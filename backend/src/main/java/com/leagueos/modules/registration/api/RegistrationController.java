@@ -20,11 +20,10 @@ public class RegistrationController {
     @PostMapping("/players")
     public Player registerPlayer(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
-            @RequestBody Player player) {
+            @RequestBody com.leagueos.modules.registration.api.dto.PlayerRegistrationRequest request) {
         TenantContext.setCurrentTenant(tenantId);
         try {
-            player.setTenantId(tenantId);
-            return registrationService.registerPlayer(player);
+            return registrationService.registerPlayer(request, null, tenantId);
         } finally {
             TenantContext.clear();
         }

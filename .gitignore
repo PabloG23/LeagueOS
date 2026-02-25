@@ -29,3 +29,6 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+
+# Spring Boot Local Run
+boot-run.pid

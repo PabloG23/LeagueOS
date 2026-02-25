@@ -18,4 +18,21 @@ public class Team extends BaseEntity {
 
     @Column(name = "logo_url")
     private String logoUrl;
+
+    @jakarta.persistence.ManyToOne
+    @jakarta.persistence.JoinColumn(name = "representative_id")
+    private Person representative;
+
+    @jakarta.persistence.Transient
+    public String getRepresentativeName() {
+        if (representative == null) return null;
+        String first = representative.getFirstName() != null ? representative.getFirstName() : "";
+        String last = representative.getLastName() != null ? representative.getLastName() : "";
+        return (first + " " + last).trim();
+    }
+
+    @jakarta.persistence.Transient
+    public String getRepresentativePhone() {
+        return representative != null ? representative.getPhone() : null;
+    }
 }

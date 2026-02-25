@@ -21,8 +21,11 @@ public class TenantFilterAspect {
     public void enableTenantFilter() {
         UUID tenantId = TenantContext.getCurrentTenant();
         if (tenantId != null) {
+            System.out.println("TenantFilterAspect: Enabling filter for Tenant ID: " + tenantId);
             Session session = entityManager.unwrap(Session.class);
             session.enableFilter("tenantFilter").setParameter("tenantId", tenantId);
+        } else {
+            System.out.println("TenantFilterAspect: No Tenant ID found in context. Filter NOT enabled.");
         }
     }
 }

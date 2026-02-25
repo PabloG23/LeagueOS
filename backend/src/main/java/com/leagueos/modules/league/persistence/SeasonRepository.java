@@ -9,5 +9,9 @@ import java.util.UUID;
 
 @Repository
 public interface SeasonRepository extends JpaRepository<Season, UUID> {
-    List<Season> findByIsActiveTrue();
+    List<Season> findByStatus(com.leagueos.modules.league.domain.SeasonStatus status);
+
+    java.util.Optional<Season> findFirstByStatus(com.leagueos.modules.league.domain.SeasonStatus status);
+
+    java.util.Optional<Season> findByIdAndTenantId(UUID id, UUID tenantId);
 }

@@ -19,6 +19,8 @@ import java.util.UUID;
 public class LeagueController {
 
     private final LeagueService leagueService;
+    private final com.leagueos.modules.competition.service.FixtureGeneratorService fixtureGeneratorService;
+    private final com.leagueos.modules.competition.service.MatchImportService matchImportService;
 
     @GetMapping("/tenants")
     public List<Tenant> getTenants() {
@@ -68,6 +70,59 @@ public class LeagueController {
         try {
             season.setTenantId(tenantId);
             return ResponseEntity.ok(leagueService.createSeason(season));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PutMapping("/seasons/{id}/activate")
+    public ResponseEntity<Season> activateSeason(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(leagueService.activateSeason(id));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PutMapping("/seasons/{id}/advance-matchday")
+    public ResponseEntity<Season> advanceMatchday(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(leagueService.advanceMatchday(id));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PostMapping("/seasons/{id}/generate-fixtures/round-robin")
+    public ResponseEntity<?> generateRoundRobinFixtures(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(fixtureGeneratorService.generateRoundRobinMatches(id));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PostMapping("/seasons/{id}/import-calendar")
+    public ResponseEntity<?> importCalendar(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable String id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(matchImportService.importMatchesFromExcel(id, file));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         } finally {
             TenantContext.clear();
         }

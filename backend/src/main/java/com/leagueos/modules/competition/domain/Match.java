@@ -36,6 +36,9 @@ public class Match extends BaseEntity {
     @Column(name = "match_date")
     private LocalDateTime matchDate;
 
+    @Column(name = "matchday")
+    private Integer matchday;
+
     @Column(name = "home_score")
     private Integer homeScore;
 

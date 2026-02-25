@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface PlayerRepository extends JpaRepository<Player, UUID> {
     List<Player> findByTeamId(UUID teamId);
+
+    int countByTeamIdAndStatus(UUID teamId, com.leagueos.modules.registration.domain.PlayerStatus status);
 }

@@ -51,4 +51,34 @@ public class LeagueService {
     public Season createSeason(Season season) {
         return seasonRepository.save(season);
     }
+
+    @Transactional
+    public Season activateSeason(UUID seasonId) {
+        Season targetSeason = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new RuntimeException("Season not found"));
+        
+        // Deactivate all other seasons in the same division
+        if (targetSeason.getDivision() != null) {
+            List<Season> activeSeasons = seasonRepository.findByStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
+            for (Season s : activeSeasons) {
+                if (s.getDivision() != null && s.getDivision().getId().equals(targetSeason.getDivision().getId()) 
+                    && !s.getId().equals(seasonId)) {
+                    s.setStatus(com.leagueos.modules.league.domain.SeasonStatus.COMPLETED); // or DRAFT/etc depending on business rule
+                    seasonRepository.save(s);
+                }
+            }
+        }
+
+        targetSeason.setStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
+        return seasonRepository.save(targetSeason);
+    }
+
+    @Transactional
+    public Season advanceMatchday(UUID seasonId) {
+        Season targetSeason = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new RuntimeException("Season not found"));
+        
+        targetSeason.setCurrentMatchday(targetSeason.getCurrentMatchday() + 1);
+        return seasonRepository.save(targetSeason);
+    }
 }
