@@ -175,10 +175,19 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
 
                 console.log(`[TenantContext] Switched to tenant: ${tenantId}, Name: ${name}`);
 
-                const response = await axios.get('/api/tenants/settings/current');
-                // Merge backend settings with frontend branding
+                let responseData = {};
+                try {
+                    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+                    const response = await axios.get(`${baseURL}/tenants/settings/current`);
+                    responseData = response.data;
+                } catch (apiError) {
+                    console.error("[TenantContext] Failed to fetch tenant settings from backend. Using local fallbacks.", apiError);
+                }
+
+                // Merge backend settings with frontend branding REGARDLESS of API failure
                 setSettings({
-                    ...response.data,
+                    ...DEFAULT_SETTINGS, // The default interface base
+                    ...(typeof responseData === 'object' ? responseData : {}),     // Overrides from backend (if any)
                     name,
                     logoUrl,
                     boardMembers,
@@ -192,10 +201,11 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     twitterUrl,
                     matchTickerBackgroundClass,
                     matchCardBackgroundClass,
-                    matchTickerTextClass
+                    matchTickerTextClass,
+                    tenantId // <--- CRUCIAL: explicitly set tenantId
                 });
             } catch (error) {
-                console.error("Failed to fetch tenant settings, using defaults.", error);
+                console.error("Critical error in tenant context initialization:", error);
             } finally {
                 setIsLoading(false);
             }
