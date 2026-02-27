@@ -23,7 +23,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/public/**", "/public/**", "/api/tenants/settings/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/public/**", "/public/**", "/api/tenants/settings/**", "/api/admin/system/seed").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/leagues/tenants", "/api/leagues/teams", "/api/leagues/seasons", "/api/registration/teams/*/players", "/api/competition/seasons/*/matches").permitAll()
                 .anyRequest().authenticated()
             )
