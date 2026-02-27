@@ -29,9 +29,8 @@ import java.util.Random;
 import java.util.UUID;
 
 @Component
-@Profile("dev")
 @RequiredArgsConstructor
-public class DataInitializer implements CommandLineRunner {
+public class DataInitializer {
 
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
@@ -44,8 +43,7 @@ public class DataInitializer implements CommandLineRunner {
     
     private final Random random = new Random();
 
-    @Override
-    public void run(String... args) throws Exception {
+    public void execute() throws Exception {
         System.out.println("====== STARTING DEV DATA INITIALIZATION ======");
         UUID tenantMexiquense = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID tenantSanLucas = UUID.fromString("22222222-2222-2222-2222-222222222222");
