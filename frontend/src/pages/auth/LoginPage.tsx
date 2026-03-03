@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { Shield, Lock, User } from 'lucide-react';
+import api from '@/shared/api/league-api';
 
 export const LoginPage = () => {
     const navigate = useNavigate();
@@ -20,18 +21,8 @@ export const LoginPage = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.message || 'Error al iniciar sesión');
-            }
-
-            const data = await response.json();
+            const response = await api.post('/auth/login', { username, password });
+            const data = response.data;
 
             // Store Auth Data
             localStorage.setItem('token', data.accessToken);
@@ -61,7 +52,7 @@ export const LoginPage = () => {
             }
 
         } catch (err: any) {
-            setError(err.message || 'Credenciales inválidas');
+            setError(err.response?.data?.message || err.message || 'Credenciales inválidas');
         } finally {
             setIsLoading(false);
         }
