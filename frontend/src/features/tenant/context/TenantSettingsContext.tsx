@@ -177,8 +177,9 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
 
                 let responseData = {};
                 try {
-                    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-                    const response = await axios.get(`${baseURL}/tenants/settings/current`);
+                    const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+                    const finalBaseUrl = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+                    const response = await axios.get(`${finalBaseUrl}/tenants/settings/current`);
                     responseData = response.data;
                 } catch (apiError) {
                     console.error("[TenantContext] Failed to fetch tenant settings from backend. Using local fallbacks.", apiError);
