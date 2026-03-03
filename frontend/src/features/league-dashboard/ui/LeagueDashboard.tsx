@@ -13,6 +13,8 @@ import { LeadershipSection } from './LeadershipSection';
 import { GlobalFooter } from './GlobalFooter';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { DisciplineWidget } from './DisciplineWidget';
+import { FullCalendarModal } from './FullCalendarModal';
+
 
 
 
@@ -25,6 +27,7 @@ export const LeagueDashboard = () => {
     const isSanLucas = settings?.tenantId === '22222222-2222-2222-2222-222222222222';
 
     const [finalStandingsData, setStandingsData] = useState<TeamStanding[] | Record<string, TeamStanding[]>>([]);
+    const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchStandings = async () => {
@@ -106,7 +109,7 @@ export const LeagueDashboard = () => {
             <Navbar />
 
             <section>
-                <MatchdayCarousel />
+                <MatchdayCarousel onViewAll={() => setIsCalendarModalOpen(true)} />
             </section>
 
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
@@ -149,6 +152,7 @@ export const LeagueDashboard = () => {
             </div>
 
             <GlobalFooter />
+            <FullCalendarModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)} />
         </div>
     );
 };

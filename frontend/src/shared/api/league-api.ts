@@ -107,7 +107,8 @@ export const leagueApi = {
         });
     },
     getUpcomingMatches: (tenantId: string) =>
-        api.get<Match[]>(`/public/matches/upcoming`, { headers: { 'X-Tenant-ID': tenantId } }),
+        api.get<Match[]>('/public/matches/upcoming', { headers: { 'X-Tenant-ID': tenantId } }),
+    getAllMatches: (tenantId: string) => api.get<Match[]>('/public/matches/season', { headers: { 'X-Tenant-ID': tenantId } }),
 };
 
 export default api;

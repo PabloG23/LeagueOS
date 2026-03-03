@@ -5,7 +5,11 @@ import { Link, useParams } from 'react-router-dom';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match } from '@/shared/api/league-api';
 
-export const MatchdayCarousel = () => {
+interface MatchdayCarouselProps {
+    onViewAll?: () => void;
+}
+
+export const MatchdayCarousel = ({ onViewAll }: MatchdayCarouselProps) => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const { settings } = useTenantSettings();
     const [matches, setMatches] = useState<Match[]>([]);
@@ -37,13 +41,28 @@ export const MatchdayCarousel = () => {
 
     const currentMatchday = matches[0]?.matchday || 1;
 
+    // Dynamic Title Logic
+    const allFinished = matches.every(m => m.status === 'FINISHED');
+    const anyInProgress = matches.some(m => m.status === 'IN_PROGRESS');
+
+    let tickerTitle = `Próxima Jornada ${currentMatchday}`;
+    let tickerIconColor = "text-white";
+
+    if (anyInProgress) {
+        tickerTitle = `Jornada ${currentMatchday} - En Juego`;
+        tickerIconColor = "text-red-500 animate-pulse";
+    } else if (allFinished) {
+        tickerTitle = `Resultados Jornada ${currentMatchday}`;
+        tickerIconColor = "text-emerald-400";
+    }
+
     return (
         <section className={`${settings.matchTickerBackgroundClass} text-sidebar-foreground py-6 border-b border-white/10 transition-colors duration-500`}>
             <div className="w-full">
                 <div className="container mx-auto px-4 flex justify-center items-center gap-4 mb-4">
                     <div className={`flex items-center gap-2 text-sm font-bold uppercase tracking-wider ${settings.matchTickerTextClass}`}>
-                        <Calendar className="w-4 h-4" />
-                        Jornada {currentMatchday}
+                        <Calendar className={`w-4 h-4 ${tickerIconColor}`} />
+                        {tickerTitle}
                     </div>
                 </div>
 
@@ -87,7 +106,7 @@ export const MatchdayCarousel = () => {
 
                     {/* View Full Schedule Button */}
                     <div className="snap-start shrink-0 w-[100px] flex items-center justify-center">
-                        <button className="flex flex-col items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                        <button onClick={onViewAll} className="flex flex-col items-center gap-2 text-slate-400 hover:text-white transition-colors">
                             <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center">
                                 <ChevronRight className="w-5 h-5" />
                             </div>
