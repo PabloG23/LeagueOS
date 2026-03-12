@@ -1,4 +1,4 @@
-import { Plus, Users, Search, Trash2, Edit2, AlertTriangle, X } from 'lucide-react';
+import { Plus, Users, Search, Trash2, Edit2, AlertTriangle, X, Shield } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AddTeamModal } from './AddTeamModal';
@@ -106,7 +106,13 @@ export const TeamsView = () => {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Directorio General de Equipos</h1>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-2xl font-bold text-slate-900">Directorio General de Equipos</h1>
+                        <span className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                            <Shield className="w-3.5 h-3.5" />
+                            {teams.length} Equipos Activos
+                        </span>
+                    </div>
                     <p className="text-slate-500">Catálogo global de equipos de la liga.</p>
                 </div>
                 <button
