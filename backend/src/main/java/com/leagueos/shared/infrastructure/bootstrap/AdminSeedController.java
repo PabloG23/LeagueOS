@@ -18,7 +18,7 @@ public class AdminSeedController {
     @PostMapping("/seed")
     public ResponseEntity<String> runSeed() {
         try {
-            dataInitializer.execute();
+            dataInitializer.run();
             return ResponseEntity.ok("Database seeded successfully.");
         } catch (Exception e) {
             e.printStackTrace();

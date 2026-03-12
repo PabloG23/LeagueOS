@@ -30,7 +30,7 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-public class DataInitializer {
+public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
@@ -38,7 +38,8 @@ public class DataInitializer {
     private final com.leagueos.modules.league.persistence.PersonRepository personRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public void execute() throws Exception {
+    @Override
+    public void run(String... args) throws Exception {
         System.out.println("====== STARTING DEV DATA INITIALIZATION ======");
         UUID tenantMexiquense = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID tenantSanLucas = UUID.fromString("22222222-2222-2222-2222-222222222222");
