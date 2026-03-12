@@ -1,14 +1,16 @@
-import { X, Upload, Save, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { X, Upload, Save, Shield, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 
 interface AddTeamModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (team: { name: string; representative?: { firstName: string; lastName: string; phone: string }; logoUrl: string; }) => void;
+    onSave: (team: { name: string; representative?: { firstName: string; lastName: string; phone?: string }; logoUrl: string; }) => void;
+    teamToEdit?: { id?: string; name: string; representative?: { firstName: string; lastName: string; phone?: string }; logoUrl?: string };
+    existingTeams?: { id: string; name: string }[];
 }
 
-export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => {
+export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeams = [] }: AddTeamModalProps) => {
     const { settings } = useTenantSettings();
     const isSanLucas = settings.tenantId === '22222222-2222-2222-2222-222222222222';
 
@@ -18,7 +20,27 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
     const [dragging, setDragging] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+    // Effect to populate form when editing
+    useEffect(() => {
+        if (teamToEdit && isOpen) {
+            setName(teamToEdit.name || '');
+            if (teamToEdit.representative) {
+                setRepresentativeName(`${teamToEdit.representative.firstName || ''} ${teamToEdit.representative.lastName || ''}`.trim());
+                setRepresentativePhone(teamToEdit.representative.phone || '');
+            }
+        } else if (!teamToEdit && isOpen) {
+            setName('');
+            setRepresentativeName('');
+            setRepresentativePhone('');
+        }
+        setErrors({});
+    }, [teamToEdit, isOpen]);
+
     if (!isOpen) return null;
+
+    const isNameDuplicate = existingTeams.some(
+        t => t.name.trim().toLowerCase() === name.trim().toLowerCase() && t.id !== teamToEdit?.id
+    );
 
     const validateForm = () => {
         const newErrors: { [key: string]: string } = {};
@@ -37,7 +59,7 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!validateForm()) return;
+        if (!validateForm() || isNameDuplicate) return;
 
         // Mock photo for MVP
         const mockPhoto = `https://api.dicebear.com/7.x/identicon/svg?seed=${name}`;
@@ -72,7 +94,7 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-blue-600" />
-                        Registrar Nuevo Equipo
+                        {teamToEdit ? 'Actualizar Equipo' : 'Registrar Nuevo Equipo'}
                     </h3>
                     <button
                         onClick={onClose}
@@ -112,11 +134,20 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
                                 setName(e.target.value);
                                 if (errors.name) setErrors({ ...errors, name: '' });
                             }}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
-                                }`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                                errors.name || isNameDuplicate
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/50' 
+                                : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                            }`}
                             placeholder="Ej. Atlético San Lucas"
                         />
                         {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+                        {isNameDuplicate && !errors.name && (
+                            <p className="text-xs text-red-600 mt-1 flex items-center gap-1 font-medium">
+                                <AlertTriangle className="w-3 h-3" />
+                                Este nombre ya está en uso por otro equipo.
+                            </p>
+                        )}
                     </div>
 
 
@@ -166,10 +197,13 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
                         </button>
                         <button
                             type="submit"
-                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm shadow-blue-200 transition-colors"
+                            disabled={dragging || isNameDuplicate}
+                            className={`flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm shadow-blue-200 transition-colors ${
+                                dragging || isNameDuplicate ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                         >
                             <Save className="w-4 h-4" />
-                            Registrar Equipo
+                            {teamToEdit ? 'Guardar Cambios' : 'Registrar Equipo'}
                         </button>
                     </div>
                 </form>

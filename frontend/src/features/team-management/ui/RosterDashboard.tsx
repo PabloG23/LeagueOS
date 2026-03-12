@@ -98,7 +98,7 @@ export const RosterDashboard = () => {
                     setPlayers(fetchedPlayers.map((p: any) => ({
                         id: p.id,
                         name: `${p.firstName} ${p.lastName}`,
-                        photoUrl: p.profilePhotoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.firstName}${p.lastName}`,
+                        photoUrl: p.profilePhotoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${p.firstName} ${p.lastName}`,
                         isActive: p.status === 'ACTIVE',
                         jerseyNumber: p.jerseyNumber
                     })));
@@ -263,8 +263,6 @@ export const RosterDashboard = () => {
                             <PlayerCard
                                 player={player}
                                 onToggleStatus={canEdit ? handleToggleStatus : undefined}
-                                onDelete={canEdit ? handleDelete : undefined}
-                                onEdit={canEdit ? () => { } : undefined}
                                 requireJerseyNumbers={settings?.requireJerseyNumbers}
                             />
                         </div>

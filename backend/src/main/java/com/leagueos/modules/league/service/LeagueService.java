@@ -43,7 +43,65 @@ public class LeagueService {
     }
 
     @Transactional
-    public Team createTeam(Team team) {
+    public Team createTeam(Team teamDetails) {
+        UUID tenantId = com.leagueos.shared.context.TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new IllegalStateException("Tenant context not available.");
+        }
+
+        if (teamRepository.existsByNameIgnoreCaseAndTenantId(teamDetails.getName(), tenantId)) {
+            throw new IllegalArgumentException("Ya existe un equipo activo con ese nombre en esta liga.");
+        }
+
+        Team team = new Team();
+        team.setTenantId(tenantId);
+        team.setName(teamDetails.getName());
+        team.setLogoUrl(teamDetails.getLogoUrl());
+        team.setActive(true); // Teams are active by default when created
+
+        // Handle representative if provided
+        if (teamDetails.getRepresentative() != null) {
+            team.setRepresentative(teamDetails.getRepresentative());
+            team.getRepresentative().setTenantId(tenantId);
+        }
+
+        return teamRepository.save(team);
+    }
+
+    @Transactional
+    public Team updateTeam(UUID teamId, Team teamDetails) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+        
+        if (teamDetails.getName() != null && !teamDetails.getName().trim().isEmpty()) {
+            // Check for uniqueness if the name is being changed
+            if (!team.getName().equalsIgnoreCase(teamDetails.getName()) &&
+                teamRepository.existsByNameIgnoreCaseAndTenantId(teamDetails.getName(), team.getTenantId())) {
+                throw new IllegalArgumentException("Ya existe otro equipo activo con ese nombre en esta liga.");
+            }
+            team.setName(teamDetails.getName());
+        }
+        if (teamDetails.getLogoUrl() != null) {
+            team.setLogoUrl(teamDetails.getLogoUrl());
+        }
+        
+        if (teamDetails.getRepresentative() != null) {
+            if (team.getRepresentative() == null) {
+                team.setRepresentative(teamDetails.getRepresentative());
+                team.getRepresentative().setTenantId(team.getTenantId());
+            } else {
+                if (teamDetails.getRepresentative().getFirstName() != null) {
+                    team.getRepresentative().setFirstName(teamDetails.getRepresentative().getFirstName());
+                }
+                if (teamDetails.getRepresentative().getLastName() != null) {
+                    team.getRepresentative().setLastName(teamDetails.getRepresentative().getLastName());
+                }
+                if (teamDetails.getRepresentative().getPhone() != null) {
+                    team.getRepresentative().setPhone(teamDetails.getRepresentative().getPhone());
+                }
+            }
+        }
+        
         return teamRepository.save(team);
     }
 

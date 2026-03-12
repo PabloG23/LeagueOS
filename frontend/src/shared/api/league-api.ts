@@ -111,6 +111,8 @@ export const leagueApi = {
         api.get<Team[]>('/leagues/teams', { headers: { 'X-Tenant-ID': tenantId } }),
     createTeam: (tenantId: string, team: Partial<Team>) =>
         api.post<Team>('/leagues/teams', team, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateTeam: (tenantId: string, teamId: string, team: Partial<Team>) =>
+        api.put<Team>(`/leagues/teams/${teamId}`, team, { headers: { 'X-Tenant-ID': tenantId } }),
     deleteTeam: (tenantId: string, teamId: string) =>
         api.delete(`/leagues/teams/${teamId}`, { headers: { 'X-Tenant-ID': tenantId } }),
     enrollTeamsToSeason: (tenantId: string, seasonId: string, teamIds: string[]) =>
@@ -124,7 +126,7 @@ export const leagueApi = {
     registerPlayer: (tenantId: string, player: any) =>
         api.post<Player>('/registration/players', player, { headers: { 'X-Tenant-ID': tenantId } }),
     batchCreatePlayers: (tenantId: string, teamId: string, players: any[]) =>
-        api.post<Player[]>(`/registration/teams/${teamId}/players/batch`, players, { headers: { 'X-Tenant-ID': tenantId } }),
+        api.post<Player[]>(`/teams/${teamId}/players/batch`, players, { headers: { 'X-Tenant-ID': tenantId } }),
     getTeamPlayers: (tenantId: string, teamId: string) =>
         api.get<Player[]>(`/registration/teams/${teamId}/players`, { headers: { 'X-Tenant-ID': tenantId } }),
 

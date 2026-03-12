@@ -4,7 +4,7 @@ import { useState } from 'react';
 interface AddPlayerModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (player: { name: string; photoUrl: string, jerseyNumber?: number }) => void;
+    onSave: (player: { name: string; photoUrl: string, jerseyNumber?: number, birthDate?: string }) => void;
     requireJerseyNumbers?: boolean;
 }
 
@@ -12,23 +12,40 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [jerseyNumber, setJerseyNumber] = useState('');
+    const [birthDate, setBirthDate] = useState('');
     const [dragging, setDragging] = useState(false);
+    const [error, setError] = useState('');
 
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+
+        let formattedDate = undefined;
+        if (birthDate) {
+            // birthDate from type="date" is already in YYYY-MM-DD format
+            formattedDate = birthDate;
+            const dateObj = new Date(formattedDate);
+            if (isNaN(dateObj.getTime())) {
+                setError('Fecha inválida');
+                return;
+            }
+        }
+
         // Mock photo for now
         const mockPhoto = `https://api.dicebear.com/7.x/initials/svg?seed=${name}`;
         onSave({
             name: `${name} ${surname}`,
             photoUrl: mockPhoto,
-            jerseyNumber: jerseyNumber ? parseInt(jerseyNumber, 10) : undefined
+            jerseyNumber: jerseyNumber ? parseInt(jerseyNumber, 10) : undefined,
+            birthDate: formattedDate
         });
         // Reset form
         setName('');
         setSurname('');
         setJerseyNumber('');
+        setBirthDate('');
         onClose();
     };
 
@@ -108,6 +125,18 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
                             />
                         </div>
                     )}
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Fecha de Nacimiento (Opcional)</label>
+                        <input
+                            type="date"
+                            value={birthDate}
+                            onChange={(e) => setBirthDate(e.target.value)}
+                            max={new Date().toISOString().split('T')[0]}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${error ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'}`}
+                        />
+                        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+                    </div>
 
                     <div className="pt-4 flex justify-end gap-3">
                         <button

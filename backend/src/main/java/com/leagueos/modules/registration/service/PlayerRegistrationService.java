@@ -170,6 +170,7 @@ public class PlayerRegistrationService {
             com.leagueos.modules.league.domain.Person person = new com.leagueos.modules.league.domain.Person();
             person.setFirstName(firstName);
             person.setLastName(lastName);
+            person.setBirthDate(request.getBirthDate());
             person.setTenantId(tenantId);
             person = personRepository.save(person);
     

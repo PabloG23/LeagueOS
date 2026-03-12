@@ -1,8 +1,8 @@
-import { Plus, Users, Search, Trash2, AlertTriangle, X } from 'lucide-react';
+import { Plus, Users, Search, Trash2, Edit2, AlertTriangle, X } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AddTeamModal } from './AddTeamModal';
-import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
+import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { leagueApi, Team } from '@/shared/api/league-api';
 import { useToast } from '@/shared/components/ui/ToastContext';
 
@@ -14,6 +14,7 @@ export const TeamsView = () => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const currentLeague = leagueSlug || 'ligaMexiquense';
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [teamToEdit, setTeamToEdit] = useState<ExtendedTeam | null>(null);
     const { settings } = useTenantSettings();
     const [teams, setTeams] = useState<ExtendedTeam[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,20 +40,36 @@ export const TeamsView = () => {
         fetchTeams();
     }, [settings?.tenantId]);
 
-    const handleSaveTeam = async (newTeam: any) => {
+    const handleSaveTeam = async (teamData: any) => {
         if (!settings?.tenantId) return;
         try {
-            await leagueApi.createTeam(settings.tenantId, {
-                ...newTeam,
-                tenantId: settings.tenantId
-            });
+            if (teamToEdit) {
+                await leagueApi.updateTeam(settings.tenantId, teamToEdit.id, {
+                    ...teamData,
+                });
+                showToast("Equipo actualizado exitosamente.", "success");
+            } else {
+                await leagueApi.createTeam(settings.tenantId, {
+                    ...teamData,
+                    tenantId: settings.tenantId
+                });
+                showToast("Equipo registrado exitosamente.", "success");
+            }
             await fetchTeams();
             setIsAddModalOpen(false);
-            showToast("Equipo registrado exitosamente.", "success");
-        } catch (error) {
-            console.error('Error creating team:', error);
-            showToast('Error al registrar el equipo.', 'error');
+            setTeamToEdit(null);
+        } catch (error: any) {
+            console.error('Error saving team:', error);
+            const errorMessage = error.response?.data?.message || error.response?.data || 'Error al guardar el equipo.';
+            showToast(typeof errorMessage === 'string' ? errorMessage : 'Error al guardar el equipo.', 'error');
         }
+    };
+
+    const handleEditClick = (e: React.MouseEvent, team: ExtendedTeam) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setTeamToEdit(team);
+        setIsAddModalOpen(true);
     };
 
     const handleDeleteClick = (e: React.MouseEvent, team: ExtendedTeam) => {
@@ -129,7 +146,7 @@ export const TeamsView = () => {
                             <Link
                                 key={team.id}
                                 to={`/${currentLeague}/admin/teams/${team.id}`}
-                                className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center text-center hover:shadow-lg hover:shadow-green-500/20 hover:border-green-500 transition-all cursor-pointer group"
+                                className="relative bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center text-center hover:shadow-lg hover:shadow-green-500/20 hover:border-green-500 transition-all cursor-pointer group"
                             >
                                 <img src={team.logoUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${team.name}`} alt={team.name} className="w-20 h-20 mb-4 rounded-full bg-slate-50 p-2 group-hover:scale-105 transition-transform object-cover" />
                                 <h3 className="font-bold text-lg text-slate-900 mb-1">{team.name}</h3>
@@ -140,13 +157,22 @@ export const TeamsView = () => {
                                     <Users className="w-3 h-3" />
                                     <span>{team.playersCount} Jugadores</span>
                                 </div>
-                                <button
-                                    onClick={(e) => handleDeleteClick(e, team)}
-                                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                    title="Eliminar equipo"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
+                                <div className="absolute top-4 right-4 flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={(e) => handleEditClick(e, team)}
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Editar equipo"
+                                    >
+                                        <Edit2 className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => handleDeleteClick(e, team)}
+                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Eliminar equipo"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </Link>
                         ))}
                     </div>
@@ -155,8 +181,13 @@ export const TeamsView = () => {
 
             <AddTeamModal
                 isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
+                onClose={() => {
+                    setIsAddModalOpen(false);
+                    setTeamToEdit(null);
+                }}
                 onSave={handleSaveTeam}
+                teamToEdit={teamToEdit || undefined}
+                existingTeams={teams.map(t => ({ id: t.id, name: t.name }))}
             />
 
             {isDeleteModalOpen && teamToDelete && (

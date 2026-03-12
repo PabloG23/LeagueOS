@@ -68,6 +68,19 @@ public class LeagueController {
         }
     }
 
+    @PutMapping("/teams/{teamId}")
+    public Team updateTeam(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID teamId,
+            @RequestBody Team team) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return leagueService.updateTeam(teamId, team);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     @GetMapping("/seasons")
     public List<Season> getSeasons(@RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId) {
         if (tenantId != null) {

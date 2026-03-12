@@ -20,8 +20,7 @@ interface PlayerCardProps {
     requireJerseyNumbers?: boolean;
 }
 
-export const PlayerCard = ({ player, onToggleStatus, onDelete, onEdit, requireJerseyNumbers }: PlayerCardProps) => {
-    const showActions = !!onEdit || !!onDelete;
+export const PlayerCard = ({ player, onToggleStatus, requireJerseyNumbers }: PlayerCardProps) => {
 
     return (
         <div className={`
@@ -32,29 +31,7 @@ export const PlayerCard = ({ player, onToggleStatus, onDelete, onEdit, requireJe
             }
         `}>
 
-            {/* Action Menu (Visible on Hover if actions exist) */}
-            {showActions && (
-                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    {onEdit && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onEdit(player.id); }}
-                            className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                            title="Editar"
-                        >
-                            <Edit2 className="w-4 h-4" />
-                        </button>
-                    )}
-                    {onDelete && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(player.id); }}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            title="Eliminar"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-            )}
+            {/* Action Menu (Removed for Players) */}
 
             <div className="flex flex-col items-center text-center">
                 {/* Avatar with Status Indicator Ring */}

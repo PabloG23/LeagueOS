@@ -6,6 +6,7 @@ interface ParsedPlayer {
     firstName: string;
     lastName: string;
     jerseyNumber?: number;
+    birthDate?: string;
     _error?: string;
 }
 
@@ -26,7 +27,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
     if (!isOpen) return null;
 
     const downloadTemplate = () => {
-        const ws = XLSX.utils.aoa_to_sheet([['Nombre', 'Apellido', 'Dorsal']]);
+        const ws = XLSX.utils.aoa_to_sheet([['Nombre', 'Apellido', 'Dorsal', 'Fecha Nacimiento (dd/mm/aaaa)']]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Plantilla Jugadores");
         XLSX.writeFile(wb, "plantilla_jugadores.xlsx");
@@ -61,12 +62,46 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                     const lastName = (row['Apellido'] || '').toString().trim();
                     const rawJersey = (row['Dorsal'] || row['Numero'] || '').toString().trim();
                     const jerseyNumber = rawJersey ? parseInt(rawJersey, 10) : undefined;
+                    
+                    const rawBirthDate = (row['Fecha Nacimiento (dd/mm/aaaa)'] || row['Fecha Nacimiento'] || row['Fecha de Nacimiento'] || '').toString().trim();
+                    let formattedDate = undefined;
+                    let dateError = false;
+
+                    if (rawBirthDate) {
+                        // Check if it's an Excel date serial number
+                        if (!isNaN(Number(rawBirthDate)) && Number(rawBirthDate) > 30000) {
+                             const dateObj = new Date(Math.round((Number(rawBirthDate) - 25569)*86400*1000));
+                             const iso = dateObj.toISOString();
+                             formattedDate = iso.split('T')[0];
+                        } else {
+                            const dateRegex = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/;
+                            const match = rawBirthDate.match(dateRegex);
+                            if (match) {
+                                const [_, day, month, year] = match;
+                                formattedDate = `${year}-${month}-${day}`;
+                                const dObj = new Date(formattedDate);
+                                if (isNaN(dObj.getTime())) dateError = true;
+                            } else {
+                                dateError = true;
+                            }
+                        }
+                    }
 
                     let error;
                     if (!firstName) error = "Nombre es requerido";
                     else if (requireJerseyNumbers && isNaN(jerseyNumber as number)) error = "Dorsal inválido o faltante";
+                    else if (dateError) error = "Fecha de Nacimiento inválida (usa dd/mm/aaaa)";
 
-                    return { firstName, lastName, jerseyNumber: isNaN(jerseyNumber as number) ? undefined : jerseyNumber, _error: error };
+                    const profilePhotoUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${firstName} ${lastName}`;
+
+                    return { 
+                        firstName, 
+                        lastName, 
+                        jerseyNumber: isNaN(jerseyNumber as number) ? undefined : jerseyNumber, 
+                        birthDate: formattedDate,
+                        profilePhotoUrl,
+                        _error: error 
+                    };
                 });
 
                 if (players.length === 0) {
@@ -215,6 +250,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                                             <th className="font-semibold text-slate-500 p-3 text-xs uppercase">Nombre</th>
                                             <th className="font-semibold text-slate-500 p-3 text-xs uppercase">Apellido</th>
                                             <th className="font-semibold text-slate-500 p-3 text-xs uppercase w-24 text-center">Dorsal</th>
+                                            <th className="font-semibold text-slate-500 p-3 text-xs uppercase w-32 text-center">Nacimiento</th>
                                             <th className="font-semibold text-slate-500 p-3 w-10"></th>
                                         </tr>
                                     </thead>
@@ -233,6 +269,10 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                                                 <td className="p-2">
                                                     <input type="text" value={row.jerseyNumber ?? ''} onChange={(e) => updateRow(i, 'jerseyNumber', e.target.value)}
                                                         className={`w-full bg-transparent border-0 focus:ring-1 p-1 px-2 rounded text-center text-slate-600 font-mono ${(requireJerseyNumbers && !row.jerseyNumber) ? 'focus:ring-red-400 bg-red-50' : 'focus:ring-blue-400'}`} placeholder="--" />
+                                                </td>
+                                                <td className="p-2">
+                                                    <input type="date" value={row.birthDate ?? ''} onChange={(e) => updateRow(i, 'birthDate', e.target.value)}
+                                                        className={`w-full bg-transparent border-0 focus:ring-1 p-1 px-2 rounded font-mono text-slate-600 text-xs focus:ring-blue-400`} />
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     {row._error && <div title={row._error}><AlertCircle className="w-4 h-4 text-red-500 inline-block" /></div>}
