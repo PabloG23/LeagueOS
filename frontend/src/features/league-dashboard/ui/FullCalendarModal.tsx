@@ -24,13 +24,6 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
             .then(res => {
                 const fetchedMatches = res.data;
                 setMatches(fetchedMatches);
-
-                // Set the default tab to the latest matchday that has matches, or 1.
-                // Could also use currentMatchday from Season, but inferring from the data is safe
-                if (fetchedMatches.length > 0) {
-                    const latest = Math.max(...fetchedMatches.map(m => m.matchday || 1));
-                    setActiveMatchday(latest);
-                }
             })
             .catch(err => console.error("Error fetching full calendar", err))
             .finally(() => setLoading(false));
@@ -50,15 +43,49 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
         return `/${leagueSlug || 'ligaMexiquense'}/team/${teamId || '1'}`;
     };
 
-    // Calculate available matchdays for the tabs
-    const matchdays = useMemo(() => {
-        const uniqueMatchdays = new Set(matches.map(m => m.matchday || 1));
-        return Array.from(uniqueMatchdays).sort((a, b) => a - b);
+    // Extract unique seasons
+    const availableSeasons = useMemo(() => {
+        const seasonMap = new Map<string, string>();
+        matches.forEach(m => {
+            const id = m.seasonId || m.season?.id;
+            if (id) {
+                seasonMap.set(id, m.season?.name || 'Categoría');
+            }
+        });
+        return Array.from(seasonMap.entries()).map(([id, name]) => ({ id, name }));
     }, [matches]);
 
+    const [activeSeasonId, setActiveSeasonId] = useState<string>('');
+
+    // Set default season on load
+    useEffect(() => {
+        if (availableSeasons.length > 0 && !activeSeasonId) {
+            setActiveSeasonId(availableSeasons[0].id);
+        }
+    }, [availableSeasons, activeSeasonId]);
+
+    const seasonMatches = useMemo(() => {
+        if (!activeSeasonId) return [];
+        return matches.filter(m => (m.seasonId === activeSeasonId) || (m.season?.id === activeSeasonId));
+    }, [matches, activeSeasonId]);
+
+    // Calculate available matchdays for the tabs based on selected season
+    const matchdays = useMemo(() => {
+        const uniqueMatchdays = new Set(seasonMatches.map(m => m.matchday || 1));
+        return Array.from(uniqueMatchdays).sort((a, b) => a - b);
+    }, [seasonMatches]);
+
+    // Update active matchday when season changes
+    useEffect(() => {
+        if (seasonMatches.length > 0) {
+            const latest = Math.max(...seasonMatches.map(m => m.matchday || 1));
+            setActiveMatchday(latest);
+        }
+    }, [activeSeasonId, seasonMatches.length]);
+
     const activeMatches = useMemo(() => {
-        return matches.filter(m => (m.matchday || 1) === activeMatchday);
-    }, [matches, activeMatchday]);
+        return seasonMatches.filter(m => (m.matchday || 1) === activeMatchday);
+    }, [seasonMatches, activeMatchday]);
 
     if (!isOpen) return null;
 
@@ -98,16 +125,39 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                         </div>
                     ) : (
                         <>
+                            {/* Season Tabs - Only show if > 1 */}
+                            {availableSeasons.length > 1 && (
+                                <div className="w-full overflow-x-auto scrollbar-hide bg-slate-900 border-b border-white/5 z-20">
+                                    <div className="flex p-3 gap-3 min-w-max">
+                                        {availableSeasons.map((season) => {
+                                            const shortName = season.name.includes(' - ') ? season.name.split(' - ')[1] : season.name;
+                                            return (
+                                                <button
+                                                    key={season.id}
+                                                    onClick={() => setActiveSeasonId(season.id)}
+                                                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeSeasonId === season.id
+                                                        ? 'bg-slate-800 text-white shadow-inner border border-white/10'
+                                                        : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-transparent'
+                                                        }`}
+                                                >
+                                                    {shortName}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Matchday Tabs */}
-                            <div className="w-full overflow-x-auto scrollbar-none border-b border-white/5 bg-slate-900/80 sticky top-0 z-10">
-                                <div className="flex p-2 gap-2 min-w-max">
+                            <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-800/50 sticky top-0 z-10 shadow-sm">
+                                <div className="flex p-3 gap-2 min-w-max px-4">
                                     {matchdays.map((day) => (
                                         <button
                                             key={day}
                                             onClick={() => setActiveMatchday(day)}
-                                            className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeMatchday === day
-                                                    ? `${settings?.matchTickerBackgroundClass || 'bg-blue-600'} text-white shadow-lg`
-                                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeMatchday === day
+                                                ? `${settings?.matchTickerBackgroundClass || 'bg-blue-600'} text-white shadow-md ring-1 ring-white/20`
+                                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                                                 }`}
                                         >
                                             Jornada {day}
@@ -132,17 +182,23 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
 
                                                     {/* Status Badge */}
                                                     <div className="flex justify-between items-center mb-3">
-                                                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
-                                                            {new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
+                                                        <div className="flex flex-col">
+                                                            <p className="font-medium text-slate-300 capitalize text-sm">
+                                                                {match.matchDate
+                                                                    ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                                                    : 'Horario por definir'
+                                                                }
+                                                            </p>
+                                                            {match.location && (
+                                                                <span className="text-xs text-slate-500 font-medium mt-0.5">📍 {match.location}</span>
+                                                            )}
+                                                        </div>
                                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${match.status === 'FINISHED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                                                match.status === 'IN_PROGRESS' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                                                                    'bg-slate-800 text-slate-400'
+                                                            'bg-slate-800 text-slate-400'
                                                             }`}>
                                                             {match.status === 'FINISHED' ? 'Finalizado' :
-                                                                match.status === 'SCHEDULED' ? 'Por Jugar' :
-                                                                    match.status === 'IN_PROGRESS' ? 'En Vivo' :
-                                                                        'Cancelado'}
+                                                                match.status === 'CANCELLED' ? 'Cancelado' :
+                                                                    'Por Jugar'}
                                                         </span>
                                                     </div>
 

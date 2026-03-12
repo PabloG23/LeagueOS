@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, ArrowLeft } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Upload } from 'lucide-react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { TeamDashboardLayout } from './TeamDashboardLayout';
 import { AdminDashboardLayout } from '../../admin/ui/AdminDashboardLayout';
 import { PlayerCard, Player } from './PlayerCard';
 import { AddPlayerModal } from './AddPlayerModal';
+import { MassUploadPlayerModal } from './MassUploadPlayerModal';
 import { PlayerProfileModal } from './PlayerProfileModal';
 import { Navbar } from '../../league-dashboard/ui/Navbar';
 import { GlobalFooter } from '../../league-dashboard/ui/GlobalFooter';
@@ -12,6 +13,7 @@ import { TeamStanding } from '../../league-dashboard/ui/StandingsTable';
 import { TeamOverviewWidget } from './TeamOverviewWidget';
 import { leagueApi } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
+import { useToast } from '@/shared/components/ui/ToastContext';
 
 // Local type extending the base Player to include dashboard-specific info
 type ExtendedPlayer = Player & {
@@ -47,10 +49,12 @@ export const RosterDashboard = () => {
 
     const [players, setPlayers] = useState<Player[]>([]);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isMassUploadModalOpen, setIsMassUploadModalOpen] = useState(false);
     const [selectedPlayer, setSelectedPlayer] = useState<ExtendedPlayer | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [teamName, setTeamName] = useState('Cargando...');
     const [teamRep, setTeamRep] = useState<{ name: string, phone: string | null, photoUrl?: string | null }>({ name: 'Sin Asignar', phone: null });
+    const { showToast, showConfirm } = useToast();
 
     // Layout Selection
     const Layout = isAdminMode ? AdminDashboardLayout : (isTeamRepMode ? TeamDashboardLayout : PublicTeamLayout);
@@ -95,7 +99,8 @@ export const RosterDashboard = () => {
                         id: p.id,
                         name: `${p.firstName} ${p.lastName}`,
                         photoUrl: p.profilePhotoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.firstName}${p.lastName}`,
-                        isActive: p.status === 'ACTIVE'
+                        isActive: p.status === 'ACTIVE',
+                        jerseyNumber: p.jerseyNumber
                     })));
                 }
             } catch (error) {
@@ -110,7 +115,8 @@ export const RosterDashboard = () => {
     }, [teamId, isTeamRepMode, settings?.tenantId]);
 
 
-    const maxActivePlayers = 26;
+    const isSanLucas = settings?.tenantId === '22222222-2222-2222-2222-222222222222';
+    const maxActivePlayers = isSanLucas ? 25 : 26;
     const activePlayersCount = players.filter(p => p.isActive).length;
     const inactivePlayersCount = players.length - activePlayersCount;
 
@@ -120,7 +126,7 @@ export const RosterDashboard = () => {
         setPlayers(prev => prev.map(player => {
             if (player.id === id) {
                 if (!player.isActive && activePlayersCount >= maxActivePlayers) {
-                    alert('¡Límite de jugadores activos alcanzado!');
+                    showToast('¡Límite de jugadores activos alcanzado!', 'error');
                     return player;
                 }
                 return { ...player, isActive: !player.isActive };
@@ -131,17 +137,36 @@ export const RosterDashboard = () => {
 
     const handleDelete = (id: string) => {
         if (isPublicMode) return; // Guard
-        if (confirm('¿Estás seguro de eliminar este jugador?')) {
+        showConfirm('¿Estás seguro de eliminar este jugador?', () => {
             setPlayers(prev => prev.filter(p => p.id !== id));
+            showToast('Jugador eliminado.', 'success');
+        }, "Sí, eliminar", "Cancelar");
+    };
+
+    const handleAddPlayer = async (newPlayer: { name: string; photoUrl: string, jerseyNumber?: number }) => {
+        try {
+            if (!settings?.tenantId || !teamId) return;
+            await leagueApi.registerPlayer(settings.tenantId, {
+                teamId,
+                firstName: newPlayer.name.split(' ')[0],
+                lastName: newPlayer.name.split(' ').slice(1).join(' '),
+                profilePhotoUrl: newPlayer.photoUrl,
+                jerseyNumber: newPlayer.jerseyNumber
+            });
+            window.location.reload();
+        } catch (e: any) {
+            showToast(e.response?.data?.message || 'Error al agregar jugador', 'error');
         }
     };
 
-    const handleAddPlayer = (newPlayer: { name: string; photoUrl: string }) => {
-        setPlayers(prev => [
-            ...prev,
-            { id: Date.now().toString(), ...newPlayer, isActive: true } // Default active
-        ]);
-        setIsAddModalOpen(false);
+    const handleSaveMassUpload = async (parsedPlayers: any[]) => {
+        if (!settings?.tenantId || !teamId) return;
+        try {
+            await leagueApi.batchCreatePlayers(settings.tenantId, teamId, parsedPlayers);
+            window.location.reload();
+        } catch (e: any) {
+            throw new Error(e.response?.data?.message || 'Error al guardar lote de jugadores');
+        }
     };
 
     // Derived state
@@ -157,7 +182,7 @@ export const RosterDashboard = () => {
             <div className="w-full">
                 {isAdminMode && (
                     <div className="mb-6">
-                        <Link to="/admin/teams" className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors">
+                        <Link to={`/${location.pathname.split('/')[1]}/admin/teams`} className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors">
                             <ArrowLeft className="w-5 h-5" />
                             <span>Volver a Equipos</span>
                         </Link>
@@ -189,13 +214,22 @@ export const RosterDashboard = () => {
                         </div>
                     </div>
                     {canEdit && (
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-500/20 transition-all transform hover:scale-[1.02]"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Agregar Jugador
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsMassUploadModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all"
+                            >
+                                <Upload className="w-4 h-4" />
+                                <span className="hidden sm:inline">Carga Masiva</span>
+                            </button>
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-500/20 transition-all transform hover:scale-[1.02]"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Agregar Jugador
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -231,6 +265,7 @@ export const RosterDashboard = () => {
                                 onToggleStatus={canEdit ? handleToggleStatus : undefined}
                                 onDelete={canEdit ? handleDelete : undefined}
                                 onEdit={canEdit ? () => { } : undefined}
+                                requireJerseyNumbers={settings?.requireJerseyNumbers}
                             />
                         </div>
                     ))}
@@ -245,11 +280,20 @@ export const RosterDashboard = () => {
 
                 {/* Add Player (Admin/Rep) */}
                 {canEdit && (
-                    <AddPlayerModal
-                        isOpen={isAddModalOpen}
-                        onClose={() => setIsAddModalOpen(false)}
-                        onSave={handleAddPlayer}
-                    />
+                    <>
+                        <AddPlayerModal
+                            isOpen={isAddModalOpen}
+                            onClose={() => setIsAddModalOpen(false)}
+                            onSave={handleAddPlayer}
+                            requireJerseyNumbers={settings?.requireJerseyNumbers}
+                        />
+                        <MassUploadPlayerModal
+                            isOpen={isMassUploadModalOpen}
+                            onClose={() => setIsMassUploadModalOpen(false)}
+                            onSave={handleSaveMassUpload}
+                            requireJerseyNumbers={settings?.requireJerseyNumbers}
+                        />
+                    </>
                 )}
 
                 {/* View Player (Public/All) */}

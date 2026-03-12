@@ -16,20 +16,20 @@ export const TeamList = ({ tenantId }: TeamListProps) => {
             .finally(() => setLoading(false));
     }, [tenantId]);
 
-    if (loading) return <div>Loading teams...</div>;
+    if (loading) return <div>Cargando equipos...</div>;
 
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-primary">Teams</h2>
+                <h2 className="text-2xl font-bold text-primary">Equipos</h2>
                 <button className="bg-accent text-accent-foreground px-4 py-2 rounded-md text-sm font-medium">
-                    New Team
+                    Nuevo Equipo
                 </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {teams.length === 0 ? (
-                    <p className="text-muted-foreground italic">No teams registered yet.</p>
+                    <p className="text-muted-foreground italic">No hay equipos registrados aún.</p>
                 ) : (
                     teams.map(team => (
                         <div key={team.id} className="p-4 bg-card border rounded-lg shadow-sm flex items-center space-x-4">

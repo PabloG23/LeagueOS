@@ -29,18 +29,22 @@ public class PublicMatchController {
         TenantContext.setCurrentTenant(tenantId);
         try {
             // Find all active seasons for this tenant
-            List<Season> activeSeasons = seasonRepository.findByStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
+            List<Season> activeSeasons = seasonRepository.findByTenantIdAndStatus(tenantId, com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
             
             List<Match> upcomingMatches = new ArrayList<>();
             // For each active season, fetch all matches for its current matchday
+            System.out.println("Active seasons found: " + activeSeasons.size());
             for (Season season : activeSeasons) {
+                System.out.println("Checking season: " + season.getName() + " with currentMatchday: " + season.getCurrentMatchday());
                 List<Match> matches = matchRepository.findByMatchday(season.getCurrentMatchday());
+                System.out.println("Matches found for matchday " + season.getCurrentMatchday() + ": " + matches.size());
                 for (Match m : matches) {
                     if (m.getSeason().getId().equals(season.getId())) {
                         upcomingMatches.add(m);
                     }
                 }
             }
+            System.out.println("Total upcoming matches to return: " + upcomingMatches.size());
 
             // Sort by match date
             upcomingMatches.sort((m1, m2) -> {
@@ -60,7 +64,7 @@ public class PublicMatchController {
         
         TenantContext.setCurrentTenant(tenantId);
         try {
-            List<Season> activeSeasons = seasonRepository.findByStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
+            List<Season> activeSeasons = seasonRepository.findByTenantIdAndStatus(tenantId, com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
             
             List<Match> allSeasonMatches = new ArrayList<>();
             for (Season season : activeSeasons) {

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import com.leagueos.modules.registration.api.dto.PlayerResponse;
 
 @RestController
 @RequestMapping("/api")
@@ -19,22 +20,29 @@ public class PlayerRegistrationController {
     private final PlayerRegistrationService playerRegistrationService;
 
     @GetMapping("/my-team/players")
-    public ResponseEntity<List<Player>> getMyTeamPlayers(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<List<PlayerResponse>> getMyTeamPlayers(@AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails.getTeamId() == null) {
             return ResponseEntity.badRequest().build();
         }
-        List<Player> players = playerRegistrationService.getPlayersByTeam(userDetails.getTeamId());
+        List<PlayerResponse> players = playerRegistrationService.getPlayersByTeam(userDetails.getTeamId());
         // Sort active first logic could be here or frontend. Frontend already does it.
         return ResponseEntity.ok(players);
     }
 
     @PostMapping("/players")
-    public ResponseEntity<Player> registerPlayer(@AuthenticationPrincipal CustomUserDetails userDetails,
+    public ResponseEntity<PlayerResponse> registerPlayer(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                  @RequestBody com.leagueos.modules.registration.api.dto.PlayerRegistrationRequest request) {
         if (userDetails.getTeamId() == null) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(playerRegistrationService.registerPlayer(request, userDetails.getTeamId(), UUID.fromString(userDetails.getTenantId())));
+    }
+
+    @PostMapping("/teams/{teamId}/players/batch")
+    public ResponseEntity<List<PlayerResponse>> registerPlayersBatch(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                             @PathVariable UUID teamId,
+                                                             @RequestBody List<com.leagueos.modules.registration.api.dto.BatchPlayerRegistrationRequest> requestList) {
+        return ResponseEntity.ok(playerRegistrationService.registerPlayersBatch(requestList, teamId, UUID.fromString(userDetails.getTenantId())));
     }
 
     @PatchMapping("/players/{id}/activate")

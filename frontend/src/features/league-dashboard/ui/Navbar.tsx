@@ -1,14 +1,16 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { UserCircle } from 'lucide-react';
 import { useTenantSettings } from '../../tenant/context/TenantSettingsContext';
 
 export const Navbar = () => {
     const { settings } = useTenantSettings();
+    const location = useLocation();
 
     return (
         <nav className="w-full bg-white border-b border-slate-200 shadow-sm relative overflow-hidden">
             {/* Background Pattern/Gradient Overlay (Optional for texture) */}
             <div className="absolute inset-0 bg-slate-50/50 pointer-events-none" />
+
 
             <div className="container mx-auto px-4 py-6 md:py-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                 {/* Left: Brand */}

@@ -21,6 +21,9 @@ public class LeagueController {
     private final LeagueService leagueService;
     private final com.leagueos.modules.competition.service.FixtureGeneratorService fixtureGeneratorService;
     private final com.leagueos.modules.competition.service.MatchImportService matchImportService;
+    private final com.leagueos.modules.league.service.TeamRegistrationService teamRegistrationService;
+    private final com.leagueos.modules.competition.service.PlayoffService playoffService;
+    private final com.leagueos.modules.competition.persistence.PlayoffTieRepository playoffTieRepository;
 
     @GetMapping("/tenants")
     public List<Tenant> getTenants() {
@@ -44,7 +47,22 @@ public class LeagueController {
         TenantContext.setCurrentTenant(tenantId);
         try {
             team.setTenantId(tenantId);
+            if (team.getRepresentative() != null) {
+                team.getRepresentative().setTenantId(tenantId);
+            }
             return leagueService.createTeam(team);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @DeleteMapping("/teams/{teamId}")
+    public void deleteTeam(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID teamId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            leagueService.softDeleteTeam(teamId);
         } finally {
             TenantContext.clear();
         }
@@ -121,6 +139,111 @@ public class LeagueController {
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(matchImportService.importMatchesFromExcel(id, file));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PostMapping("/seasons/{id}/enroll")
+    public ResponseEntity<List<com.leagueos.modules.league.domain.TeamRegistration>> enrollTeams(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id,
+            @RequestBody List<UUID> teamIds) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(teamRegistrationService.enrollTeamsToSeason(id, teamIds, tenantId));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @GetMapping("/seasons/{id}/teams")
+    public ResponseEntity<List<com.leagueos.modules.league.domain.TeamRegistration>> getEnrolledTeams(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(teamRegistrationService.getEnrolledTeams(id));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @DeleteMapping("/seasons/{id}/teams/{teamId}")
+    public ResponseEntity<Void> unenrollTeam(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id,
+            @PathVariable UUID teamId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            teamRegistrationService.unenrollTeam(id, teamId);
+            return ResponseEntity.ok().build();
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @DeleteMapping("/seasons/{id}")
+    public ResponseEntity<Void> deleteSeason(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            leagueService.deleteDraftSeason(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    public static class GeneratePlayoffRequest {
+        public com.leagueos.modules.competition.domain.PlayoffRound startingRound;
+        public List<UUID> seededTeamIds;
+        public int numLegs;
+    }
+
+    @PostMapping("/seasons/{id}/playoffs/generate")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_' + #tenantId.toString().replace('-', '_').toUpperCase())")
+    public ResponseEntity<?> generatePlayoffs(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id,
+            @RequestBody GeneratePlayoffRequest request) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            playoffService.generateBracket(id, request.startingRound, request.seededTeamIds, request.numLegs);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @GetMapping("/seasons/{id}/playoffs/bracket")
+    public ResponseEntity<?> getPlayoffBracket(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(playoffTieRepository.findBySeasonId(id));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @DeleteMapping("/seasons/{id}/playoffs")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_' + #tenantId.toString().replace('-', '_').toUpperCase())")
+    public ResponseEntity<?> deletePlayoffs(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            playoffService.deleteBracket(id);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         } finally {

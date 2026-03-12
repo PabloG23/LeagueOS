@@ -4,12 +4,14 @@ import { useState } from 'react';
 interface AddPlayerModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (player: { name: string; photoUrl: string }) => void;
+    onSave: (player: { name: string; photoUrl: string, jerseyNumber?: number }) => void;
+    requireJerseyNumbers?: boolean;
 }
 
-export const AddPlayerModal = ({ isOpen, onClose, onSave }: AddPlayerModalProps) => {
+export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }: AddPlayerModalProps) => {
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
+    const [jerseyNumber, setJerseyNumber] = useState('');
     const [dragging, setDragging] = useState(false);
 
     if (!isOpen) return null;
@@ -20,11 +22,13 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave }: AddPlayerModalProps)
         const mockPhoto = `https://api.dicebear.com/7.x/initials/svg?seed=${name}`;
         onSave({
             name: `${name} ${surname}`,
-            photoUrl: mockPhoto
+            photoUrl: mockPhoto,
+            jerseyNumber: jerseyNumber ? parseInt(jerseyNumber, 10) : undefined
         });
         // Reset form
         setName('');
         setSurname('');
+        setJerseyNumber('');
         onClose();
     };
 
@@ -90,6 +94,20 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave }: AddPlayerModalProps)
                             />
                         </div>
                     </div>
+
+                    {requireJerseyNumbers && (
+                        <div>
+                            <label className="text-sm font-medium text-slate-700">Dorsal / Número de Playera</label>
+                            <input
+                                type="number"
+                                required={requireJerseyNumbers}
+                                value={jerseyNumber}
+                                onChange={(e) => setJerseyNumber(e.target.value)}
+                                className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                placeholder="Ej. 10"
+                            />
+                        </div>
+                    )}
 
                     <div className="pt-4 flex justify-end gap-3">
                         <button

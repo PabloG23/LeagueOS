@@ -22,6 +22,7 @@ export type TeamStanding = {
     lost: number;
     goalsFor: number;
     goalsAgainst: number;
+    goalDifference: number;
     points: number;
     form: ('W' | 'D' | 'L')[];
 };
@@ -125,6 +126,18 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 accessorKey: 'goalsAgainst',
                 header: 'GC',
                 cell: (info) => <span className="text-slate-500 font-medium hidden md:table-cell whitespace-nowrap">{info.getValue<number>()}</span>,
+            },
+            {
+                accessorKey: 'goalDifference',
+                header: 'DG',
+                cell: (info) => {
+                    const diff = info.getValue<number>();
+                    return (
+                        <span className={`font-bold hidden md:table-cell whitespace-nowrap ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                            {diff > 0 ? `+${diff}` : diff}
+                        </span>
+                    );
+                },
             },
             {
                 accessorKey: 'points',
@@ -238,8 +251,8 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                             transition={{ delay: i * 0.02, duration: 0.15, ease: "easeOut" }}
                                             className={cn(
                                                 "border-b border-slate-50 transition-colors hover:bg-slate-50 group",
-                                                i === 0 && "bg-amber-50/30", // Highlight 1st place subtle
-                                                i >= table.getRowModel().rows.length - 2 && "bg-rose-50/20" // Relegation zone subtle
+                                                i < 8 && "bg-emerald-100", // Liguilla
+                                                i >= table.getRowModel().rows.length - 2 && "bg-rose-100" // Descenso
                                             )}
                                         >
                                             {row.getVisibleCells().map((cell) => (

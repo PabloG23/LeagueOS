@@ -5,6 +5,7 @@ export interface Player {
     name: string;
     photoUrl: string;
     isActive: boolean;
+    jerseyNumber?: number;
     stats?: {
         yellowCards: number;
         redCards: number;
@@ -16,9 +17,10 @@ interface PlayerCardProps {
     onToggleStatus?: (id: string) => void;
     onDelete?: (id: string) => void;
     onEdit?: (id: string) => void;
+    requireJerseyNumbers?: boolean;
 }
 
-export const PlayerCard = ({ player, onToggleStatus, onDelete, onEdit }: PlayerCardProps) => {
+export const PlayerCard = ({ player, onToggleStatus, onDelete, onEdit, requireJerseyNumbers }: PlayerCardProps) => {
     const showActions = !!onEdit || !!onDelete;
 
     return (
@@ -69,6 +71,18 @@ export const PlayerCard = ({ player, onToggleStatus, onDelete, onEdit }: PlayerC
                         absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-white
                         ${player.isActive ? 'bg-green-500' : 'bg-slate-400'}
                     `} />
+
+                    {/* Jersey Number Badge */}
+                    {requireJerseyNumbers && (
+                        <div className={`
+                            absolute -top-1 -right-1 flex items-center justify-center
+                            w-7 h-7 bg-white text-slate-800 font-bold text-xs rounded-full 
+                            shadow-md border border-slate-100
+                            ${!player.isActive && 'grayscale opacity-75'}
+                        `} title="Dorsal">
+                            {player.jerseyNumber || '-'}
+                        </div>
+                    )}
                 </div>
 
                 {/* Player Info */}

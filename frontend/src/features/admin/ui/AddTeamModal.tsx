@@ -1,17 +1,20 @@
 import { X, Upload, Save, Shield } from 'lucide-react';
 import { useState } from 'react';
+import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 
 interface AddTeamModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (team: { name: string; representativeName: string; representativePhone: string; logoUrl: string; seasonId: string }) => void;
+    onSave: (team: { name: string; representative?: { firstName: string; lastName: string; phone: string }; logoUrl: string; }) => void;
 }
 
 export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => {
+    const { settings } = useTenantSettings();
+    const isSanLucas = settings.tenantId === '22222222-2222-2222-2222-222222222222';
+
     const [name, setName] = useState('');
     const [representativeName, setRepresentativeName] = useState('');
     const [representativePhone, setRepresentativePhone] = useState('');
-    const [seasonId, setSeasonId] = useState('00000000-0000-0000-0000-000000000001'); // Default mock UUID for 1ra Fuerza
     const [dragging, setDragging] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -20,9 +23,12 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
     const validateForm = () => {
         const newErrors: { [key: string]: string } = {};
         if (!name.trim()) newErrors.name = 'El nombre del equipo es obligatorio';
-        if (!representativeName.trim()) newErrors.representativeName = 'El nombre del representante es obligatorio';
-        if (!representativePhone.trim()) newErrors.representativePhone = 'El teléfono es obligatorio';
-        else if (representativePhone.replace(/\D/g, '').length < 10) newErrors.representativePhone = 'Ingresa un teléfono válido de 10 dígitos';
+        
+        if (!isSanLucas) {
+            if (!representativeName.trim()) newErrors.representativeName = 'El nombre del representante es obligatorio';
+            if (!representativePhone.trim()) newErrors.representativePhone = 'El teléfono es obligatorio';
+            else if (representativePhone.replace(/\D/g, '').length < 10) newErrors.representativePhone = 'Ingresa un teléfono válido de 10 dígitos';
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -37,10 +43,12 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
         const mockPhoto = `https://api.dicebear.com/7.x/identicon/svg?seed=${name}`;
         onSave({
             name,
-            representativeName,
-            representativePhone,
             logoUrl: mockPhoto,
-            seasonId
+            representative: isSanLucas ? undefined : {
+                firstName: representativeName.split(' ')[0],
+                lastName: representativeName.split(' ').slice(1).join(' '),
+                phone: representativePhone
+            }
         });
 
         // Reset form
@@ -111,51 +119,42 @@ export const AddTeamModal = ({ isOpen, onClose, onSave }: AddTeamModalProps) => 
                         {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Torneo / Fuerza *</label>
-                        <select
-                            value={seasonId}
-                            onChange={(e) => setSeasonId(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                        >
-                            <option value="00000000-0000-0000-0000-000000000001">1ra Fuerza - Temporada Regular</option>
-                            <option value="00000000-0000-0000-0000-000000000002">2da Fuerza - Temporada Regular</option>
-                            <option value="00000000-0000-0000-0000-000000000003">3ra Fuerza - Temporada Regular</option>
-                        </select>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Representante *</label>
-                            <input
-                                type="text"
-                                value={representativeName}
-                                onChange={(e) => {
-                                    setRepresentativeName(e.target.value);
-                                    if (errors.representativeName) setErrors({ ...errors, representativeName: '' });
-                                }}
-                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.representativeName ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
-                                    }`}
-                                placeholder="Nombre completo"
-                            />
-                            {errors.representativeName && <p className="text-xs text-red-500 mt-1">{errors.representativeName}</p>}
+
+                    {!isSanLucas && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700">Representante *</label>
+                                <input
+                                    type="text"
+                                    value={representativeName}
+                                    onChange={(e) => {
+                                        setRepresentativeName(e.target.value);
+                                        if (errors.representativeName) setErrors({ ...errors, representativeName: '' });
+                                    }}
+                                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.representativeName ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
+                                        }`}
+                                    placeholder="Nombre completo"
+                                />
+                                {errors.representativeName && <p className="text-xs text-red-500 mt-1">{errors.representativeName}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700">Teléfono / WhatsApp *</label>
+                                <input
+                                    type="tel"
+                                    value={representativePhone}
+                                    onChange={(e) => {
+                                        setRepresentativePhone(e.target.value);
+                                        if (errors.representativePhone) setErrors({ ...errors, representativePhone: '' });
+                                    }}
+                                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.representativePhone ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
+                                        }`}
+                                    placeholder="10 dígitos"
+                                />
+                                {errors.representativePhone && <p className="text-xs text-red-500 mt-1">{errors.representativePhone}</p>}
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Teléfono / WhatsApp *</label>
-                            <input
-                                type="tel"
-                                value={representativePhone}
-                                onChange={(e) => {
-                                    setRepresentativePhone(e.target.value);
-                                    if (errors.representativePhone) setErrors({ ...errors, representativePhone: '' });
-                                }}
-                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.representativePhone ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
-                                    }`}
-                                placeholder="10 dígitos"
-                            />
-                            {errors.representativePhone && <p className="text-xs text-red-500 mt-1">{errors.representativePhone}</p>}
-                        </div>
-                    </div>
+                    )}
 
                     <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-2">
                         <button

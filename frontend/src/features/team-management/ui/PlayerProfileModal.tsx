@@ -1,11 +1,14 @@
-import { X, Shield, Trophy } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Shield, Trophy, Loader2 } from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
+import { leagueApi } from '@/shared/api/league-api';
 
 interface Player {
     id: string;
     name: string;
     photoUrl: string;
     isActive: boolean;
+    jerseyNumber?: number;
     // Mock stats for demo
     stats?: {
         matchesPlayed: number;
@@ -30,14 +33,48 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
 
     if (!isOpen || !player) return null;
 
-    // Use mock stats if not present
-    const stats = player.stats || {
-        matchesPlayed: Math.floor(Math.random() * 10) + 1,
-        goals: Math.floor(Math.random() * 5),
-        yellowCards: Math.floor(Math.random() * 3),
+    const [isFetching, setIsFetching] = useState(false);
+    const [stats, setStats] = useState({
+        matchesPlayed: 0,
+        goals: 0,
+        yellowCards: 0,
         redCards: 0,
-        suspendedUntilMatchday: null
-    };
+        suspendedUntilMatchday: null as number | null
+    });
+
+    useEffect(() => {
+        if (!isOpen || !player || !settings?.tenantId) return;
+
+        const loadStats = async () => {
+            setIsFetching(true);
+            try {
+                // If player already has stats injected from a parent component, use those
+                if (player.stats) {
+                    setStats({
+                        ...player.stats,
+                        suspendedUntilMatchday: player.stats.suspendedUntilMatchday ?? null
+                    });
+                    return;
+                }
+
+                // Otherwise fetch fresh from the backend
+                const response = await leagueApi.getPlayerStats(player.id, settings.tenantId as string);
+                setStats({
+                    matchesPlayed: response.data.matchesPlayed || 0,
+                    goals: response.data.goals || 0,
+                    yellowCards: response.data.yellowCards || 0,
+                    redCards: response.data.redCards || 0,
+                    suspendedUntilMatchday: response.data.suspendedUntilMatchday || null
+                });
+            } catch (error) {
+                console.error("Failed to load player stats", error);
+            } finally {
+                setIsFetching(false);
+            }
+        };
+
+        loadStats();
+    }, [isOpen, player, settings?.tenantId]);
 
     // Suspension Logic
     const isSuspended = stats.suspendedUntilMatchday && stats.suspendedUntilMatchday > currentMatchday;
@@ -76,7 +113,14 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
 
                 {/* Content */}
                 <div className="pt-14 pb-8 px-6 text-center">
-                    <h2 className="text-2xl font-bold text-slate-900">{player.name}</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 flex items-center justify-center gap-2">
+                        {settings?.requireJerseyNumbers && player.jerseyNumber && (
+                            <span className="inline-flex items-center justify-center min-w-[32px] h-8 px-2 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-sm font-black tracking-tighter" title="Dorsal">
+                                {player.jerseyNumber}
+                            </span>
+                        )}
+                        {player.name}
+                    </h2>
                     <p className="text-slate-500 font-medium mb-4">{player.teamName || 'Equipo'}</p>
 
                     {/* Status Badge */}
@@ -95,24 +139,30 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-4 gap-2 mb-8">
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <div className="text-xs text-slate-400 font-bold uppercase">Juegos</div>
-                            <div className="text-xl font-black text-slate-700">{stats.matchesPlayed}</div>
+                    {isFetching ? (
+                        <div className="flex justify-center items-center h-24 mb-8 text-slate-400">
+                            <Loader2 className="w-8 h-8 animate-spin" />
                         </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <div className="text-xs text-slate-400 font-bold uppercase">Goles</div>
-                            <div className="text-xl font-black text-slate-700">{stats.goals}</div>
+                    ) : (
+                        <div className="grid grid-cols-4 gap-2 mb-8">
+                            <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <div className="text-xs text-slate-400 font-bold uppercase">Juegos</div>
+                                <div className="text-xl font-black text-slate-700">{stats.matchesPlayed}</div>
+                            </div>
+                            <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <div className="text-xs text-slate-400 font-bold uppercase">Goles</div>
+                                <div className="text-xl font-black text-slate-700">{stats.goals}</div>
+                            </div>
+                            <div className="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
+                                <div className="text-xs text-yellow-600/70 font-bold uppercase">Amarillas</div>
+                                <div className="text-xl font-black text-yellow-600">{stats.yellowCards}</div>
+                            </div>
+                            <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+                                <div className="text-xs text-red-600/70 font-bold uppercase">Rojas</div>
+                                <div className="text-xl font-black text-red-600">{stats.redCards}</div>
+                            </div>
                         </div>
-                        <div className="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                            <div className="text-xs text-yellow-600/70 font-bold uppercase">Amarillas</div>
-                            <div className="text-xl font-black text-yellow-600">{stats.yellowCards}</div>
-                        </div>
-                        <div className="bg-red-50 p-2 rounded-lg border border-red-100">
-                            <div className="text-xs text-red-600/70 font-bold uppercase">Rojas</div>
-                            <div className="text-xl font-black text-red-600">{stats.redCards}</div>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Playoff Eligibility (Feature Flagged Logic) */}
                     {minMatches > 0 && (

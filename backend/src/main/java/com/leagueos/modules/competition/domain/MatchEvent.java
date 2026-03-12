@@ -32,6 +32,9 @@ public class MatchEvent extends BaseEntity {
     @Column(name = "suspension_matchdays")
     private Integer suspensionMatchdays;
 
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
     public enum MatchEventType {
         GOAL, YELLOW_CARD, RED_CARD, APPEARANCE
     }

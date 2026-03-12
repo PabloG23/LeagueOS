@@ -11,4 +11,7 @@ import java.util.UUID;
 public interface TeamRegistrationRepository extends JpaRepository<TeamRegistration, UUID> {
     List<TeamRegistration> findBySeasonId(UUID seasonId);
     List<TeamRegistration> findByStatus(TeamRegistration.RegistrationStatus status);
+    List<TeamRegistration> findBySeasonIdAndStatus(UUID seasonId, TeamRegistration.RegistrationStatus status);
+    java.util.Optional<TeamRegistration> findBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
+    void deleteBySeasonId(UUID seasonId);
 }

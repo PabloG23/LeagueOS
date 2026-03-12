@@ -7,19 +7,15 @@ import { StandingsTable, TeamStanding } from './StandingsTable';
 import { StatsWidget } from './StatsWidget';
 import { TopDefenseWidget } from './TopDefenseWidget';
 import { TopScorersWidget } from './TopScorersWidget';
-import { TopRedCardsWidget } from './TopRedCardsWidget';
+import { DisciplineDashboardWidget } from './DisciplineDashboardWidget';
 import { Shield, Trophy } from 'lucide-react';
 import { LeadershipSection } from './LeadershipSection';
 import { GlobalFooter } from './GlobalFooter';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { DisciplineWidget } from './DisciplineWidget';
 import { FullCalendarModal } from './FullCalendarModal';
-
-
-
-
-
-import { leagueApi } from '@/shared/api/league-api';
+import { PublicPlayoffsView } from './PublicPlayoffsView';
+import { leagueApi, Season, Match } from '@/shared/api/league-api';
 
 export const LeagueDashboard = () => {
     const { settings } = useTenantSettings();
@@ -28,51 +24,96 @@ export const LeagueDashboard = () => {
 
     const [finalStandingsData, setStandingsData] = useState<TeamStanding[] | Record<string, TeamStanding[]>>([]);
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'regular' | 'playoffs'>('regular');
+    const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+    const [allActiveSeasons, setAllActiveSeasons] = useState<Season[]>([]);
+    const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
+    const [loadingUpcoming, setLoadingUpcoming] = useState(true);
+
+    const [generalRedCards, setGeneralRedCards] = useState<any[]>([]);
+    const [matchdayRedCards, setMatchdayRedCards] = useState<any[]>([]);
+    const [teamRedCards, setTeamRedCards] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!settings?.tenantId) return;
+        leagueApi.getSeasons(settings.tenantId)
+            .then(res => {
+                const active = res.data.find(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
+                const actives = res.data.filter(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
+                if (active) setActiveSeason(active);
+                setAllActiveSeasons(actives);
+            })
+            .catch(console.error);
+            
+        leagueApi.getUpcomingMatches(settings.tenantId)
+            .then(res => setUpcomingMatches(res.data))
+            .catch(err => console.error("Error fetching upcoming matches", err))
+            .finally(() => setLoadingUpcoming(false));
+    }, [settings?.tenantId]);
 
     useEffect(() => {
         const fetchStandings = async () => {
-            if (!settings?.tenantId) return;
+            if (!settings?.tenantId || allActiveSeasons.length === 0) return;
             try {
-                const { data: teams } = await leagueApi.getTeams(settings.tenantId);
-                const baseStandings: TeamStanding[] = teams.map((t, idx) => ({
-                    id: t.id,
-                    rank: idx + 1,
-                    team: t.name,
-                    played: 0, won: 0, drawn: 0, lost: 0,
-                    goalsFor: 0, goalsAgainst: 0, goalDifference: 0,
-                    points: 0,
-                    form: []
-                }));
-                // Real Standings calc needs backend endpoint, defaulting to 0s
-                if (settings.tenantId === '22222222-2222-2222-2222-222222222222') {
-                    // San Lucas Grouping
-                    const grouped: Record<string, TeamStanding[]> = {
-                        "Primera Fuerza": [],
-                        "Segunda Fuerza": [],
-                        "Tercera Fuerza": [],
-                    };
-                    baseStandings.forEach(t => {
-                        if (t.team.includes('1ra')) grouped["Primera Fuerza"].push(t);
-                        else if (t.team.includes('2da')) grouped["Segunda Fuerza"].push(t);
-                        else if (t.team.includes('3ra')) grouped["Tercera Fuerza"].push(t);
-                        else grouped["Primera Fuerza"].push(t); // fallback
-                    });
-
-                    // Re-rank 1 to N inside each division
-                    Object.values(grouped).forEach(group => {
-                        group.forEach((t, idx) => t.rank = idx + 1);
-                    });
-
+                if (settings.tenantId === '22222222-2222-2222-2222-222222222222' || true) {
+                    // Dynamic grouping for all tenants
+                    const grouped: Record<string, TeamStanding[]> = {};
+                    
+                    for (const season of allActiveSeasons) {
+                        try {
+                            const { data: standings } = await leagueApi.getSeasonStandings(season.id, settings.tenantId as string);
+                            
+                            // Use the short name of the season for the tab
+                            const shortName = season.name.includes(' - ') ? season.name.split(' - ')[1] : season.name;
+                            grouped[shortName] = standings;
+                        } catch (err) {
+                            console.error(`Error fetching standings for season ${season.name}`, err);
+                        }
+                    }
+                    
                     setStandingsData(grouped);
                 } else {
+                    // Legacy fallback
+                    const { data: teams } = await leagueApi.getTeams(settings.tenantId as string);
+                    const baseStandings: TeamStanding[] = teams.map((t, idx) => ({
+                        id: t.id,
+                        rank: idx + 1,
+                        team: t.name,
+                        played: 0, won: 0, drawn: 0, lost: 0,
+                        goalsFor: 0, goalsAgainst: 0, goalDifference: 0,
+                        points: 0,
+                        form: []
+                    }));
                     setStandingsData(baseStandings);
                 }
             } catch (error) {
-                console.error("Error fetching teams for standings", error);
+                console.error("Error fetching standings", error);
             }
         };
         fetchStandings();
-    }, [settings?.tenantId]);
+    }, [settings?.tenantId, allActiveSeasons]);
+
+    useEffect(() => {
+        if (!settings?.tenantId || !isSanLucas) return;
+
+        const fetchDisciplineStats = async (tenantId: string) => {
+            try {
+                const [generalRes, matchdayRes, teamRes] = await Promise.all([
+                    leagueApi.getGeneralRedCards(tenantId),
+                    leagueApi.getMatchdayRedCards(tenantId),
+                    leagueApi.getTeamRedCards(tenantId)
+                ]);
+
+                setGeneralRedCards(generalRes.data || []);
+                setMatchdayRedCards(matchdayRes.data || []);
+                setTeamRedCards(teamRes.data || []);
+            } catch (error) {
+                console.error("Error fetching discipline stats", error);
+            }
+        };
+
+        fetchDisciplineStats(settings.tenantId);
+    }, [settings?.tenantId, isSanLucas]);
 
     const flatStandings = Array.isArray(finalStandingsData)
         ? finalStandingsData
@@ -90,41 +131,66 @@ export const LeagueDashboard = () => {
         { id: '5', name: 'Luis Hernández', team: 'Papitos', teamId: '6', goals: 8, rank: 5 },
     ];
 
-    // Mock Red Cards for TopRedCardsWidget (Top 10)
-    const mockRedCards = [
-        { id: '101', name: 'Oscar García', team: 'Manguitos', teamId: '3', redCards: 4, rank: 1 },
-        { id: '102', name: 'Roberto Díaz', team: 'Lagartos', teamId: '4', redCards: 3, rank: 2 },
-        { id: '103', name: 'Eduardo Ruiz', team: 'Wolves', teamId: '1', redCards: 3, rank: 3 },
-        { id: '104', name: 'Mario Gómez', team: 'San Felipe', teamId: '2', redCards: 2, rank: 4 },
-        { id: '105', name: 'Hugo Silva', team: 'Halcones', teamId: '5', redCards: 2, rank: 5 },
-        { id: '106', name: 'Daniel Castro', team: 'Papitos', teamId: '6', redCards: 2, rank: 6 },
-        { id: '107', name: 'Andrés Reyes', team: 'Perla', teamId: '7', redCards: 1, rank: 7 },
-        { id: '108', name: 'Javier Morales', team: 'SNTE', teamId: '8', redCards: 1, rank: 8 },
-        { id: '109', name: 'Fernando Cruz', team: 'Independencia', teamId: '9', redCards: 1, rank: 9 },
-        { id: '110', name: 'Héctor Vega', team: 'D. Corona', teamId: '10', redCards: 1, rank: 10 },
-    ];
-
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
             <Navbar />
-
-            <section>
-                <MatchdayCarousel onViewAll={() => setIsCalendarModalOpen(true)} />
-            </section>
+            {/* Dynamic Carousels for all active seasons */}
+            <div className="w-full bg-slate-50 relative z-10 w-full overflow-hidden">
+                {loadingUpcoming ? (
+                    <section className={`${settings?.matchTickerBackgroundClass || 'bg-slate-900'} py-6 border-b border-white/10`}><div className="text-center text-white">Cargando próximas jornadas...</div></section>
+                ) : allActiveSeasons.length === 0 ? (
+                    <section className={`${settings?.matchTickerBackgroundClass || 'bg-slate-900'} py-6 border-b border-white/10`}><div className="text-center text-white font-medium">No hay torneos activos.</div></section>
+                ) : (
+                    <MatchdayCarousel
+                        activeSeasons={allActiveSeasons}
+                        upcomingMatches={upcomingMatches}
+                        onViewAll={() => setIsCalendarModalOpen(true)}
+                    />
+                )}
+            </div>
 
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Main Content - Standings (9 cols) */}
-                    <div className="lg:col-span-9">
-                        <StandingsTable data={finalStandingsData} />
+                    {/* Main Content (9 cols) */}
+                    <div className="lg:col-span-9 flex flex-col gap-6">
+                        {/* Tab Switcher */}
+                        {activeSeason && (
+                            <div className="flex p-1 bg-slate-200/50 rounded-xl w-fit">
+                                <button
+                                    onClick={() => setActiveTab('regular')}
+                                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'regular' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Fase Regular
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('playoffs')}
+                                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'playoffs' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    <Trophy className="w-4 h-4" />
+                                    Liguilla
+                                </button>
+                            </div>
+                        )}
+
+                        {activeTab === 'regular' ? (
+                            <StandingsTable data={finalStandingsData} />
+                        ) : (
+                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                <h3 className="text-xl font-black text-slate-800 mb-6">Fase Final del Torneo</h3>
+                                {activeSeason ? (
+                                    <PublicPlayoffsView tenantId={settings?.tenantId || ''} seasonId={activeSeason.id} />
+                                ) : (
+                                    <div className="text-center text-slate-500 py-12">Torneo no disponible</div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Sidebar Widgets (3 cols) */}
                     <div className="lg:col-span-3 flex flex-col gap-6">
-                        {isSanLucas ? (
-                            <TopRedCardsWidget players={mockRedCards} />
-                        ) : (
+                        {/* Only Scorers widget in sidebar if San Lucas, or default for others */}
+                        {!isSanLucas && (
                             <TopScorersWidget scorers={mockScorers} />
                         )}
 
@@ -145,6 +211,17 @@ export const LeagueDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-8 pt-8 border-t border-slate-200">
+                    {/* Full width panel - Moved from sidebar */}
+                    {isSanLucas && (
+                        <div className="col-span-full">
+                            <DisciplineDashboardWidget
+                                generalPlayers={generalRedCards}
+                                matchdayPlayers={matchdayRedCards}
+                                teams={teamRedCards}
+                            />
+                        </div>
+                    )}
+
                     <div className="col-span-full">
                         <LeadershipSection />
                     </div>

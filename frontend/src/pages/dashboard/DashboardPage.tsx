@@ -22,19 +22,19 @@ export const DashboardPage = () => {
                         onClick={() => setActiveTab('seasons')}
                         className={`w-full text-left font-medium transition-opacity ${activeTab === 'seasons' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
                     >
-                        Seasons & Standings
+                        Torneos y Posiciones
                     </button>
                     <button
                         onClick={() => setActiveTab('teams')}
                         className={`w-full text-left font-medium transition-opacity ${activeTab === 'teams' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
                     >
-                        Teams
+                        Equipos
                     </button>
                     <button
                         onClick={() => setActiveTab('matches')}
                         className={`w-full text-left font-medium transition-opacity ${activeTab === 'matches' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
                     >
-                        Match Scheduler
+                        Calendario de Partidos
                     </button>
                 </nav>
             </aside>
@@ -44,7 +44,7 @@ export const DashboardPage = () => {
                 <header className="mb-8 border-b pb-4 flex justify-between items-center">
                     <div>
                         <h1 className="text-3xl font-extrabold tracking-tight">{activeTenant.name}</h1>
-                        <p className="text-muted-foreground">{activeTenant.sport} MANAGEMENT</p>
+                        <p className="text-muted-foreground">{activeTenant.sport} ADMINISTRACIÓN</p>
                     </div>
                 </header>
 

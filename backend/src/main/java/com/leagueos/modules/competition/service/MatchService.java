@@ -24,6 +24,7 @@ public class MatchService {
     private final MatchEventRepository matchEventRepository;
     private final PlayerRepository playerRepository;
     private final TenantSettingsService tenantSettingsService;
+    private final PlayoffService playoffService;
 
     @Transactional
     public void submitMatchReport(UUID matchId, List<MatchEvent> events) {
@@ -31,17 +32,23 @@ public class MatchService {
         Match match = matchRepository.findById(matchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Match not found: " + matchId));
 
-        // 2. Clear existing events (if re-submitting) or just append? 
-        // Assuming append or fresh submission. For simplicity, we save all.
-        // In a real app, we might check for duplicates or clear previous reports.
+        // 2. Clear existing events to overwrite
+        matchEventRepository.deleteByMatchId(matchId);
         
         // 3. Process Events
         int homeGoals = 0;
         int awayGoals = 0;
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
 
-        for (MatchEvent event : events) {
-            event.setMatch(match); // Link event to match
+        for (MatchEvent eventRaw : events) {
+            MatchEvent event = new MatchEvent();
+            event.setMatch(match);
+            event.setTenantId(match.getTenantId());
+            event.setPlayer(eventRaw.getPlayer());
+            event.setTeam(eventRaw.getTeam());
+            event.setEventType(eventRaw.getEventType());
+            event.setSuspensionMatchdays(eventRaw.getSuspensionMatchdays());
+            event.setNotes(eventRaw.getNotes());
             matchEventRepository.save(event);
 
             // Auto-Score
@@ -73,9 +80,33 @@ public class MatchService {
         match.setAwayScore(awayGoals);
         match.setStatus(Match.MatchStatus.FINISHED);
         matchRepository.save(match);
+
+        // 5. If this is a playoff match, try to resolve the tie
+        if (com.leagueos.modules.competition.domain.MatchStage.PLAYOFFS.equals(match.getStage()) && match.getPlayoffTie() != null) {
+            playoffService.resolveTie(match.getPlayoffTie().getId());
+        }
     }
     
     public List<Match> getMatchesByMatchday(Integer matchday) {
         return matchRepository.findByMatchday(matchday);
+    }
+
+    public List<MatchEvent> getMatchEvents(UUID matchId) {
+        return matchEventRepository.findByMatchId(matchId);
+    }
+
+    @Transactional
+    public Match updateMatchSchedule(UUID matchId, com.leagueos.modules.competition.api.dto.UpdateMatchScheduleRequest request) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found: " + matchId));
+
+        if (!match.getTenantId().equals(com.leagueos.shared.context.TenantContext.getCurrentTenant())) {
+             throw new IllegalStateException("Match does not belong to the current tenant");
+        }
+
+        match.setMatchDate(request.getMatchDate());
+        match.setLocation(request.getLocation());
+
+        return matchRepository.save(match);
     }
 }

@@ -3,9 +3,9 @@ package com.leagueos.modules.competition.service;
 import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.persistence.MatchRepository;
 import com.leagueos.modules.league.domain.Season;
-import com.leagueos.modules.league.domain.Team;
+import com.leagueos.modules.league.domain.TeamRegistration;
 import com.leagueos.modules.league.persistence.SeasonRepository;
-import com.leagueos.modules.league.persistence.TeamRepository;
+import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.shared.context.TenantContext;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -30,12 +30,12 @@ import java.util.UUID;
 public class MatchImportService {
 
     private final MatchRepository matchRepository;
-    private final TeamRepository teamRepository;
+    private final TeamRegistrationRepository teamRegistrationRepository;
     private final SeasonRepository seasonRepository;
 
-    public MatchImportService(MatchRepository matchRepository, TeamRepository teamRepository, SeasonRepository seasonRepository) {
+    public MatchImportService(MatchRepository matchRepository, TeamRegistrationRepository teamRegistrationRepository, SeasonRepository seasonRepository) {
         this.matchRepository = matchRepository;
-        this.teamRepository = teamRepository;
+        this.teamRegistrationRepository = teamRegistrationRepository;
         this.seasonRepository = seasonRepository;
     }
 
@@ -46,8 +46,12 @@ public class MatchImportService {
         Season season = seasonRepository.findByIdAndTenantId(parsedSeasonId, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Season not found"));
 
+        if (matchRepository.existsBySeasonIdAndTenantId(parsedSeasonId, tenantId)) {
+            throw new IllegalStateException("Este torneo ya tiene un calendario cargado. Si deseas subir uno nuevo, por favor elimina este torneo y crea uno nuevo.");
+        }
+
         List<Match> importedMatches = new ArrayList<>();
-        List<Team> allTeams = teamRepository.findByTenantId(tenantId);
+        List<TeamRegistration> enrolledTeams = teamRegistrationRepository.findBySeasonIdAndStatus(parsedSeasonId, TeamRegistration.RegistrationStatus.APPROVED);
 
         try (InputStream is = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(is)) {
@@ -73,22 +77,27 @@ public class MatchImportService {
                     continue;
                 }
 
-                Team homeTeam = findTeamByName(allTeams, homeTeamName);
-                Team awayTeam = findTeamByName(allTeams, awayTeamName);
-
-                if (homeTeam == null) {
-                    throw new IllegalArgumentException(String.format("Fila %d: El equipo local '%s' no está registrado en la liga.", row.getRowNum() + 1, homeTeamName));
+                // Skip the template example row silently if the user left it in
+                if (homeTeamName.equalsIgnoreCase("FC Ejemplo Local") && awayTeamName.equalsIgnoreCase("FC Ejemplo Visitante")) {
+                    continue;
                 }
-                if (awayTeam == null) {
-                    throw new IllegalArgumentException(String.format("Fila %d: El equipo visitante '%s' no está registrado en la liga.", row.getRowNum() + 1, awayTeamName));
+
+                TeamRegistration homeReg = findTeamRegistrationByName(enrolledTeams, homeTeamName);
+                TeamRegistration awayReg = findTeamRegistrationByName(enrolledTeams, awayTeamName);
+
+                if (homeReg == null) {
+                    throw new IllegalArgumentException(String.format("Fila %d: El equipo local '%s' no está inscrito y aprobado en este torneo.", row.getRowNum() + 1, homeTeamName));
+                }
+                if (awayReg == null) {
+                    throw new IllegalArgumentException(String.format("Fila %d: El equipo visitante '%s' no está inscrito y aprobado en este torneo.", row.getRowNum() + 1, awayTeamName));
                 }
 
                 Match match = new Match();
                 match.setTenantId(tenantId);
                 match.setSeason(season);
                 match.setMatchday(matchday);
-                match.setHomeTeam(homeTeam);
-                match.setAwayTeam(awayTeam);
+                match.setHomeTeam(homeReg.getTeam());
+                match.setAwayTeam(awayReg.getTeam());
                 match.setStatus(Match.MatchStatus.SCHEDULED);
 
                 // Date is optional
@@ -113,16 +122,16 @@ public class MatchImportService {
 
             return matchRepository.saveAll(importedMatches);
 
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
              throw e; // Rethrow business validation errors as is
         } catch (Exception e) {
             throw new RuntimeException("Error al procesar el archivo Excel: " + e.getMessage(), e);
         }
     }
 
-    private Team findTeamByName(List<Team> teams, String name) {
-        return teams.stream()
-                .filter(t -> t.getName().equalsIgnoreCase(name))
+    private TeamRegistration findTeamRegistrationByName(List<TeamRegistration> registrations, String name) {
+        return registrations.stream()
+                .filter(reg -> reg.getTeam().getName().equalsIgnoreCase(name))
                 .findFirst()
                 .orElse(null);
     }

@@ -4,10 +4,11 @@ import com.leagueos.modules.registration.domain.Player;
 import com.leagueos.modules.registration.service.PlayerRegistrationService;
 import com.leagueos.shared.context.TenantContext;
 import lombok.RequiredArgsConstructor;
+import com.leagueos.modules.registration.api.dto.PlayerResponse;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.UUID;
+
 
 @RestController
 @RequestMapping("/api/registration")
@@ -18,7 +19,7 @@ public class RegistrationController {
     private final PlayerRegistrationService registrationService;
 
     @PostMapping("/players")
-    public Player registerPlayer(
+    public PlayerResponse registerPlayer(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @RequestBody com.leagueos.modules.registration.api.dto.PlayerRegistrationRequest request) {
         TenantContext.setCurrentTenant(tenantId);
@@ -30,7 +31,7 @@ public class RegistrationController {
     }
 
     @GetMapping("/teams/{teamId}/players")
-    public List<Player> getTeamPlayers(
+    public List<PlayerResponse> getTeamPlayers(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID teamId) {
         TenantContext.setCurrentTenant(tenantId);

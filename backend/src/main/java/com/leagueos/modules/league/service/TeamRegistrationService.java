@@ -54,4 +54,40 @@ public class TeamRegistrationService {
 
         return teamRegistrationRepository.save(registration);
     }
+
+    @Transactional
+    public java.util.List<TeamRegistration> enrollTeamsToSeason(UUID seasonId, java.util.List<UUID> teamIds, UUID tenantId) {
+        Season season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new RuntimeException("Season not found"));
+
+        java.util.List<TeamRegistration> registrations = new java.util.ArrayList<>();
+        for (UUID teamId : teamIds) {
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+
+            // Check if already registered
+            if (teamRegistrationRepository.findBySeasonIdAndTeamId(seasonId, teamId).isPresent()) {
+                continue;
+            }
+
+            TeamRegistration registration = new TeamRegistration();
+            registration.setTeam(team);
+            registration.setSeason(season);
+            registration.setStatus(TeamRegistration.RegistrationStatus.APPROVED);
+            registration.setTenantId(tenantId);
+            registrations.add(teamRegistrationRepository.save(registration));
+        }
+        return registrations;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<TeamRegistration> getEnrolledTeams(UUID seasonId) {
+        return teamRegistrationRepository.findBySeasonId(seasonId);
+    }
+
+    @Transactional
+    public void unenrollTeam(UUID seasonId, UUID teamId) {
+        teamRegistrationRepository.findBySeasonIdAndTeamId(seasonId, teamId)
+                .ifPresent(teamRegistrationRepository::delete);
+    }
 }

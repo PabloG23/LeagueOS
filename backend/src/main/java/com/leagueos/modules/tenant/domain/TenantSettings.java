@@ -22,6 +22,9 @@ public class TenantSettings extends BaseEntity {
     @Column(name = "enable_auto_suspensions")
     private boolean enableAutoSuspensions = false;
 
+    @Column(name = "require_jersey_numbers")
+    private boolean requireJerseyNumbers = false;
+
     @Column(name = "min_matches_for_playoffs")
     private Integer minMatchesForPlayoffs = 0;
 

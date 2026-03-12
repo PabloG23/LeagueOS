@@ -10,12 +10,13 @@ import { MatchResultsView } from '@/features/admin/ui/MatchResultsView';
 import { PlayerTransferView } from '@/features/admin/ui/PlayerTransferView';
 import { SeasonsView } from '@/features/admin/ui/SeasonsView';
 import { SeasonDetailsPage } from '@/pages/dashboard/SeasonDetailsPage';
-
 import { TenantSettingsProvider } from '@/features/tenant/context/TenantSettingsContext';
+import { ToastProvider } from '@/shared/components/ui/ToastContext';
 
 function App() {
     return (
         <BrowserRouter>
+            <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
                     {/* Default Redirect to Liga Mexiquense */}
@@ -70,6 +71,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </TenantSettingsProvider>
+            </ToastProvider>
         </BrowserRouter>
     );
 }

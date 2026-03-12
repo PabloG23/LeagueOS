@@ -36,6 +36,9 @@ public class Match extends BaseEntity {
     @Column(name = "match_date")
     private LocalDateTime matchDate;
 
+    @Column(name = "location")
+    private String location;
+
     @Column(name = "matchday")
     private Integer matchday;
 
@@ -48,6 +51,20 @@ public class Match extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MatchStatus status = MatchStatus.SCHEDULED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "stage")
+    private MatchStage stage = MatchStage.REGULAR;
+
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @JoinColumn(name = "playoff_tie_id")
+    private PlayoffTie playoffTie;
+
+    @Column(name = "leg_number")
+    private Integer legNumber;
+
+    @Column(name = "is_tiebreaker_required")
+    private Boolean isTiebreakerRequired = false;
 
     public enum MatchStatus {
         SCHEDULED, IN_PROGRESS, FINISHED, CANCELLED

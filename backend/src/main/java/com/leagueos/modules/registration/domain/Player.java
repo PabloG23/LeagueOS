@@ -24,14 +24,6 @@ public class Player extends BaseEntity {
     @JoinColumn(name = "person_id")
     private com.leagueos.modules.league.domain.Person person;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PlayerStatus status;
-
-    @ManyToOne
-    @JoinColumn(name = "team_id")
-    private Team team;
-
     @Column(name = "suspended_until_matchday")
     private Integer suspendedUntilMatchday;
 

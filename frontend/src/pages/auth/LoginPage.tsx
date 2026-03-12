@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
-import { Shield, Lock, User } from 'lucide-react';
+import { Shield, Lock, User, AlertCircle } from 'lucide-react';
 import api from '@/shared/api/league-api';
 
 export const LoginPage = () => {
@@ -18,6 +18,20 @@ export const LoginPage = () => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (!username.trim() && !password.trim()) {
+            setError('Por favor ingresa tu usuario y contraseña.');
+            return;
+        }
+        if (!username.trim()) {
+            setError('Por favor ingresa tu usuario.');
+            return;
+        }
+        if (!password.trim()) {
+            setError('Por favor ingresa tu contraseña.');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -52,7 +66,12 @@ export const LoginPage = () => {
             }
 
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Credenciales inválidas');
+            const serverMessage = err.response?.data;
+            if (typeof serverMessage === 'string' && serverMessage.trim() !== '') {
+                setError(serverMessage);
+            } else {
+                setError(err.response?.data?.message || 'Credenciales inválidas. Verifica tu usuario y contraseña.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -106,11 +125,16 @@ export const LoginPage = () => {
                         </p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-6">
+                    <form onSubmit={handleLogin} className="space-y-6" noValidate>
                         {error && (
-                            <div className="p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 flex items-center gap-2 animate-shake">
-                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                                {error}
+                            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-shake">
+                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-semibold text-red-800">No se pudo iniciar sesión</h4>
+                                    <p className="text-sm text-red-600 font-medium leading-relaxed">
+                                        {error}
+                                    </p>
+                                </div>
                             </div>
                         )}
 
@@ -125,7 +149,6 @@ export const LoginPage = () => {
                                         onChange={(e) => setUsername(e.target.value)}
                                         className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-slate-900 placeholder:text-slate-400"
                                         placeholder="ej. admin"
-                                        required
                                     />
                                 </div>
                             </div>
@@ -142,7 +165,6 @@ export const LoginPage = () => {
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-slate-900 placeholder:text-slate-400"
                                         placeholder="••••••••"
-                                        required
                                     />
                                 </div>
                             </div>

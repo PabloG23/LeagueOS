@@ -7,10 +7,13 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "teams")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Team extends BaseEntity {
 
     @Column(nullable = false)
@@ -19,7 +22,10 @@ public class Team extends BaseEntity {
     @Column(name = "logo_url")
     private String logoUrl;
 
-    @jakarta.persistence.ManyToOne
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
+
+    @jakarta.persistence.ManyToOne(cascade = jakarta.persistence.CascadeType.ALL)
     @jakarta.persistence.JoinColumn(name = "representative_id")
     private Person representative;
 

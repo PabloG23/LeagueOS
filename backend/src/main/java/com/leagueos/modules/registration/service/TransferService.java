@@ -17,6 +17,8 @@ public class TransferService {
 
     private final PlayerRepository playerRepository;
     private final TeamRepository teamRepository;
+    private final com.leagueos.modules.registration.persistence.SeasonRosterRepository seasonRosterRepository;
+    private final com.leagueos.modules.league.persistence.SeasonRepository seasonRepository;
 
     @Transactional
     public void transferPlayer(UUID playerId, UUID newTeamId) {
@@ -26,11 +28,17 @@ public class TransferService {
         Team newTeam = teamRepository.findById(newTeamId)
                 .orElseThrow(() -> new RuntimeException("New Team not found"));
 
-        // Update Team
-        player.setTeam(newTeam);
-        // Reset status to INACTIVE upon transfer
-        player.setStatus(PlayerStatus.INACTIVE);
+        com.leagueos.modules.league.domain.Season activeSeason = seasonRepository.findFirstByStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException("No active season found for transfer"));
 
-        playerRepository.save(player);
+        com.leagueos.modules.registration.domain.SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
+                .orElseThrow(() -> new RuntimeException("Player does not have an active roster in the current season"));
+
+        // Transfer to new Team
+        roster.setTeam(newTeam);
+        // Reset status to INACTIVE upon transfer (requires reactivation)
+        roster.setStatus(PlayerStatus.INACTIVE);
+
+        seasonRosterRepository.save(roster);
     }
 }

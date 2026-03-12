@@ -17,6 +17,7 @@ export interface TenantSettings {
     enableAutoSuspensions: boolean;
     minMatchesForPlayoffs: number;
     allowTransfers: boolean;
+    requireJerseyNumbers: boolean;
     themeClass?: string;
     footerAddress: string;
     footerPhone: string;
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
     enableAutoSuspensions: false,
     minMatchesForPlayoffs: 0,
     allowTransfers: false,
+    requireJerseyNumbers: false,
     themeClass: '',
     footerAddress: "Joaquín Fernández de Lizardi 408-A.<br />Col. Sánchez Colin. Toluca, Estado de México.<br />C.P. 50150.",
     footerPhone: "729 103 7941",
@@ -111,10 +113,11 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 const matchLeagueExact = matchPath("/:leagueSlug", location.pathname);
 
                 const slug = matchLeague?.params.leagueSlug || matchLeagueExact?.params.leagueSlug;
+                const normalizedSlug = slug?.toLowerCase();
 
-                if (slug) {
-                    console.log(`[TenantContext] Detected slug: ${slug}`);
-                    if (slug === 'ligaSanLucas') {
+                if (normalizedSlug) {
+                    console.log(`[TenantContext] Detected slug: ${slug} (normalized: ${normalizedSlug})`);
+                    if (normalizedSlug === 'ligasanlucas') {
                         tenantId = '22222222-2222-2222-2222-222222222222';
                         name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
                         logoUrl = "/san_lucas_logo.png";
@@ -138,7 +141,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                             { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
                             { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
                         ];
-                    } else if (slug === 'ligaMexiquense') {
+                    } else if (normalizedSlug === 'ligamexiquense') {
                         tenantId = '11111111-1111-1111-1111-111111111111';
                         name = "Liga Mexiquense";
                         logoUrl = "/logo.png";

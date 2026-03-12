@@ -11,4 +11,5 @@ public class PlayerRegistrationRequest {
     private LocalDate birthDate;
     private String profilePhotoUrl;
     private UUID teamId;
+    private Integer jerseyNumber;
 }
