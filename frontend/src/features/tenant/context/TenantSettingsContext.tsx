@@ -227,7 +227,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
 
     return (
         <TenantSettingsContext.Provider value={{ settings, isLoading }}>
-            {children}
+            {isLoading ? null : children}
         </TenantSettingsContext.Provider>
     );
 };
