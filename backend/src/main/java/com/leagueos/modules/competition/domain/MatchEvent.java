@@ -36,6 +36,6 @@ public class MatchEvent extends BaseEntity {
     private String notes;
 
     public enum MatchEventType {
-        GOAL, YELLOW_CARD, RED_CARD, APPEARANCE
+        GOAL, YELLOW_CARD, RED_CARD, APPEARANCE, DOUBLE_FORFEIT
     }
 }

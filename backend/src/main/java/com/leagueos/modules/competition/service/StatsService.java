@@ -124,7 +124,13 @@ public class StatsService {
             away.setGoalsAgainst(away.getGoalsAgainst() + homeScore);
             away.setGoalDifference(away.getGoalsFor() - away.getGoalsAgainst());
 
-            if (homeScore > awayScore) {
+            if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
+                home.setLost(home.getLost() + 1);
+                home.getForm().add("L");
+
+                away.setLost(away.getLost() + 1);
+                away.getForm().add("L");
+            } else if (homeScore > awayScore) {
                 home.setWon(home.getWon() + 1);
                 home.setPoints(home.getPoints() + 3);
                 home.getForm().add("W");

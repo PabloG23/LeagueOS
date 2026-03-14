@@ -58,6 +58,10 @@ public class PlayerRegistrationService {
 
     @Transactional
     public com.leagueos.modules.registration.api.dto.PlayerResponse registerPlayer(com.leagueos.modules.registration.api.dto.PlayerRegistrationRequest request, UUID defaultTeamId, UUID tenantId) {
+        if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
+             throw new com.leagueos.shared.domain.exception.BusinessRuleException("El nombre del jugador es obligatorio.");
+        }
+
         UUID teamId = request.getTeamId() != null ? request.getTeamId() : defaultTeamId;
         com.leagueos.modules.league.domain.Team team = null;
         if (teamId != null) {
@@ -65,20 +69,51 @@ public class PlayerRegistrationService {
                 .orElseThrow(() -> new RuntimeException("Team not found"));
         }
 
+        // Format Name (Uppercase)
+        String firstName = request.getFirstName().trim().toUpperCase();
+        String lastName = request.getLastName() != null ? request.getLastName().trim().toUpperCase() : "";
+        String finalFirstName = firstName;
+        String finalLastName = lastName;
+
         // Need the season to register the roster
         com.leagueos.modules.league.domain.Season activeSeason = null;
         if (team != null) {
             activeSeason = seasonRepository.findFirstByStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active season found to register the player into."));
+                
+            int currentActive = seasonRosterRepository.countByTeamIdAndSeasonIdAndStatus(
+                teamId, activeSeason.getId(), com.leagueos.modules.registration.domain.PlayerStatus.ACTIVE
+            );
+            
+            if (currentActive >= activeSeason.getMaxActivePlayersPerTeam()) {
+                 throw new com.leagueos.shared.domain.exception.BusinessRuleException(
+                    "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
+                );
+            }
         }
 
         com.leagueos.modules.tenant.domain.TenantSettings settings = tenantSettingsService.getCurrentSettings();
-        if (settings.isRequireJerseyNumbers() && activeSeason != null) {
-            if (request.getJerseyNumber() == null) {
-                throw new com.leagueos.shared.domain.exception.BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
+        
+        if (teamId != null && activeSeason != null) {
+            List<com.leagueos.modules.registration.domain.SeasonRoster> existingRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
+            
+            boolean duplicateName = existingRosters.stream()
+                .anyMatch(r -> {
+                    String pFirst = r.getPlayer().getPerson().getFirstName();
+                    String pLast = r.getPlayer().getPerson().getLastName();
+                    pLast = pLast != null ? pLast : "";
+                    return pFirst.equalsIgnoreCase(finalFirstName) && pLast.equalsIgnoreCase(finalLastName);
+                });
+                               
+            if (duplicateName) {
+                throw new com.leagueos.shared.domain.exception.BusinessRuleException("El jugador '" + finalFirstName + " " + finalLastName + "' ya existe en el equipo.");
             }
-            if (teamId != null) {
-                boolean duplicateExists = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId()).stream()
+
+            if (settings.isRequireJerseyNumbers()) {
+                if (request.getJerseyNumber() == null) {
+                    throw new com.leagueos.shared.domain.exception.BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
+                }
+                boolean duplicateExists = existingRosters.stream()
                         .anyMatch(r -> r.getStatus() == com.leagueos.modules.registration.domain.PlayerStatus.ACTIVE
                                 && r.getJerseyNumber() != null
                                 && r.getJerseyNumber().equals(request.getJerseyNumber()));
@@ -89,8 +124,8 @@ public class PlayerRegistrationService {
         }
 
         com.leagueos.modules.league.domain.Person person = new com.leagueos.modules.league.domain.Person();
-        person.setFirstName(request.getFirstName());
-        person.setLastName(request.getLastName());
+        person.setFirstName(finalFirstName);
+        person.setLastName(finalLastName.isEmpty() ? null : finalLastName);
         person.setBirthDate(request.getBirthDate());
         person.setProfilePhotoUrl(request.getProfilePhotoUrl());
         person.setTenantId(tenantId);
@@ -111,7 +146,6 @@ public class PlayerRegistrationService {
             roster.setTenantId(tenantId);
             seasonRosterRepository.save(roster);
             
-            // For now DTO maps via direct getters on Player, which we will need to address.
             return mapToResponse(player, roster);
         }
 
@@ -129,17 +163,61 @@ public class PlayerRegistrationService {
         com.leagueos.modules.tenant.domain.TenantSettings settings = tenantSettingsService.getCurrentSettings();
         List<com.leagueos.modules.registration.domain.SeasonRoster> existingRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
         
+        long currentActiveCount = existingRosters.stream()
+            .filter(r -> r.getStatus() == com.leagueos.modules.registration.domain.PlayerStatus.ACTIVE)
+            .count();
+            
+        List<com.leagueos.modules.registration.api.dto.BatchPlayerRegistrationRequest> validRequests = requests.stream()
+            .filter(r -> r.getFirstName() != null && !r.getFirstName().trim().isEmpty())
+            .toList();
+            
+        if (validRequests.isEmpty()) {
+            throw new com.leagueos.shared.domain.exception.BusinessRuleException("El archivo no contiene jugadores válidos.");
+        }
+            
+        if (currentActiveCount + validRequests.size() > activeSeason.getMaxActivePlayersPerTeam()) {
+            throw new com.leagueos.shared.domain.exception.BusinessRuleException(
+                "La carga masiva agregaría " + validRequests.size() + " jugadores, excediendo el límite de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos por equipo. (Actuales: " + currentActiveCount + ")"
+            );
+        }
+        
         List<Player> newPlayers = new java.util.ArrayList<>();
         List<com.leagueos.modules.registration.domain.SeasonRoster> newRosters = new java.util.ArrayList<>();
         
-        for (com.leagueos.modules.registration.api.dto.BatchPlayerRegistrationRequest request : requests) {
-            if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
-                continue; // Skip invalid records
+        for (com.leagueos.modules.registration.api.dto.BatchPlayerRegistrationRequest request : validRequests) {
+            
+            // Format name (Uppercase)
+            String firstName = request.getFirstName().trim().toUpperCase();
+            String lastName = request.getLastName() != null ? request.getLastName().trim().toUpperCase() : "";
+            
+            String finalFirstName = firstName;
+            String finalLastNameSafe = lastName;
+            
+            boolean duplicateName = existingRosters.stream()
+                .anyMatch(r -> {
+                    String pFirst = r.getPlayer().getPerson().getFirstName();
+                    String pLast = r.getPlayer().getPerson().getLastName();
+                    pLast = pLast != null ? pLast : "";
+                    return pFirst.equalsIgnoreCase(finalFirstName) && pLast.equalsIgnoreCase(finalLastNameSafe);
+                });
+                               
+            if (!duplicateName) {
+                duplicateName = newRosters.stream()
+                    .anyMatch(r -> {
+                        String pFirst = r.getPlayer().getPerson().getFirstName();
+                        String pLast = r.getPlayer().getPerson().getLastName();
+                        pLast = pLast != null ? pLast : "";
+                        return pFirst.equalsIgnoreCase(finalFirstName) && pLast.equalsIgnoreCase(finalLastNameSafe);
+                    });
+            }
+            
+            if (duplicateName) {
+                throw new com.leagueos.shared.domain.exception.BusinessRuleException("El jugador '" + finalFirstName + " " + finalLastNameSafe + "' ya existe en el equipo. Por favor revisa y corrige el archivo.");
             }
             
             if (settings.isRequireJerseyNumbers()) {
                 if (request.getJerseyNumber() == null) {
-                     throw new com.leagueos.shared.domain.exception.BusinessRuleException("El número de playera es obligatorio para el jugador " + request.getFirstName() + ".");
+                     throw new com.leagueos.shared.domain.exception.BusinessRuleException("El dorsal/número de playera es obligatorio para '" + finalFirstName + " " + finalLastNameSafe + "'.");
                 }
                 
                 // Check within existing or just added players
@@ -155,21 +233,13 @@ public class PlayerRegistrationService {
                 }
                 
                 if (duplicateExists) {
-                    throw new com.leagueos.shared.domain.exception.BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado. Corrige los duplicados.");
+                    throw new com.leagueos.shared.domain.exception.BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado. Corrige el dorsal de '" + finalFirstName + " " + finalLastNameSafe + "'.");
                 }
-            }
-            
-            // Format name
-            String firstName = request.getFirstName().trim();
-            firstName = firstName.substring(0, 1).toUpperCase() + firstName.substring(1).toLowerCase();
-            String lastName = request.getLastName() != null ? request.getLastName().trim() : "";
-            if (!lastName.isEmpty()) {
-                lastName = lastName.substring(0, 1).toUpperCase() + lastName.substring(1).toLowerCase();
             }
             
             com.leagueos.modules.league.domain.Person person = new com.leagueos.modules.league.domain.Person();
             person.setFirstName(firstName);
-            person.setLastName(lastName);
+            person.setLastName(lastName.isEmpty() ? null : lastName);
             person.setBirthDate(request.getBirthDate());
             person.setTenantId(tenantId);
             person = personRepository.save(person);

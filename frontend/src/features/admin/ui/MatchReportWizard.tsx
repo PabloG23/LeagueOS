@@ -45,6 +45,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     const [homeSearch, setHomeSearch] = useState('');
     const [awaySearch, setAwaySearch] = useState('');
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+    const [isDoubleForfeit, setIsDoubleForfeit] = useState(false); // New State
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -60,6 +61,11 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                 fetchedEvents.forEach((ev: any) => {
                     const playerId = ev.player?.id;
                     if (!playerId) return;
+
+                    if (ev.eventType === 'DOUBLE_FORFEIT') {
+                        setIsDoubleForfeit(true);
+                        return;
+                    }
 
                     if (!newEvents[playerId]) {
                         newEvents[playerId] = { played: false, goals: 0, yellowCards: 0, redCard: false };
@@ -161,6 +167,15 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                 });
             }
         });
+
+        if (isDoubleForfeit) {
+            // Include a dummy team, backend only checks eventType
+            const dummyTeamId = match.homeTeam?.id || match.homeTeamId;
+            payload.push({
+                team: { id: dummyTeamId },
+                eventType: 'DOUBLE_FORFEIT'
+            });
+        }
 
         try {
             if (!settings?.tenantId) throw new Error("Missing tenant");
@@ -404,9 +419,30 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                         </div>
                     )}
                     {step === 1 && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20 min-h-0">
-                            {renderRosterGrid(homeRoster, homeTeamName || "Local", homeSearch, setHomeSearch)}
-                            {renderRosterGrid(awayRoster, awayTeamName || "Visitante", awaySearch, setAwaySearch)}
+                        <div className="flex flex-col gap-6 pb-20 min-h-0 h-full">
+                            {/* Double Forfeit Toggle */}
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                                <div>
+                                    <h4 className="font-bold text-red-900 text-sm">Situación Extraordinaria: Ambos Equipos Pierden</h4>
+                                    <p className="text-xs text-red-700 mt-1">
+                                        Activar en caso de incidentes (ej. riña). Puedes usar esta vista para añadir expulsiones o notas. Ambos equipos registrarán una derrota y 0 puntos al finalizar.
+                                    </p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={isDoubleForfeit}
+                                        onChange={(e) => setIsDoubleForfeit(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+                                {renderRosterGrid(homeRoster, homeTeamName || "Local", homeSearch, setHomeSearch)}
+                                {renderRosterGrid(awayRoster, awayTeamName || "Visitante", awaySearch, setAwaySearch)}
+                            </div>
                         </div>
                     )}
 

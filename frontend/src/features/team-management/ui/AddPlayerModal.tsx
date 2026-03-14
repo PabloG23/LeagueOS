@@ -1,5 +1,6 @@
-import { X, Upload, Save } from 'lucide-react';
 import { useState } from 'react';
+import { useToast } from '../../../shared/components/ui/ToastContext';
+import { X, Upload, Save } from 'lucide-react';
 
 interface AddPlayerModalProps {
     isOpen: boolean;
@@ -15,6 +16,7 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
     const [birthDate, setBirthDate] = useState('');
     const [dragging, setDragging] = useState(false);
     const [error, setError] = useState('');
+    const { showToast } = useToast();
 
     if (!isOpen) return null;
 
@@ -22,13 +24,28 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
         e.preventDefault();
         setError('');
 
+        if (!name.trim()) {
+             showToast('El nombre es obligatorio.', 'error');
+             return;
+        }
+
+        if (!surname.trim()) {
+             showToast('El apellido es obligatorio.', 'error');
+             return;
+        }
+
+        if (requireJerseyNumbers && !jerseyNumber.trim()) {
+             showToast('El dorsal o número de playera es obligatorio para esta liga.', 'error');
+             return;
+        }
+
         let formattedDate = undefined;
         if (birthDate) {
             // birthDate from type="date" is already in YYYY-MM-DD format
             formattedDate = birthDate;
             const dateObj = new Date(formattedDate);
             if (isNaN(dateObj.getTime())) {
-                setError('Fecha inválida');
+                showToast('Fecha de nacimiento inválida.', 'error');
                 return;
             }
         }
@@ -92,7 +109,7 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
                             <label className="text-sm font-medium text-slate-700">Nombre(s)</label>
                             <input
                                 type="text"
-                                required
+                                
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -103,7 +120,7 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
                             <label className="text-sm font-medium text-slate-700">Apellidos</label>
                             <input
                                 type="text"
-                                required
+                                
                                 value={surname}
                                 onChange={(e) => setSurname(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -117,7 +134,7 @@ export const AddPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNumbers }
                             <label className="text-sm font-medium text-slate-700">Dorsal / Número de Playera</label>
                             <input
                                 type="number"
-                                required={requireJerseyNumbers}
+                                
                                 value={jerseyNumber}
                                 onChange={(e) => setJerseyNumber(e.target.value)}
                                 className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"

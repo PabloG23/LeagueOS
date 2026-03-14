@@ -123,7 +123,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         logoUrl = "/san_lucas_logo.png";
                         allowTransfers = false; // Disable transfers for San Lucas
                         footerAddress = "Zaragoza S/N, San Sebastián, Metepec C.P. 52146";
-                        footerPhone = "722 734 4082";
+                        footerPhone = "722 634 4082";
                         footerBackgroundClass = "bg-emerald-800";
                         slogan = "Uniendo tradición y pasión en cada encuentro deportivo.";
                         facebookUrl = "https://www.facebook.com/share/1DrWt7euqW/?mibextid=wwXIfr";

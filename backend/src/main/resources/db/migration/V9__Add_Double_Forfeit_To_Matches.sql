@@ -1,0 +1,1 @@
+ALTER TABLE matches ADD COLUMN is_double_forfeit BOOLEAN DEFAULT FALSE;

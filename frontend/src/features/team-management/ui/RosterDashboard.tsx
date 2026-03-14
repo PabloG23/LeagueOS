@@ -120,19 +120,32 @@ export const RosterDashboard = () => {
     const activePlayersCount = players.filter(p => p.isActive).length;
     const inactivePlayersCount = players.length - activePlayersCount;
 
-    const handleToggleStatus = (id: string) => {
+    const handleToggleStatus = async (id: string) => {
         if (isPublicMode) return; // Guard
 
-        setPlayers(prev => prev.map(player => {
-            if (player.id === id) {
-                if (!player.isActive && activePlayersCount >= maxActivePlayers) {
-                    showToast('¡Límite de jugadores activos alcanzado!', 'error');
-                    return player;
-                }
-                return { ...player, isActive: !player.isActive };
+        const player = players.find(p => p.id === id);
+        if (!player) return;
+
+        if (!player.isActive && activePlayersCount >= maxActivePlayers) {
+            showToast('¡Límite de jugadores activos alcanzado!', 'error');
+            return;
+        }
+
+        try {
+            if (!settings?.tenantId) return;
+            if (player.isActive) {
+                await leagueApi.deactivatePlayer(settings.tenantId, id);
+                showToast('Jugador dado de baja (Inactivo).', 'success');
+            } else {
+                await leagueApi.activatePlayer(settings.tenantId, id);
+                showToast('Jugador dado de alta (Activo).', 'success');
             }
-            return player;
-        }));
+            // Temporarily update local state to reflect UI changes quickly before reloading or re-fetching
+            setPlayers(prev => prev.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p));
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || 'Error al cambiar estado del jugador.';
+            showToast(errorMsg, 'error');
+        }
     };
 
     const handleDelete = (id: string) => {
@@ -259,7 +272,7 @@ export const RosterDashboard = () => {
                 {/* Players Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredPlayers.map(player => (
-                        <div key={player.id} className="cursor-pointer" onClick={() => isPublicMode && setSelectedPlayer({ ...player, teamName })}>
+                        <div key={player.id} className="cursor-pointer" onClick={() => setSelectedPlayer({ ...player, teamName })}>
                             <PlayerCard
                                 player={player}
                                 onToggleStatus={canEdit ? handleToggleStatus : undefined}

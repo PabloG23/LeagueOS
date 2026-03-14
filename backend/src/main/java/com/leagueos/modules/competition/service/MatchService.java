@@ -38,9 +38,14 @@ public class MatchService {
         // 3. Process Events
         int homeGoals = 0;
         int awayGoals = 0;
+        boolean isDoubleForfeit = false;
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
 
         for (MatchEvent eventRaw : events) {
+            if (eventRaw.getEventType() == MatchEvent.MatchEventType.DOUBLE_FORFEIT) {
+                isDoubleForfeit = true;
+                continue; // Don't save this as a regular player-level event, it's a match-level attribute
+            }
             MatchEvent event = new MatchEvent();
             event.setMatch(match);
             event.setTenantId(match.getTenantId());
@@ -79,6 +84,7 @@ public class MatchService {
         match.setHomeScore(homeGoals);
         match.setAwayScore(awayGoals);
         match.setStatus(Match.MatchStatus.FINISHED);
+        match.setIsDoubleForfeit(isDoubleForfeit);
         matchRepository.save(match);
 
         // 5. If this is a playoff match, try to resolve the tie

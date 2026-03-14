@@ -127,6 +127,8 @@ export const leagueApi = {
         api.post<Player>('/registration/players', player, { headers: { 'X-Tenant-ID': tenantId } }),
     batchCreatePlayers: (tenantId: string, teamId: string, players: any[]) =>
         api.post<Player[]>(`/teams/${teamId}/players/batch`, players, { headers: { 'X-Tenant-ID': tenantId } }),
+    activatePlayer: (tenantId: string, playerId: string) => api.patch(`/players/${playerId}/activate`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
+    deactivatePlayer: (tenantId: string, playerId: string) => api.patch(`/players/${playerId}/deactivate`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
     getTeamPlayers: (tenantId: string, teamId: string) =>
         api.get<Player[]>(`/registration/teams/${teamId}/players`, { headers: { 'X-Tenant-ID': tenantId } }),
 

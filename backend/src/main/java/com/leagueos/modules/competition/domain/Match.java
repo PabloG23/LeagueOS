@@ -66,6 +66,9 @@ public class Match extends BaseEntity {
     @Column(name = "is_tiebreaker_required")
     private Boolean isTiebreakerRequired = false;
 
+    @Column(name = "is_double_forfeit")
+    private Boolean isDoubleForfeit = false;
+
     public enum MatchStatus {
         SCHEDULED, IN_PROGRESS, FINISHED, CANCELLED
     }

@@ -39,7 +39,7 @@ public class TeamRegistrationService {
 
         // Create the team
         Team team = new Team();
-        team.setName(request.getTeamName());
+        team.setName(request.getTeamName().trim().toUpperCase());
         team.setRepresentative(representative);
         team.setLogoUrl(request.getLogoUrl());
         team.setTenantId(tenantId);
