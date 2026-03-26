@@ -14,7 +14,7 @@ export const Navbar = () => {
 
             <div className="container mx-auto px-4 py-6 md:py-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                 {/* Left: Brand */}
-                <Link to="/" className="flex flex-col md:flex-row items-center gap-6 group text-center md:text-left">
+                <div className="flex flex-col md:flex-row items-center gap-6 group text-center md:text-left">
                     <div className="relative">
                         <div className="absolute inset-0 bg-sidebar/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                         <img
@@ -32,7 +32,7 @@ export const Navbar = () => {
                             Portal Oficial
                         </span>
                     </div>
-                </Link>
+                </div>
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-4">
