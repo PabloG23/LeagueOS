@@ -127,17 +127,17 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                         <>
                             {/* Season Tabs - Only show if > 1 */}
                             {availableSeasons.length > 1 && (
-                                <div className="w-full overflow-x-auto scrollbar-hide bg-slate-900 border-b border-white/5 z-20">
-                                    <div className="flex p-3 gap-3 min-w-max">
+                                <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-900 z-20">
+                                    <div className="flex items-center p-3 gap-3 min-w-max">
                                         {availableSeasons.map((season) => {
                                             const shortName = season.name.includes(' - ') ? season.name.split(' - ')[1] : season.name;
                                             return (
                                                 <button
                                                     key={season.id}
                                                     onClick={() => setActiveSeasonId(season.id)}
-                                                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeSeasonId === season.id
-                                                        ? 'bg-slate-800 text-white shadow-inner border border-white/10'
-                                                        : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-transparent'
+                                                    className={`px-6 py-2 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeSeasonId === season.id
+                                                        ? 'bg-slate-800 text-white shadow-md ring-1 ring-white/20'
+                                                        : 'bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
                                                         }`}
                                                 >
                                                     {shortName}
@@ -149,20 +149,24 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                             )}
 
                             {/* Matchday Tabs */}
-                            <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-800/50 sticky top-0 z-10 shadow-sm">
-                                <div className="flex p-3 gap-2 min-w-max px-4">
-                                    {matchdays.map((day) => (
-                                        <button
-                                            key={day}
-                                            onClick={() => setActiveMatchday(day)}
-                                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeMatchday === day
-                                                ? `${settings?.matchTickerBackgroundClass || 'bg-blue-600'} text-white shadow-md ring-1 ring-white/20`
-                                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                                                }`}
-                                        >
-                                            Jornada {day}
-                                        </button>
-                                    ))}
+                            <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-800/50 sticky top-0 z-10 shadow-sm scroll-smooth">
+                                <div className="flex items-center p-3 gap-2 min-w-max px-4">
+                                    {matchdays.map((day) => {
+                                        const isActive = activeMatchday === day;
+                                        return (
+                                            <button
+                                                key={day}
+                                                ref={isActive ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }) : null}
+                                                onClick={() => setActiveMatchday(day)}
+                                                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${isActive
+                                                    ? `${settings?.matchTickerBackgroundClass || 'bg-blue-600'} text-white shadow-md ring-1 ring-white/20`
+                                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                                    }`}
+                                            >
+                                                Jornada {day}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

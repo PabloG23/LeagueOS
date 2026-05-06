@@ -13,4 +13,5 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
     java.util.Optional<Team> findByIdAndTenantId(UUID id, UUID tenantId);
     boolean existsByNameIgnoreCaseAndTenantId(String name, UUID tenantId);
     boolean existsByNameIgnoreCaseAndTenantIdAndIdNot(String name, UUID tenantId, UUID id);
+    java.util.Optional<Team> findByNameIgnoreCaseAndTenantId(String name, UUID tenantId);
 }

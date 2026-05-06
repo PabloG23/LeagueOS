@@ -33,18 +33,21 @@ public class PublicMatchController {
             
             List<Match> upcomingMatches = new ArrayList<>();
             // For each active season, fetch all matches for its current matchday
-            System.out.println("Active seasons found: " + activeSeasons.size());
             for (Season season : activeSeasons) {
-                System.out.println("Checking season: " + season.getName() + " with currentMatchday: " + season.getCurrentMatchday());
-                List<Match> matches = matchRepository.findByMatchday(season.getCurrentMatchday());
-                System.out.println("Matches found for matchday " + season.getCurrentMatchday() + ": " + matches.size());
-                for (Match m : matches) {
-                    if (m.getSeason().getId().equals(season.getId())) {
+                List<Match> seasonMatches = matchRepository.findBySeasonId(season.getId());
+                if (seasonMatches == null || seasonMatches.isEmpty()) continue;
+                
+                int maxMatchday = seasonMatches.stream()
+                        .mapToInt(Match::getMatchday)
+                        .max()
+                        .orElse(1);
+                        
+                for (Match m : seasonMatches) {
+                    if (m.getMatchday() == maxMatchday) {
                         upcomingMatches.add(m);
                     }
                 }
             }
-            System.out.println("Total upcoming matches to return: " + upcomingMatches.size());
 
             // Sort by match date
             upcomingMatches.sort((m1, m2) -> {

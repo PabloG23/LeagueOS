@@ -81,7 +81,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
         tickerTitle = `Jornada ${currentMatchday} - ${cleanSeasonName}`;
         tickerIconColor = "text-red-500 animate-pulse";
     } else if (allFinished) {
-        tickerTitle = `Resultados Jornada ${currentMatchday} - ${cleanSeasonName}`;
+        tickerTitle = `Últimos resultados Jornada ${currentMatchday} - ${cleanSeasonName}`;
         tickerIconColor = "text-emerald-400";
     }
 

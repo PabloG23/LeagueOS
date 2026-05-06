@@ -251,8 +251,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                             transition={{ delay: i * 0.02, duration: 0.15, ease: "easeOut" }}
                                             className={cn(
                                                 "border-b border-slate-50 transition-colors hover:bg-slate-50 group",
-                                                i < 8 && "bg-emerald-100", // Liguilla
-                                                i >= table.getRowModel().rows.length - 2 && "bg-rose-100" // Descenso
+                                                i < 8 && "bg-emerald-100" // Liguilla
                                             )}
                                         >
                                             {row.getVisibleCells().map((cell) => (

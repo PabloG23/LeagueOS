@@ -8,4 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface DivisionRepository extends JpaRepository<Division, UUID> {
+    java.util.Optional<Division> findByNameIgnoreCaseAndTenantId(String name, UUID tenantId);
 }
