@@ -124,6 +124,10 @@ public class StatsService {
             away.setGoalsAgainst(away.getGoalsAgainst() + homeScore);
             away.setGoalDifference(away.getGoalsFor() - away.getGoalsAgainst());
 
+            // Lógica personalizada de puntos para Liga de San Lucas (2 pts por victoria)
+            UUID currentTenantId = com.leagueos.shared.context.TenantContext.getCurrentTenant();
+            int winPoints = (currentTenantId != null && currentTenantId.toString().equals("22222222-2222-2222-2222-222222222222")) ? 2 : 3;
+
             if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
                 home.setLost(home.getLost() + 1);
                 home.getForm().add("L");
@@ -132,14 +136,14 @@ public class StatsService {
                 away.getForm().add("L");
             } else if (homeScore > awayScore) {
                 home.setWon(home.getWon() + 1);
-                home.setPoints(home.getPoints() + 3);
+                home.setPoints(home.getPoints() + winPoints);
                 home.getForm().add("W");
 
                 away.setLost(away.getLost() + 1);
                 away.getForm().add("L");
             } else if (homeScore < awayScore) {
                 away.setWon(away.getWon() + 1);
-                away.setPoints(away.getPoints() + 3);
+                away.setPoints(away.getPoints() + winPoints);
                 away.getForm().add("W");
 
                 home.setLost(home.getLost() + 1);
