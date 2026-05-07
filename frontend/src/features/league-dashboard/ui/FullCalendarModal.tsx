@@ -127,8 +127,8 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                         <>
                             {/* Season Tabs - Only show if > 1 */}
                             {availableSeasons.length > 1 && (
-                                <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-900 z-20">
-                                    <div className="flex items-center p-3 gap-3 min-w-max">
+                                <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-900 z-20 shrink-0">
+                                    <div className="flex items-center py-4 px-4 gap-3 min-w-max">
                                         {availableSeasons.map((season) => {
                                             const shortName = season.name.includes(' - ') ? season.name.split(' - ')[1] : season.name;
                                             return (
@@ -149,8 +149,8 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                             )}
 
                             {/* Matchday Tabs */}
-                            <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-800/50 sticky top-0 z-10 shadow-sm scroll-smooth">
-                                <div className="flex items-center p-3 gap-2 min-w-max px-4">
+                            <div className="w-full overflow-x-auto scrollbar-hide border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 shadow-sm snap-x snap-mandatory shrink-0">
+                                <div className="flex items-center py-4 px-4 gap-2 min-w-max">
                                     {matchdays.map((day) => {
                                         const isActive = activeMatchday === day;
                                         return (
@@ -158,9 +158,9 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                 key={day}
                                                 ref={isActive ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }) : null}
                                                 onClick={() => setActiveMatchday(day)}
-                                                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${isActive
-                                                    ? `${settings?.matchTickerBackgroundClass || 'bg-blue-600'} text-white shadow-md ring-1 ring-white/20`
-                                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                                className={`snap-center px-5 py-2.5 rounded-full font-bold text-sm transition-all whitespace-nowrap ${isActive
+                                                    ? `bg-white text-slate-900 shadow-lg ring-4 ring-white/10`
+                                                    : 'text-slate-400 hover:text-white hover:bg-white/10'
                                                     }`}
                                             >
                                                 Jornada {day}
@@ -178,72 +178,71 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                         {activeMatches.map(match => {
                                             const isFinished = match.status === 'FINISHED';
-                                            const homeScoreBold = (match.homeScore || 0) > (match.awayScore || 0) ? 'font-black text-white' : 'font-medium text-slate-300';
-                                            const awayScoreBold = (match.awayScore || 0) > (match.homeScore || 0) ? 'font-black text-white' : 'font-medium text-slate-300';
+                                            const homeWon = isFinished && (match.homeScore || 0) > (match.awayScore || 0);
+                                            const awayWon = isFinished && (match.awayScore || 0) > (match.homeScore || 0);
 
                                             return (
-                                                <div key={match.id} className="bg-slate-900 border border-white/5 rounded-xl p-4 flex flex-col hover:border-white/20 transition-colors group">
+                                                <div key={match.id} className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex flex-col gap-4 hover:bg-slate-800/80 hover:border-white/20 transition-all group">
 
-                                                    {/* Status Badge */}
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <div className="flex flex-col">
-                                                            <p className="font-medium text-slate-300 capitalize text-sm">
+                                                    {/* Status Badge & Location */}
+                                                    <div className="flex justify-between items-center text-xs font-semibold text-slate-400">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>
                                                                 {match.matchDate
                                                                     ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                                                    : 'Horario por definir'
-                                                                }
-                                                            </p>
-                                                            {match.location && (
-                                                                <span className="text-xs text-slate-500 font-medium mt-0.5">📍 {match.location}</span>
-                                                            )}
+                                                                    : 'Horario por definir'}
+                                                            </span>
+                                                            {match.location && <span className="hidden sm:inline">| {match.location}</span>}
                                                         </div>
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${match.status === 'FINISHED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                                            'bg-slate-800 text-slate-400'
-                                                            }`}>
-                                                            {match.status === 'FINISHED' ? 'Finalizado' :
-                                                                match.status === 'CANCELLED' ? 'Cancelado' :
-                                                                    'Por Jugar'}
+                                                        <span className={`px-2.5 py-1 rounded-md uppercase tracking-wider text-[10px] ${
+                                                            isFinished ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-700 text-slate-300'
+                                                        }`}>
+                                                            {isFinished ? 'Finalizado' : match.status === 'CANCELLED' ? 'Cancelado' : 'Por Jugar'}
                                                         </span>
                                                     </div>
 
-                                                    {/* Teams and Scores */}
-                                                    <div className="space-y-3">
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center font-bold text-xs text-slate-300 relative overflow-hidden group-hover:bg-white/10 transition-colors">
-                                                                    {match.homeTeam?.logoUrl ? (
-                                                                        <img src={match.homeTeam.logoUrl} alt={match.homeTeam.name} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        match.homeTeam?.name?.substring(0, 2).toUpperCase() || 'LO'
-                                                                    )}
-                                                                </div>
-                                                                <Link to={getTeamLink(match.homeTeamId)} className={`hover:underline hover:text-blue-400 ${homeScoreBold}`}>
-                                                                    {match.homeTeam?.name || 'Local'}
-                                                                </Link>
+                                                    {/* Teams and Scores Horizontal Layout */}
+                                                    <div className="flex items-start justify-between w-full pt-2">
+                                                        {/* Home Team */}
+                                                        <div className="flex flex-col items-center gap-3 w-[30%]">
+                                                            <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center font-bold text-base text-slate-300 relative overflow-hidden group-hover:bg-slate-700 transition-colors shadow-inner ring-1 ring-white/10">
+                                                                {match.homeTeam?.logoUrl ? (
+                                                                    <img src={match.homeTeam.logoUrl} alt={match.homeTeam.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    match.homeTeam?.name?.substring(0, 2).toUpperCase() || 'LO'
+                                                                )}
                                                             </div>
-                                                            <div className={`text-xl ${isFinished ? homeScoreBold : 'text-slate-600'}`}>
-                                                                {isFinished ? (match.homeScore ?? '-') : '-'}
-                                                            </div>
+                                                            <Link to={getTeamLink(match.homeTeamId)} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${homeWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
+                                                                {match.homeTeam?.name || 'Local'}
+                                                            </Link>
                                                         </div>
 
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center font-bold text-xs text-slate-300 relative overflow-hidden group-hover:bg-white/10 transition-colors">
-                                                                    {match.awayTeam?.logoUrl ? (
-                                                                        <img src={match.awayTeam.logoUrl} alt={match.awayTeam.name} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        match.awayTeam?.name?.substring(0, 2).toUpperCase() || 'VI'
-                                                                    )}
-                                                                </div>
-                                                                <Link to={getTeamLink(match.awayTeamId)} className={`hover:underline hover:text-blue-400 ${awayScoreBold}`}>
-                                                                    {match.awayTeam?.name || 'Visitante'}
-                                                                </Link>
-                                                            </div>
-                                                            <div className={`text-xl ${isFinished ? awayScoreBold : 'text-slate-600'}`}>
+                                                        {/* Score */}
+                                                        <div className="flex items-center justify-center gap-3 w-[40%] mt-2">
+                                                            <span className={`text-3xl sm:text-4xl ${homeWon ? 'font-black text-white' : 'font-bold text-slate-200'}`}>
+                                                                {isFinished ? (match.homeScore ?? '-') : '-'}
+                                                            </span>
+                                                            <span className="text-slate-600 font-bold text-xl">-</span>
+                                                            <span className={`text-3xl sm:text-4xl ${awayWon ? 'font-black text-white' : 'font-bold text-slate-200'}`}>
                                                                 {isFinished ? (match.awayScore ?? '-') : '-'}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Away Team */}
+                                                        <div className="flex flex-col items-center gap-3 w-[30%]">
+                                                            <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center font-bold text-base text-slate-300 relative overflow-hidden group-hover:bg-slate-700 transition-colors shadow-inner ring-1 ring-white/10">
+                                                                {match.awayTeam?.logoUrl ? (
+                                                                    <img src={match.awayTeam.logoUrl} alt={match.awayTeam.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    match.awayTeam?.name?.substring(0, 2).toUpperCase() || 'VI'
+                                                                )}
                                                             </div>
+                                                            <Link to={getTeamLink(match.awayTeamId)} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${awayWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
+                                                                {match.awayTeam?.name || 'Visitante'}
+                                                            </Link>
                                                         </div>
                                                     </div>
+
                                                 </div>
                                             );
                                         })}
