@@ -1,4 +1,4 @@
-Division,Jornada,EquipoLocal,EquipoVisitante,GolesLocal,GolesVisitante
+ODivision,Jornada,EquipoLocal,EquipoVisitante,GolesLocal,GolesVisitante
 Segunda Fuerza,1,TECOS,ATLAS CUAJIMALPA,1,0
 Segunda Fuerza,1,GALÁCTICOS,MEXIQUENSE,2,2
 Segunda Fuerza,1,INDEPENDIENTE,DEP. CARRANZA,4,1
@@ -16,7 +16,7 @@ Segunda Fuerza,3,ATLAS CUAJIMALPA,DEP. RUBÍ,5,1
 Segunda Fuerza,3,TECOS,JUV. PUMAS,2,1
 Segunda Fuerza,3,RAFAGA B,INDEPENDIENTE,1,5
 Segunda Fuerza,3,DEP. CARRANZA,JUVENTUD CENTRO,1,3
-Segunda Fuerza,3,MEXIQUENSE,ARGENTINA,4,1
+Segunda Fuerza,3,MEXIQUENSE,ARGENTINA,4,10
 Segunda Fuerza,3,FRANCIA,LA PIEDAD,0,2
 Segunda Fuerza,3,GALÁCTICOS,CORINTHIANS,1,0
 Segunda Fuerza,3,OLYMPUS,ARGENTINA,1,0
@@ -67,3 +67,10 @@ Segunda Fuerza,9,JUV. PUMAS,OLYMPUS,1,3
 Segunda Fuerza,9,LA PIEDAD,MEXIQUENSE,0,1
 Segunda Fuerza,9,DEP. RUBÍ,CHELSEA,4,2
 Segunda Fuerza,9,DEP. SANTY,INDEPENDIENTE,0,5
+Segunda Fuerza,10,JUVENTUD CENTRO,OLYMPUS,5,0
+Segunda Fuerza,10,ATLAS CUAJIMALPA,INDEPENDIENTE,1,1
+Segunda Fuerza,10,CHELSEA,GALÁCTICOS,2,2
+Segunda Fuerza,10,DEP. RUBÍ,DEP. SANTY,2,4
+Segunda Fuerza,10,RAFAGA,JUV. PUMAS,2,1
+Segunda Fuerza,10,FRANCIA,LA PIEDAD,3,2
+Segunda Fuerza,10,TECOS,MEXIQUENSE,3,2

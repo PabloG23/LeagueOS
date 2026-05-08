@@ -122,54 +122,59 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                     </div>
                 </div>
 
-                {/* Match Grid Container */}
-                <div className="flex flex-wrap justify-center gap-4 pb-4">
-                    {matches.map((match) => (
-                        <div
-                            key={match.id}
-                            className={`w-full sm:w-[260px] min-h-[110px] flex flex-col justify-center ${settings.matchCardBackgroundClass} rounded-lg p-4 gap-3 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group shadow-sm hover:shadow-md hover:-translate-y-0.5`}
-                        >
-                            <div className="flex flex-col pb-2 border-b border-white/10 mb-1">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                                    {match.matchDate 
-                                        ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
-                                        : 'Horario por definir'}
-                                </span>
-                                {match.location && (
-                                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate" title={match.location}>
-                                        📍 {match.location}
+                {/* Match Grid Container - Marquee */}
+                <div 
+                    className="w-full overflow-hidden flex items-center py-4 group"
+                    style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)', maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}
+                >
+                    <div className="flex w-max animate-marquee group-hover:[animation-play-state:paused] gap-4 pl-4">
+                        {[...matches, ...matches].map((match, idx) => (
+                            <div
+                                key={`${match.id}-${idx}`}
+                                className={`w-[260px] min-w-[260px] min-h-[110px] flex flex-col justify-center ${settings.matchCardBackgroundClass} rounded-xl p-4 gap-3 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5`}
+                            >
+                                <div className="flex flex-col pb-2 border-b border-white/10 mb-1">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                                        {match.matchDate 
+                                            ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                                            : 'Horario por definir'}
                                     </span>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                {/* Home Team */}
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">
-                                            {match.homeTeam?.name?.substring(0, 2) || match.homeTeamId.substring(0, 2)}
-                                        </div>
-                                        <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.homeScore || 0) > (match.awayScore || 0) ? 'text-white' : 'text-slate-400'}`}>
-                                            {match.homeTeam?.name || 'Local'}
-                                        </Link>
-                                    </div>
-                                    <span className="font-bold text-lg text-white">{match.homeScore ?? '-'}</span>
+                                    {match.location && (
+                                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate" title={match.location}>
+                                            📍 {match.location}
+                                        </span>
+                                    )}
                                 </div>
+                                <div className="space-y-2">
+                                    {/* Home Team */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">
+                                                {match.homeTeam?.name?.substring(0, 2) || match.homeTeamId.substring(0, 2)}
+                                            </div>
+                                            <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.homeScore || 0) > (match.awayScore || 0) ? 'text-white' : 'text-slate-400'}`}>
+                                                {match.homeTeam?.name || 'Local'}
+                                            </Link>
+                                        </div>
+                                        <span className="font-bold text-lg text-white">{match.homeScore ?? '-'}</span>
+                                    </div>
 
-                                {/* Away Team */}
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">
-                                            {match.awayTeam?.name?.substring(0, 2) || match.awayTeamId.substring(0, 2)}
+                                    {/* Away Team */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">
+                                                {match.awayTeam?.name?.substring(0, 2) || match.awayTeamId.substring(0, 2)}
+                                            </div>
+                                            <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.awayScore || 0) > (match.homeScore || 0) ? 'text-white' : 'text-slate-400'}`}>
+                                                {match.awayTeam?.name || 'Visitante'}
+                                            </Link>
                                         </div>
-                                        <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.awayScore || 0) > (match.homeScore || 0) ? 'text-white' : 'text-slate-400'}`}>
-                                            {match.awayTeam?.name || 'Visitante'}
-                                        </Link>
+                                        <span className="font-bold text-lg text-white">{match.awayScore ?? '-'}</span>
                                     </div>
-                                    <span className="font-bold text-lg text-white">{match.awayScore ?? '-'}</span>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
 
                 {/* View Full Schedule Button - Centered below grid */}
