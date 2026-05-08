@@ -1,5 +1,5 @@
 
-import { User, Users } from 'lucide-react';
+import { UserCircle2, Users } from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 
 export const LeadershipSection = () => {
@@ -32,11 +32,11 @@ export const LeadershipSection = () => {
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                         <div className="relative shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
-                            <User className="w-6 h-6" />
+                            <UserCircle2 className="w-6 h-6" strokeWidth={1.5} />
                         </div>
 
                         <div className="relative min-w-0">
-                            <p className="text-sm font-semibold text-primary uppercase tracking-wide mb-0.5">
+                            <p className="text-sm font-black text-emerald-800 uppercase tracking-wide mb-0.5">
                                 {member.role}
                             </p>
                             <h3 className="text-lg font-bold text-slate-900 leading-tight">

@@ -131,7 +131,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                         {[...matches, ...matches].map((match, idx) => (
                             <div
                                 key={`${match.id}-${idx}`}
-                                className={`w-[260px] min-w-[260px] min-h-[110px] flex flex-col justify-center ${settings.matchCardBackgroundClass} rounded-xl p-4 gap-3 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5`}
+                                className={`w-[260px] min-w-[260px] min-h-[110px] flex flex-col justify-center bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 gap-3 border border-white/10 hover:bg-slate-700/80 transition-colors cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5`}
                             >
                                 <div className="flex flex-col pb-2 border-b border-white/10 mb-1">
                                     <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
@@ -156,7 +156,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                                 {match.homeTeam?.name || 'Local'}
                                             </Link>
                                         </div>
-                                        <span className="font-bold text-lg text-white">{match.homeScore ?? '-'}</span>
+                                        <span className="font-black text-2xl text-white">{match.homeScore ?? '-'}</span>
                                     </div>
 
                                     {/* Away Team */}
@@ -169,7 +169,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                                 {match.awayTeam?.name || 'Visitante'}
                                             </Link>
                                         </div>
-                                        <span className="font-bold text-lg text-white">{match.awayScore ?? '-'}</span>
+                                        <span className="font-black text-2xl text-white">{match.awayScore ?? '-'}</span>
                                     </div>
                                 </div>
                             </div>

@@ -8,7 +8,7 @@ import {
     ColumnDef,
 } from '@tanstack/react-table';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpDown, Trophy } from 'lucide-react';
+import { ArrowUpDown, Trophy, Check, Minus, X } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 
@@ -33,12 +33,12 @@ interface StandingsTableProps {
 }
 
 const RecentFormCell = ({ form }: { form: ('W' | 'D' | 'L')[] }) => (
-    <div className="flex gap-1 items-center justify-center">
+    <div className="flex gap-1.5 items-center justify-center">
         {form.map((result, i) => {
             let colorClass = 'bg-slate-400';
-            let initial = 'E';
-            if (result === 'W') { colorClass = 'bg-emerald-500'; initial = 'G' }
-            if (result === 'L') { colorClass = 'bg-rose-500'; initial = 'P' }
+            let Icon = Minus;
+            if (result === 'W') { colorClass = 'bg-emerald-500'; Icon = Check }
+            if (result === 'L') { colorClass = 'bg-rose-500'; Icon = X }
 
             return (
                 <div
@@ -46,7 +46,7 @@ const RecentFormCell = ({ form }: { form: ('W' | 'D' | 'L')[] }) => (
                     className={cn("w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white shadow-sm", colorClass)}
                     title={result === 'W' ? 'Ganado' : result === 'L' ? 'Perdido' : 'Empatado'}
                 >
-                    {initial}
+                    <Icon className="w-3 h-3" strokeWidth={3} />
                 </div>
             );
         })}
@@ -99,43 +99,43 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
             },
             {
                 accessorKey: 'played',
-                header: 'JJ',
-                cell: (info) => <span className="text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</span>,
+                header: () => <div className="text-center">JJ</div>,
+                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'won',
-                header: 'JG',
-                cell: (info) => <span className="text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</span>,
+                header: () => <div className="text-center">JG</div>,
+                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'drawn',
-                header: 'JE',
-                cell: (info) => <span className="text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</span>,
+                header: () => <div className="text-center">JE</div>,
+                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'lost',
-                header: 'JP',
-                cell: (info) => <span className="text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</span>,
+                header: () => <div className="text-center">JP</div>,
+                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalsFor',
-                header: 'GF',
-                cell: (info) => <span className="text-slate-500 font-medium hidden md:table-cell whitespace-nowrap">{info.getValue<number>()}</span>,
+                header: () => <div className="text-center hidden md:block">GF</div>,
+                cell: (info) => <div className="text-center text-slate-500 font-medium hidden md:block whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalsAgainst',
-                header: 'GC',
-                cell: (info) => <span className="text-slate-500 font-medium hidden md:table-cell whitespace-nowrap">{info.getValue<number>()}</span>,
+                header: () => <div className="text-center hidden md:block">GC</div>,
+                cell: (info) => <div className="text-center text-slate-500 font-medium hidden md:block whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalDifference',
-                header: 'DG',
+                header: () => <div className="text-center hidden md:block">DG</div>,
                 cell: (info) => {
                     const diff = info.getValue<number>();
                     return (
-                        <span className={`font-bold hidden md:table-cell whitespace-nowrap ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                        <div className={`text-center font-bold hidden md:block whitespace-nowrap ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-slate-500'}`}>
                             {diff > 0 ? `+${diff}` : diff}
-                        </span>
+                        </div>
                     );
                 },
             },
@@ -144,15 +144,15 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 header: ({ column }) => {
                     return (
                         <div
-                            className="flex items-center cursor-pointer hover:text-slate-700 transition-colors font-bold text-slate-900 whitespace-nowrap"
+                            className="flex items-center justify-center cursor-pointer hover:text-slate-700 transition-colors font-black text-slate-900 whitespace-nowrap"
                             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                         >
                             PTS
-                            <ArrowUpDown className="ml-1 h-3 w-3 text-slate-400" />
+                            <ArrowUpDown className="ml-1 h-4 w-4 text-slate-400" />
                         </div>
                     )
                 },
-                cell: (info) => <span className="font-extrabold text-slate-900 text-lg whitespace-nowrap">{info.getValue<number>()}</span>,
+                cell: (info) => <div className="text-center font-black text-slate-900 text-xl whitespace-nowrap">{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'form',
