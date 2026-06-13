@@ -159,10 +159,25 @@ public class StatsService {
             }
         }
 
-        // 4. Truncate form to last 5 matches
+        // 4. Truncate form to last 5 matches and apply San Lucas Hotfix
+        UUID currentTenantId = com.leagueos.shared.context.TenantContext.getCurrentTenant();
+        boolean isSanLucasTenant = currentTenantId != null && currentTenantId.toString().equals("22222222-2222-2222-2222-222222222222");
+
         for (TeamStandingDTO standing : standingsMap.values()) {
             if (standing.getForm().size() > 5) {
                 standing.setForm(standing.getForm().subList(standing.getForm().size() - 5, standing.getForm().size()));
+            }
+
+            // HOTFIX: Descalificar a AMIGOS FC y TORREON (sólo para San Lucas)
+            if (isSanLucasTenant && ("AMIGOS FC".equalsIgnoreCase(standing.getTeam()) || "TORREON".equalsIgnoreCase(standing.getTeam()))) {
+                standing.setPoints(0);
+                standing.setGoalsFor(0);
+                standing.setGoalsAgainst(0);
+                standing.setGoalDifference(0);
+                // Opcional: También podemos poner en cero los partidos ganados/empatados/perdidos
+                standing.setWon(0);
+                standing.setDrawn(0);
+                standing.setLost(0);
             }
         }
 
