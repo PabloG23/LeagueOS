@@ -521,9 +521,7 @@ export const SeasonDetailsPage = () => {
                             </button>
                         </div>
 
-                        <div className="bg-white border rounded-3xl p-6 shadow-sm overflow-hidden">
-                            <PlayoffsBracketView tenantId={tenantId || ''} seasonId={seasonId || ''} refreshTrigger={bracketRefreshTrigger} />
-                        </div>
+                        <PlayoffsBracketView tenantId={tenantId || ''} seasonId={seasonId || ''} refreshTrigger={bracketRefreshTrigger} />
 
                         <GeneratePlayoffsModal
                             isOpen={isGeneratePlayoffsModalOpen}

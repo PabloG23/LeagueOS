@@ -24,8 +24,8 @@ export const LeagueDashboard = () => {
 
     const [finalStandingsData, setStandingsData] = useState<TeamStanding[] | Record<string, TeamStanding[]>>([]);
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'regular' | 'playoffs'>('regular');
     const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+    const [activePlayoffSeasonId, setActivePlayoffSeasonId] = useState<string | null>(null);
     const [allActiveSeasons, setAllActiveSeasons] = useState<Season[]>([]);
     const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
     const [loadingUpcoming, setLoadingUpcoming] = useState(true);
@@ -40,7 +40,12 @@ export const LeagueDashboard = () => {
             .then(res => {
                 const active = res.data.find(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
                 const actives = res.data.filter(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
-                if (active) setActiveSeason(active);
+                if (active) {
+                    setActiveSeason(active);
+                    setActivePlayoffSeasonId(active.id);
+                } else if (actives.length > 0) {
+                    setActivePlayoffSeasonId(actives[0].id);
+                }
                 setAllActiveSeasons(actives);
             })
             .catch(console.error);
@@ -153,38 +158,44 @@ export const LeagueDashboard = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Main Content (9 cols) */}
-                    <div className="lg:col-span-9 flex flex-col gap-6">
-                        {/* Tab Switcher */}
-                        {activeSeason && (
-                            <div className="flex p-1 bg-slate-200/50 rounded-xl w-fit">
-                                <button
-                                    onClick={() => setActiveTab('regular')}
-                                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'regular' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    Fase Regular
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('playoffs')}
-                                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'playoffs' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    <Trophy className="w-4 h-4" />
-                                    Liguilla
-                                </button>
+                    <div className="lg:col-span-9 flex flex-col gap-10">
+                        {/* Liguilla (Playoffs) Section */}
+                        {allActiveSeasons.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex flex-col items-center gap-4 px-1 mb-2">
+                                    <h3 className="text-xl font-black text-slate-800 tracking-wide">Fase Final del Torneo</h3>
+                                    {allActiveSeasons.length > 1 && (
+                                        <div className="flex p-1 bg-slate-200/50 rounded-xl w-fit">
+                                            {allActiveSeasons.map(season => {
+                                                const isActive = (activePlayoffSeasonId || allActiveSeasons[0].id) === season.id;
+                                                return (
+                                                    <button
+                                                        key={season.id}
+                                                        onClick={() => setActivePlayoffSeasonId(season.id)}
+                                                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                                                            isActive
+                                                                ? 'bg-slate-900 text-white shadow-sm'
+                                                                : 'text-slate-500 hover:text-slate-700'
+                                                        }`}
+                                                    >
+                                                        {season.name.includes(' - ') ? season.name.split(' - ')[1] : season.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                                <PublicPlayoffsView 
+                                    tenantId={settings?.tenantId || ''} 
+                                    seasonId={activePlayoffSeasonId || allActiveSeasons[0].id} 
+                                />
                             </div>
                         )}
 
-                        {activeTab === 'regular' ? (
+                        {/* General Standings Section */}
+                        <div className="space-y-4">
                             <StandingsTable data={finalStandingsData} />
-                        ) : (
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                                <h3 className="text-xl font-black text-slate-800 mb-6">Fase Final del Torneo</h3>
-                                {activeSeason ? (
-                                    <PublicPlayoffsView tenantId={settings?.tenantId || ''} seasonId={activeSeason.id} />
-                                ) : (
-                                    <div className="text-center text-slate-500 py-12">Torneo no disponible</div>
-                                )}
-                            </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* Sidebar Widgets (3 cols) */}

@@ -1,6 +1,7 @@
 package com.leagueos.modules.competition.api;
 
 import com.leagueos.modules.competition.domain.Match;
+import com.leagueos.modules.competition.domain.MatchStage;
 import com.leagueos.modules.competition.persistence.MatchRepository;
 import com.leagueos.modules.league.domain.Season;
 import com.leagueos.modules.league.persistence.SeasonRepository;
@@ -37,12 +38,18 @@ public class PublicMatchController {
                 List<Match> seasonMatches = matchRepository.findBySeasonId(season.getId());
                 if (seasonMatches == null || seasonMatches.isEmpty()) continue;
                 
-                int maxMatchday = seasonMatches.stream()
+                List<Match> regularMatches = seasonMatches.stream()
+                        .filter(m -> m.getStage() == MatchStage.REGULAR && m.getMatchday() != null)
+                        .toList();
+                
+                if (regularMatches.isEmpty()) continue;
+                
+                int maxMatchday = regularMatches.stream()
                         .mapToInt(Match::getMatchday)
                         .max()
                         .orElse(1);
                         
-                for (Match m : seasonMatches) {
+                for (Match m : regularMatches) {
                     if (m.getMatchday() == maxMatchday) {
                         upcomingMatches.add(m);
                     }
@@ -71,11 +78,9 @@ public class PublicMatchController {
             
             List<Match> allSeasonMatches = new ArrayList<>();
             for (Season season : activeSeasons) {
-                // Fetch matches by season. To avoid writing a new repository query for this specific
-                // prompt optimization, we can just fetch all and filter, or use an existing method if available.
                 List<Match> matches = matchRepository.findAll();
                 for (Match m : matches) {
-                    if (m.getSeason().getId().equals(season.getId())) {
+                    if (m.getSeason().getId().equals(season.getId()) && m.getStage() == MatchStage.REGULAR && m.getMatchday() != null) {
                         allSeasonMatches.add(m);
                     }
                 }
