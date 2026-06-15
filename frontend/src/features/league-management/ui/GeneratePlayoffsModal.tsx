@@ -27,12 +27,26 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
         if (!isOpen) return;
         setStep(1);
         setLoading(true);
-        leagueApi.getEnrolledTeams(tenantId, seasonId)
-            .then(res => {
-                setTeams(res.data);
-                // Pre-select based on round
+        
+        Promise.all([
+            leagueApi.getEnrolledTeams(tenantId, seasonId),
+            leagueApi.getSeasonStandings(seasonId, tenantId)
+        ])
+            .then(([enrolledRes, standingsRes]) => {
+                const enrolled = enrolledRes.data;
+                const standings = standingsRes.data;
+                
+                // Sort enrolled teams by their standings rank (rank 1 at index 0)
+                const sortedEnrolled = [...enrolled].sort((a, b) => {
+                    const rankA = standings.find((s: any) => s.id === a.team.id)?.rank ?? 999;
+                    const rankB = standings.find((s: any) => s.id === b.team.id)?.rank ?? 999;
+                    return rankA - rankB;
+                });
+                
+                setTeams(sortedEnrolled);
+                
                 const maxTeams = startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
-                setSelectedTeamIds(res.data.slice(0, maxTeams).map(t => t.team.id));
+                setSelectedTeamIds(sortedEnrolled.slice(0, maxTeams).map(t => t.team.id));
             })
             .catch(console.error)
             .finally(() => setLoading(false));
