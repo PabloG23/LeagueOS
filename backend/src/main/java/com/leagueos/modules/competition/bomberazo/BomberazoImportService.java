@@ -1,6 +1,11 @@
 package com.leagueos.modules.competition.bomberazo;
 
 import com.leagueos.modules.competition.domain.Match;
+import com.leagueos.modules.competition.domain.PlayoffRound;
+import com.leagueos.modules.competition.domain.PlayoffTie;
+import com.leagueos.modules.competition.persistence.MatchRepository;
+import com.leagueos.modules.competition.persistence.PlayoffTieRepository;
+import com.leagueos.modules.competition.service.PlayoffService;
 import com.leagueos.modules.league.domain.Division;
 import com.leagueos.modules.league.domain.Season;
 import com.leagueos.modules.league.domain.SeasonStatus;
@@ -34,6 +39,147 @@ public class BomberazoImportService {
     private final DivisionRepository divisionRepository;
     private final TeamRepository teamRepository;
     private final TeamRegistrationRepository teamRegistrationRepository;
+    private final PlayoffTieRepository playoffTieRepository;
+    private final MatchRepository matchRepository;
+    private final PlayoffService playoffService;
+
+    @Transactional
+    public void resolveQuarters() {
+        UUID tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new IllegalStateException("Se requiere el X-Tenant-ID para resolver cuartos.");
+        }
+
+        List<Season> activeSeasons = seasonRepository.findByTenantIdAndStatus(tenantId, SeasonStatus.ACTIVE);
+        
+        class QFResult {
+            final String homeTeam;
+            final String awayTeam;
+            final int homeScore;
+            final int awayScore;
+
+            QFResult(String homeTeam, String awayTeam, int homeScore, int awayScore) {
+                this.homeTeam = homeTeam.toLowerCase().trim();
+                this.awayTeam = awayTeam.toLowerCase().trim();
+                this.homeScore = homeScore;
+                this.awayScore = awayScore;
+            }
+        }
+
+        List<QFResult> results = List.of(
+            // 1ra Fuerza
+            new QFResult("TREBOL", "GARAÑONES", 6, 0),
+            new QFResult("DEP. GUADALUPE", "ATL. SAN SEBASTIÁN", 1, 0),
+            new QFResult("BAYER", "PIRMA FC", 1, 3),
+            new QFResult("DEP. SAN PEDRO", "ZORROS", 5, 6),
+
+            // 2da Fuerza
+            new QFResult("INDEPENDIENTE", "JUVENTUD CENTRO", 2, 0),
+            new QFResult("MEXIQUENSE", "GALÁCTICOS", 4, 1),
+            new QFResult("TECOS", "CHELSEA", 2, 0),
+            new QFResult("ATLAS CUAJIMALPA", "DEP. RUBÍ", 5, 6),
+
+            // 3ra Fuerza
+            new QFResult("DEP. ESTRELLA", "TOLUCA SAN GASPAR", 3, 1),
+            new QFResult("SEÑALAMIENTOS", "SAN PEDRO", 4, 5),
+            new QFResult("TIGRES", "ROMA", 3, 2),
+            new QFResult("DIABLOS ROJOS", "ATLAS", 6, 5)
+        );
+
+        for (Season season : activeSeasons) {
+            String seasonName = season.getName().toLowerCase();
+            List<PlayoffTie> ties = playoffTieRepository.findBySeasonId(season.getId());
+            List<PlayoffTie> quarters = ties.stream().filter(t -> t.getRound() == PlayoffRound.QUARTER_FINALS).toList();
+            List<PlayoffTie> semis = ties.stream().filter(t -> t.getRound() == PlayoffRound.SEMI_FINALS).toList();
+            
+            if (quarters.isEmpty() || semis.size() < 2) {
+                log.warn("No hay llaves de cuartos o semis completas para la temporada: {}", season.getName());
+                continue;
+            }
+
+            PlayoffTie semiA = semis.get(0);
+            PlayoffTie semiB = semis.get(1);
+
+            // Step 1: Re-route next_tie_id based on the customized matchups
+            for (PlayoffTie tie : quarters) {
+                String home = tie.getHomeSeedTeam().getName().toLowerCase();
+
+                if (seasonName.contains("primera") || seasonName.contains("1ra")) {
+                    if (home.contains("trebol") || home.contains("garañon") || 
+                        home.contains("bayer") || home.contains("pirma")) {
+                        tie.setNextTieId(semiA.getId());
+                    } else if (home.contains("guadalupe") || home.contains("sebastián") || 
+                               home.contains("san pedro") || home.contains("zorro")) {
+                        tie.setNextTieId(semiB.getId());
+                    }
+                } else if (seasonName.contains("tercera") || seasonName.contains("3ra")) {
+                    if (home.contains("estrella") || home.contains("gaspar") || 
+                        home.contains("señal") || home.contains("san pedro")) {
+                        tie.setNextTieId(semiA.getId());
+                    } else if (home.contains("tigre") || home.contains("roma") || 
+                               home.contains("diablo") || home.contains("atlas")) {
+                        tie.setNextTieId(semiB.getId());
+                    }
+                } else if (seasonName.contains("segunda") || seasonName.contains("2da")) {
+                    if (home.contains("independiente") || home.contains("centro") || 
+                        home.contains("cuajimalpa") || home.contains("rubí")) {
+                        tie.setNextTieId(semiA.getId());
+                    } else if (home.contains("mexiquense") || home.contains("galáctico") || 
+                               home.contains("teco") || home.contains("chelsea")) {
+                        tie.setNextTieId(semiB.getId());
+                    }
+                }
+                playoffTieRepository.save(tie);
+            }
+
+            // Step 2: Record scores and resolve
+            for (PlayoffTie tie : quarters) {
+                String homeName = tie.getHomeSeedTeam().getName();
+                String awayName = tie.getAwaySeedTeam().getName();
+                
+                // Find matching QFResult
+                QFResult matchResult = null;
+                for (QFResult r : results) {
+                    if (teamNamesMatch(homeName, r.homeTeam) && teamNamesMatch(awayName, r.awayTeam)) {
+                        matchResult = r;
+                        break;
+                    } else if (teamNamesMatch(homeName, r.awayTeam) && teamNamesMatch(awayName, r.homeTeam)) {
+                        matchResult = r;
+                        break;
+                    }
+                }
+
+                if (matchResult == null) {
+                    throw new IllegalStateException("No se encontró resultado programado para: " + homeName + " vs " + awayName);
+                }
+
+                List<Match> matches = matchRepository.findByPlayoffTieId(tie.getId());
+                if (matches.isEmpty()) {
+                    throw new IllegalStateException("No se encontraron partidos para la llave: " + tie.getId());
+                }
+
+                Match match = matches.get(0);
+                
+                if (teamNamesMatch(match.getHomeTeam().getName(), homeName)) {
+                    match.setHomeScore(matchResult.homeScore);
+                    match.setAwayScore(matchResult.awayScore);
+                } else {
+                    match.setHomeScore(matchResult.awayScore);
+                    match.setAwayScore(matchResult.homeScore);
+                }
+                match.setStatus(Match.MatchStatus.FINISHED);
+                matchRepository.save(match);
+
+                playoffService.resolveTie(tie.getId());
+            }
+        }
+    }
+
+    private boolean teamNamesMatch(String dbName, String targetName) {
+        String dbClean = dbName.toLowerCase().replaceAll("[.\\s]", "");
+        String targetClean = targetName.toLowerCase().replaceAll("[.\\s]", "");
+        return dbClean.contains(targetClean) || targetClean.contains(dbClean);
+    }
 
     @Transactional
     public void resetTenantData() {

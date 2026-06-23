@@ -41,4 +41,15 @@ public class BomberazoController {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/resolve-quarters")
+    public ResponseEntity<?> resolveQuarters() {
+        try {
+            bomberazoImportService.resolveQuarters();
+            return ResponseEntity.ok(Map.of("message", "Cuartos de final actualizados y semifinales generadas."));
+        } catch (Exception e) {
+            log.error("Fallo al resolver cuartos de final", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

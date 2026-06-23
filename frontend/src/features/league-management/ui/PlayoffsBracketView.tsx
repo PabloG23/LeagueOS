@@ -21,6 +21,7 @@ interface PlayoffsBracketViewProps {
 
 export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, readonly = false }: PlayoffsBracketViewProps) => {
     const [ties, setTies] = useState<PlayoffTie[]>([]);
+    const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -31,6 +32,7 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
         try {
             await leagueApi.deletePlayoffs(tenantId, seasonId);
             setTies([]);
+            setMatches([]);
             setShowDeleteConfirm(false);
             showToast("Fase final eliminada correctamente.", "success");
         } catch (error) {
@@ -41,17 +43,43 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
         }
     };
 
-    const loadBracket = () => {
+    const loadBracket = async () => {
         setLoading(true);
-        leagueApi.getPlayoffBracket(tenantId, seasonId)
-            .then(res => setTies(res.data))
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        try {
+            const [bracketRes, matchesRes] = await Promise.all([
+                leagueApi.getPlayoffBracket(tenantId, seasonId),
+                leagueApi.getSeasonMatches(tenantId, seasonId)
+            ]);
+            setTies(bracketRes.data);
+            setMatches(matchesRes.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         loadBracket();
     }, [tenantId, seasonId, refreshTrigger]);
+
+    const formatMatchDate = (dateStr?: string) => {
+        if (!dateStr) return null;
+        try {
+            const isoStr = dateStr.includes(' ') ? dateStr.replace(' ', 'T') : dateStr;
+            const date = new Date(isoStr);
+            return date.toLocaleDateString('es-MX', {
+                month: 'short',
+                day: 'numeric'
+            }) + ' - ' + date.toLocaleTimeString('es-MX', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).toLowerCase();
+        } catch (e) {
+            return dateStr;
+        }
+    };
 
     if (loading) return (
         <div className="p-12 text-center flex flex-col items-center justify-center bg-slate-950 rounded-3xl min-h-[400px]">
@@ -83,7 +111,6 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
     const hasRoundOf16 = roundsMap['ROUND_OF_16'].length > 0;
     const hasQuarters = roundsMap['QUARTER_FINALS'].length > 0;
     const hasSemis = roundsMap['SEMI_FINALS'].length > 0;
-
     const TeamCard = ({ team, isWinner }: { team: any, isWinner: boolean }) => (
         <div className={`p-3 border-b border-white/5 last:border-0 flex items-center gap-3 transition-all duration-300 ${isWinner ? 'bg-gradient-to-r from-amber-950/40 to-transparent border-l-4 border-l-amber-500' : 'opacity-70 grayscale hover:opacity-100 hover:grayscale-0'}`}>
             <div className={`w-7 h-7 rounded-full overflow-hidden shrink-0 border-2 ${isWinner ? 'border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'border-white/10'}`}>
@@ -99,6 +126,9 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
         const awayWinner = tie.advancingTeam?.id === tie.awaySeedTeam?.id;
         const isFinal = tie.round === 'FINAL';
 
+        // Find the match for this tie
+        const tieMatch = matches.find(m => m.playoffTie?.id === tie.id);
+
         return (
             <div className="relative flex items-center w-full justify-center group animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: `${roundIndex * 0.2}s` }}>
                 
@@ -110,6 +140,14 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
                 <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl w-56 shrink-0 overflow-hidden hover:border-amber-400/80 hover:shadow-[0_0_25px_rgba(245,158,11,0.25)] transition-all duration-300 relative z-10 my-4 cursor-pointer transform group-hover:scale-105">
                     <TeamCard team={tie.homeSeedTeam} isWinner={homeWinner} />
                     <TeamCard team={tie.awaySeedTeam} isWinner={awayWinner} />
+                    
+                    {tieMatch && tieMatch.status === 'SCHEDULED' && (tieMatch.matchDate || tieMatch.location) && (
+                        <div className="bg-slate-950/80 border-t border-white/5 px-3 py-2 flex flex-col gap-0.5 text-[10px] text-slate-400 font-bold tracking-wide">
+                            {tieMatch.location && <span className="truncate flex items-center gap-1">📍 {tieMatch.location}</span>}
+                            {tieMatch.matchDate && <span className="flex items-center gap-1">🕒 {formatMatchDate(tieMatch.matchDate)}</span>}
+                        </div>
+                    )}
+                    
                     {/* Inner highlight */}
                     <div className="absolute inset-0 border border-white/5 rounded-xl pointer-events-none"></div>
                 </div>
