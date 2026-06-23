@@ -159,7 +159,6 @@ public class BomberazoImportService {
                 }
 
                 Match match = matches.get(0);
-                
                 if (teamNamesMatch(match.getHomeTeam().getName(), homeName)) {
                     match.setHomeScore(matchResult.homeScore);
                     match.setAwayScore(matchResult.awayScore);
@@ -173,12 +172,78 @@ public class BomberazoImportService {
                 playoffService.resolveTie(tie.getId());
             }
         }
+        scheduleSemis();
     }
 
-    private boolean teamNamesMatch(String dbName, String targetName) {
-        String dbClean = dbName.toLowerCase().replaceAll("[.\\s]", "");
-        String targetClean = targetName.toLowerCase().replaceAll("[.\\s]", "");
-        return dbClean.contains(targetClean) || targetClean.contains(dbClean);
+    private boolean teamNamesMatch(String name1, String name2) {
+        String n1 = name1.toLowerCase().trim();
+        String n2 = name2.toLowerCase().trim();
+        return n1.contains(n2) || n2.contains(n1);
+    }
+
+    @Transactional
+    public void scheduleSemis() {
+        UUID tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new IllegalStateException("Se requiere el X-Tenant-ID.");
+        }
+
+        List<Season> activeSeasons = seasonRepository.findByTenantIdAndStatus(tenantId, SeasonStatus.ACTIVE);
+        for (Season season : activeSeasons) {
+            List<Match> seasonMatches = matchRepository.findBySeasonId(season.getId());
+            for (Match m : seasonMatches) {
+                if (m.getStage() == com.leagueos.modules.competition.domain.MatchStage.PLAYOFFS) {
+                    if (m.getPlayoffTie() != null && m.getPlayoffTie().getRound() == PlayoffRound.SEMI_FINALS) {
+                        String home = m.getHomeTeam().getName().toLowerCase();
+                        String away = m.getAwayTeam().getName().toLowerCase();
+
+                        // 1ra Fuerza
+                        if (teamNamesMatch(home, "trebol") || teamNamesMatch(away, "trebol")) {
+                            if (teamNamesMatch(home, "pirma") || teamNamesMatch(away, "pirma")) {
+                                m.setMatchDate(java.time.LocalDateTime.of(2026, 6, 28, 12, 0, 0));
+                                m.setLocation("Campo 1");
+                            }
+                        }
+                        if (teamNamesMatch(home, "zorros") || teamNamesMatch(away, "zorros")) {
+                            if (teamNamesMatch(home, "guadalupe") || teamNamesMatch(away, "guadalupe")) {
+                                m.setMatchDate(java.time.LocalDateTime.of(2026, 6, 28, 12, 0, 0));
+                                m.setLocation("Campo 2");
+                            }
+                        }
+
+                        // 2da Fuerza
+                        if (teamNamesMatch(home, "independiente") || teamNamesMatch(away, "independiente")) {
+                            if (teamNamesMatch(home, "rubí") || teamNamesMatch(away, "rubí")) {
+                                m.setMatchDate(java.time.LocalDateTime.of(2026, 6, 28, 10, 0, 0));
+                                m.setLocation("Campo 1");
+                            }
+                        }
+                        if (teamNamesMatch(home, "mexiquense") || teamNamesMatch(away, "mexiquense")) {
+                            if (teamNamesMatch(home, "tecos") || teamNamesMatch(away, "tecos")) {
+                                m.setMatchDate(java.time.LocalDateTime.of(2026, 6, 28, 10, 0, 0));
+                                m.setLocation("Campo 2");
+                            }
+                        }
+
+                        // 3ra Fuerza
+                        if (teamNamesMatch(home, "estrella") || teamNamesMatch(away, "estrella")) {
+                            if (teamNamesMatch(home, "san pedro") || teamNamesMatch(away, "san pedro")) {
+                                m.setMatchDate(java.time.LocalDateTime.of(2026, 6, 28, 8, 0, 0));
+                                m.setLocation("Campo 1");
+                            }
+                        }
+                        if (teamNamesMatch(home, "diablos rojos") || teamNamesMatch(away, "diablos rojos")) {
+                            if (teamNamesMatch(home, "tigres") || teamNamesMatch(away, "tigres")) {
+                                m.setMatchDate(java.time.LocalDateTime.of(2026, 6, 28, 8, 0, 0));
+                                m.setLocation("Campo 2");
+                            }
+                        }
+
+                        matchRepository.save(m);
+                    }
+                }
+            }
+        }
     }
 
     @Transactional

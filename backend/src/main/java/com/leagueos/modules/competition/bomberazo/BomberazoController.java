@@ -52,4 +52,15 @@ public class BomberazoController {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/schedule-semis")
+    public ResponseEntity<?> scheduleSemis() {
+        try {
+            bomberazoImportService.scheduleSemis();
+            return ResponseEntity.ok(Map.of("message", "Semifinales programadas correctamente."));
+        } catch (Exception e) {
+            log.error("Fallo al programar semifinales", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
 }
