@@ -30,4 +30,7 @@ public class TenantSettings extends BaseEntity {
 
     @Column(name = "theme_class")
     private String themeClass;
+
+    @Column(name = "win_points_on_win")
+    private int winPointsOnWin = 3;
 }

@@ -1,9 +1,13 @@
 package com.leagueos.modules.competition.service;
 
+import com.leagueos.core.sport.domain.SportRulesService;
+import com.leagueos.core.sport.domain.SportRulesStrategy;
 import com.leagueos.modules.competition.api.dto.PlayerProfileStatsDTO;
 import com.leagueos.modules.competition.api.dto.PlayerStatDTO;
 import com.leagueos.modules.competition.api.dto.TeamStatDTO;
 import com.leagueos.modules.competition.persistence.MatchEventRepository;
+import com.leagueos.modules.tenant.domain.TenantSettings;
+import com.leagueos.modules.tenant.service.TenantSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +33,8 @@ public class StatsService {
     private final MatchEventRepository matchEventRepository;
     private final MatchRepository matchRepository;
     private final TeamRegistrationRepository teamRegistrationRepository;
+    private final TenantSettingsService tenantSettingsService;
+    private final SportRulesService sportRulesService;
 
     @Transactional(readOnly = true)
     public List<PlayerStatDTO> getTopRedCardsByPlayerForSeason(List<UUID> seasonIds) {
@@ -101,10 +107,17 @@ public class StatsService {
             return m1.getMatchDate().compareTo(m2.getMatchDate());
         });
 
-        // 3. Process matches
+        // 3. Resolve points configuration from TenantSettings and SportRulesStrategy
+        TenantSettings settings = tenantSettingsService.getCurrentSettings();
+        int winPoints = settings.getWinPointsOnWin();
+        // Use SOCCER strategy by default; future: derive sportType from the season/tenant
+        SportRulesStrategy rulesStrategy = sportRulesService.getStrategy("SOCCER")
+                .orElseThrow(() -> new IllegalStateException("No se encontró una estrategia de reglas para el deporte SOCCER."));
+
+        // 4. Process matches
         for (Match match : matches) {
             if (match.getHomeTeam() == null || match.getAwayTeam() == null) continue;
-            
+
             TeamStandingDTO home = standingsMap.get(match.getHomeTeam().getId());
             TeamStandingDTO away = standingsMap.get(match.getAwayTeam().getId());
 
@@ -124,10 +137,6 @@ public class StatsService {
             away.setGoalsAgainst(away.getGoalsAgainst() + homeScore);
             away.setGoalDifference(away.getGoalsFor() - away.getGoalsAgainst());
 
-            // Lógica personalizada de puntos para Liga de San Lucas (2 pts por victoria)
-            UUID currentTenantId = com.leagueos.shared.context.TenantContext.getCurrentTenant();
-            int winPoints = (currentTenantId != null && currentTenantId.toString().equals("22222222-2222-2222-2222-222222222222")) ? 2 : 3;
-
             if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
                 home.setLost(home.getLost() + 1);
                 home.getForm().add("L");
@@ -135,53 +144,47 @@ public class StatsService {
                 away.setLost(away.getLost() + 1);
                 away.getForm().add("L");
             } else if (homeScore > awayScore) {
+                int pts = rulesStrategy.calculateMatchPoints(
+                        SportRulesStrategy.MatchResult.builder().homeScore(homeScore).awayScore(awayScore).isHomeTeam(true).build(),
+                        winPoints);
                 home.setWon(home.getWon() + 1);
-                home.setPoints(home.getPoints() + winPoints);
+                home.setPoints(home.getPoints() + pts);
                 home.getForm().add("W");
 
                 away.setLost(away.getLost() + 1);
                 away.getForm().add("L");
             } else if (homeScore < awayScore) {
+                int pts = rulesStrategy.calculateMatchPoints(
+                        SportRulesStrategy.MatchResult.builder().homeScore(homeScore).awayScore(awayScore).isHomeTeam(false).build(),
+                        winPoints);
                 away.setWon(away.getWon() + 1);
-                away.setPoints(away.getPoints() + winPoints);
+                away.setPoints(away.getPoints() + pts);
                 away.getForm().add("W");
 
                 home.setLost(home.getLost() + 1);
                 home.getForm().add("L");
             } else {
+                int pts = rulesStrategy.calculateMatchPoints(
+                        SportRulesStrategy.MatchResult.builder().homeScore(homeScore).awayScore(awayScore).isHomeTeam(true).build(),
+                        winPoints);
                 home.setDrawn(home.getDrawn() + 1);
-                home.setPoints(home.getPoints() + 1);
+                home.setPoints(home.getPoints() + pts);
                 home.getForm().add("D");
 
                 away.setDrawn(away.getDrawn() + 1);
-                away.setPoints(away.getPoints() + 1);
+                away.setPoints(away.getPoints() + pts);
                 away.getForm().add("D");
             }
         }
 
-        // 4. Truncate form to last 5 matches and apply San Lucas Hotfix
-        UUID currentTenantId = com.leagueos.shared.context.TenantContext.getCurrentTenant();
-        boolean isSanLucasTenant = currentTenantId != null && currentTenantId.toString().equals("22222222-2222-2222-2222-222222222222");
-
+        // 5. Truncate form to last 5 matches
         for (TeamStandingDTO standing : standingsMap.values()) {
             if (standing.getForm().size() > 5) {
                 standing.setForm(standing.getForm().subList(standing.getForm().size() - 5, standing.getForm().size()));
             }
-
-            // HOTFIX: Descalificar a AMIGOS FC y TORREON (sólo para San Lucas)
-            if (isSanLucasTenant && ("AMIGOS FC".equalsIgnoreCase(standing.getTeam()) || "TORREON".equalsIgnoreCase(standing.getTeam()))) {
-                standing.setPoints(0);
-                standing.setGoalsFor(0);
-                standing.setGoalsAgainst(0);
-                standing.setGoalDifference(0);
-                // Opcional: También podemos poner en cero los partidos ganados/empatados/perdidos
-                standing.setWon(0);
-                standing.setDrawn(0);
-                standing.setLost(0);
-            }
         }
 
-        // 5. Sort and assign rank
+        // 6. Sort and assign rank
         List<TeamStandingDTO> sortedStandings = standingsMap.values().stream()
                 .sorted((a, b) -> {
                     if (a.getPoints() != b.getPoints()) return Integer.compare(b.getPoints(), a.getPoints());

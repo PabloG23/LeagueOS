@@ -5,17 +5,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class SoccerRulesStrategy implements SportRulesStrategy {
 
+    private static final int DEFAULT_WIN_POINTS = 3;
+
     @Override
     public int calculateMatchPoints(MatchResult result) {
+        return calculateMatchPoints(result, DEFAULT_WIN_POINTS);
+    }
+
+    @Override
+    public int calculateMatchPoints(MatchResult result, int winPoints) {
         if (result.getHomeScore() == result.getAwayScore()) {
             return 1; // Draw
         }
-        
-        boolean isWin = result.isHomeTeam() 
+
+        boolean isWin = result.isHomeTeam()
             ? result.getHomeScore() > result.getAwayScore()
             : result.getAwayScore() > result.getHomeScore();
-            
-        return isWin ? 3 : 0;
+
+        return isWin ? winPoints : 0;
     }
 
     @Override
