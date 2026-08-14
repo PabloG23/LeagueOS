@@ -1,12 +1,15 @@
 package com.leagueos.modules.competition.service;
 
 import com.leagueos.modules.competition.domain.Match;
+import com.leagueos.modules.competition.domain.MatchStage;
 import com.leagueos.modules.competition.persistence.MatchRepository;
 import com.leagueos.modules.league.domain.Season;
 import com.leagueos.modules.league.domain.Team;
 import com.leagueos.modules.league.domain.TeamRegistration;
 import com.leagueos.modules.league.persistence.SeasonRepository;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
+import com.leagueos.shared.domain.exception.BusinessRuleException;
+import com.leagueos.shared.domain.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,41 +32,39 @@ public class FixtureGeneratorService {
     @Transactional
     public List<Match> generateRoundRobinMatches(UUID seasonId) {
         Season season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new RuntimeException("Season not found: " + seasonId));
+                .orElseThrow(() -> new ResourceNotFoundException("Season not found: " + seasonId));
 
-        // Get approved teams
         List<Team> teams = teamRegistrationRepository.findBySeasonId(seasonId).stream()
                 .filter(reg -> reg.getStatus() == TeamRegistration.RegistrationStatus.APPROVED)
                 .map(TeamRegistration::getTeam)
                 .collect(Collectors.toList());
 
         if (teams.size() < 2) {
-            throw new RuntimeException("At least 2 approved teams are required to generate a calendar");
+            throw new BusinessRuleException("At least 2 approved teams are required to generate a calendar");
         }
 
-        // Shuffle for randomness
         Collections.shuffle(teams);
 
-        // If odd number of teams, add a dummy team "null" for a "Bye"
+        // If odd number of teams, add a bye slot (null)
         if (teams.size() % 2 != 0) {
             teams.add(null);
         }
 
-        int MathdaysTotal = teams.size() - 1;
+        int totalMatchdays = teams.size() - 1;
         int halfSize = teams.size() / 2;
         List<Match> generatedMatches = new ArrayList<>();
-        
-        // Starts on the season's start date + 1 day at 10 AM arbitrary time
-        LocalDateTime currentMatchDate = season.getStartDate().atTime(10, 0); 
 
-        List<Team> teamsCopy = new ArrayList<>(teams);
+        // Start on the season's start date at 10:00 AM
+        LocalDateTime currentMatchDate = season.getStartDate().atTime(10, 0);
 
-        for (int matchday = 1; matchday <= MathdaysTotal; matchday++) {
+        List<Team> rotation = new ArrayList<>(teams);
+
+        for (int matchday = 1; matchday <= totalMatchdays; matchday++) {
             for (int i = 0; i < halfSize; i++) {
-                Team home = teamsCopy.get(i);
-                Team away = teamsCopy.get(teams.size() - 1 - i);
+                Team home = rotation.get(i);
+                Team away = rotation.get(teams.size() - 1 - i);
 
-                // Alternating home/away for the fixed first team
+                // Alternate home/away for the pinned first team
                 if (i == 0 && matchday % 2 == 0) {
                     Team temp = home;
                     home = away;
@@ -78,16 +79,16 @@ public class FixtureGeneratorService {
                     match.setAwayTeam(away);
                     match.setMatchDate(currentMatchDate);
                     match.setStatus(Match.MatchStatus.SCHEDULED);
+                    match.setStage(MatchStage.REGULAR);
                     match.setTenantId(season.getTenantId());
                     generatedMatches.add(match);
                 }
             }
 
-            // Rotate array (keep first element fixed)
-            Team last = teamsCopy.remove(teamsCopy.size() - 1);
-            teamsCopy.add(1, last);
-            
-            // Advance date by 7 days per matchday
+            // Rotate all teams except the first (round-robin algorithm)
+            Team last = rotation.remove(rotation.size() - 1);
+            rotation.add(1, last);
+
             currentMatchDate = currentMatchDate.plusDays(7);
         }
 

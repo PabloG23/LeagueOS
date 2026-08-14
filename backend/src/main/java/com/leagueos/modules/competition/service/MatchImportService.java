@@ -7,8 +7,11 @@ import com.leagueos.modules.league.domain.TeamRegistration;
 import com.leagueos.modules.league.persistence.SeasonRepository;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.shared.context.TenantContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -26,18 +29,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class MatchImportService {
 
     private final MatchRepository matchRepository;
     private final TeamRegistrationRepository teamRegistrationRepository;
     private final SeasonRepository seasonRepository;
-
-    public MatchImportService(MatchRepository matchRepository, TeamRegistrationRepository teamRegistrationRepository, SeasonRepository seasonRepository) {
-        this.matchRepository = matchRepository;
-        this.teamRegistrationRepository = teamRegistrationRepository;
-        this.seasonRepository = seasonRepository;
-    }
 
     @Transactional
     public List<Match> importMatchesFromExcel(String seasonId, MultipartFile file) {
@@ -51,7 +50,8 @@ public class MatchImportService {
         }
 
         List<Match> importedMatches = new ArrayList<>();
-        List<TeamRegistration> enrolledTeams = teamRegistrationRepository.findBySeasonIdAndStatus(parsedSeasonId, TeamRegistration.RegistrationStatus.APPROVED);
+        List<TeamRegistration> enrolledTeams = teamRegistrationRepository.findBySeasonIdAndStatus(
+                parsedSeasonId, TeamRegistration.RegistrationStatus.APPROVED);
 
         try (InputStream is = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(is)) {
@@ -60,37 +60,30 @@ public class MatchImportService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
             for (Row row : sheet) {
-                if (row.getRowNum() == 0) {
-                    continue; // Skip header row
-                }
+                if (row.getRowNum() == 0) continue; // Skip header
 
-                // Matchday | Home Team | Away Team | Date Proposal (Optional)
-                if (row.getCell(0) == null || row.getCell(1) == null || row.getCell(2) == null) {
-                    continue; // Skip incomplete relative rows
-                }
+                if (row.getCell(0) == null || row.getCell(1) == null || row.getCell(2) == null) continue;
 
                 int matchday = getCellValueAsInt(row.getCell(0));
                 String homeTeamName = getCellValueAsString(row.getCell(1));
                 String awayTeamName = getCellValueAsString(row.getCell(2));
 
-                if (homeTeamName.isBlank() || awayTeamName.isBlank()) {
-                    continue;
-                }
+                if (homeTeamName.isBlank() || awayTeamName.isBlank()) continue;
 
-                // Skip the template example row silently if the user left it in
+                // Skip the template example row
                 if (homeTeamName.equalsIgnoreCase("FC Ejemplo Local") && awayTeamName.equalsIgnoreCase("FC Ejemplo Visitante")) {
                     continue;
                 }
 
-                TeamRegistration homeReg = findTeamRegistrationByName(enrolledTeams, homeTeamName);
-                TeamRegistration awayReg = findTeamRegistrationByName(enrolledTeams, awayTeamName);
+                TeamRegistration homeReg = findTeamRegistrationByName(enrolledTeams, homeTeamName)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                String.format("Fila %d: El equipo local '%s' no está inscrito y aprobado en este torneo.",
+                                        row.getRowNum() + 1, homeTeamName)));
 
-                if (homeReg == null) {
-                    throw new IllegalArgumentException(String.format("Fila %d: El equipo local '%s' no está inscrito y aprobado en este torneo.", row.getRowNum() + 1, homeTeamName));
-                }
-                if (awayReg == null) {
-                    throw new IllegalArgumentException(String.format("Fila %d: El equipo visitante '%s' no está inscrito y aprobado en este torneo.", row.getRowNum() + 1, awayTeamName));
-                }
+                TeamRegistration awayReg = findTeamRegistrationByName(enrolledTeams, awayTeamName)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                String.format("Fila %d: El equipo visitante '%s' no está inscrito y aprobado en este torneo.",
+                                        row.getRowNum() + 1, awayTeamName)));
 
                 Match match = new Match();
                 match.setTenantId(tenantId);
@@ -100,22 +93,7 @@ public class MatchImportService {
                 match.setAwayTeam(awayReg.getTeam());
                 match.setStatus(Match.MatchStatus.SCHEDULED);
 
-                // Date is optional
-                if (row.getCell(3) != null) {
-                    try {
-                        if (row.getCell(3).getCellType() == CellType.NUMERIC && org.apache.poi.ss.usermodel.DateUtil.isCellDateFormatted(row.getCell(3))) {
-                            match.setMatchDate(row.getCell(3).getLocalDateTimeCellValue());
-                        } else {
-                            String dateStr = getCellValueAsString(row.getCell(3));
-                            if (!dateStr.isBlank()) {
-                                LocalDate date = LocalDate.parse(dateStr, formatter);
-                                match.setMatchDate(date.atStartOfDay());
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Ignore if not parseable
-                    }
-                }
+                parseDateCell(row, 3, formatter).ifPresent(match::setMatchDate);
 
                 importedMatches.add(match);
             }
@@ -123,17 +101,37 @@ public class MatchImportService {
             return matchRepository.saveAll(importedMatches);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-             throw e; // Rethrow business validation errors as is
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Error al procesar el archivo Excel: " + e.getMessage(), e);
         }
     }
 
-    private TeamRegistration findTeamRegistrationByName(List<TeamRegistration> registrations, String name) {
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    private Optional<TeamRegistration> findTeamRegistrationByName(List<TeamRegistration> registrations, String name) {
         return registrations.stream()
                 .filter(reg -> reg.getTeam().getName().equalsIgnoreCase(name))
-                .findFirst()
-                .orElse(null);
+                .findFirst();
+    }
+
+    private Optional<LocalDateTime> parseDateCell(Row row, int cellIndex, DateTimeFormatter formatter) {
+        Cell cell = row.getCell(cellIndex);
+        if (cell == null) return Optional.empty();
+        try {
+            if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                return Optional.of(cell.getLocalDateTimeCellValue());
+            }
+            String dateStr = getCellValueAsString(cell);
+            if (!dateStr.isBlank()) {
+                return Optional.of(LocalDate.parse(dateStr, formatter).atStartOfDay());
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse date cell at row {}, column {}: {}", row.getRowNum(), cellIndex, e.getMessage());
+        }
+        return Optional.empty();
     }
 
     private String getCellValueAsString(Cell cell) {
@@ -147,7 +145,12 @@ public class MatchImportService {
         if (cell == null) return 0;
         if (cell.getCellType() == CellType.NUMERIC) return (int) cell.getNumericCellValue();
         if (cell.getCellType() == CellType.STRING) {
-            try { return Integer.parseInt(cell.getStringCellValue().trim()); } catch (Exception e) { return 0; }
+            try {
+                return Integer.parseInt(cell.getStringCellValue().trim());
+            } catch (NumberFormatException e) {
+                log.warn("Could not parse numeric cell value: '{}'", cell.getStringCellValue());
+                return 0;
+            }
         }
         return 0;
     }

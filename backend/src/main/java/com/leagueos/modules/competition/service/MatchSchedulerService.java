@@ -2,6 +2,7 @@ package com.leagueos.modules.competition.service;
 
 import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.persistence.MatchRepository;
+import com.leagueos.shared.domain.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,7 @@ public class MatchSchedulerService {
     @Transactional
     public Match recordResult(UUID matchId, int homeScore, int awayScore) {
         Match match = matchRepository.findById(matchId)
-            .orElseThrow(() -> new RuntimeException("Match not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found: " + matchId));
         match.setHomeScore(homeScore);
         match.setAwayScore(awayScore);
         match.setStatus(Match.MatchStatus.FINISHED);

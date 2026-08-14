@@ -4,8 +4,14 @@ import com.leagueos.core.sport.domain.SportRulesService;
 import com.leagueos.core.sport.domain.SportRulesStrategy;
 import com.leagueos.modules.competition.api.dto.PlayerProfileStatsDTO;
 import com.leagueos.modules.competition.api.dto.PlayerStatDTO;
+import com.leagueos.modules.competition.api.dto.TeamStandingDTO;
 import com.leagueos.modules.competition.api.dto.TeamStatDTO;
+import com.leagueos.modules.competition.domain.Match;
+import com.leagueos.modules.competition.domain.MatchEvent;
 import com.leagueos.modules.competition.persistence.MatchEventRepository;
+import com.leagueos.modules.competition.persistence.MatchRepository;
+import com.leagueos.modules.league.domain.TeamRegistration;
+import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.modules.tenant.domain.TenantSettings;
 import com.leagueos.modules.tenant.service.TenantSettingsService;
 import lombok.RequiredArgsConstructor;
@@ -13,18 +19,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import com.leagueos.modules.competition.api.dto.TeamStandingDTO;
-import com.leagueos.modules.competition.domain.Match;
-import com.leagueos.modules.competition.domain.MatchEvent;
-import com.leagueos.modules.competition.persistence.MatchRepository;
-import com.leagueos.modules.league.domain.TeamRegistration;
-import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -38,21 +38,21 @@ public class StatsService {
 
     @Transactional(readOnly = true)
     public List<PlayerStatDTO> getTopRedCardsByPlayerForSeason(List<UUID> seasonIds) {
-        List<PlayerStatDTO> stats = matchEventRepository.countRedCardsByPlayerForSeason(seasonIds);
-        return rankPlayerStats(stats);
+        return assignRanks(matchEventRepository.countRedCardsByPlayerForSeason(seasonIds),
+                PlayerStatDTO::getRedCards, (dto, rank) -> dto.setRank(rank));
     }
 
     @Transactional(readOnly = true)
     public List<PlayerStatDTO> getTopRedCardsByPlayerForMatchday(List<UUID> seasonIds, Integer matchday) {
         if (matchday == null) return List.of();
-        List<PlayerStatDTO> stats = matchEventRepository.countRedCardsByPlayerForMatchday(seasonIds, matchday);
-        return rankPlayerStats(stats);
+        return assignRanks(matchEventRepository.countRedCardsByPlayerForMatchday(seasonIds, matchday),
+                PlayerStatDTO::getRedCards, (dto, rank) -> dto.setRank(rank));
     }
 
     @Transactional(readOnly = true)
     public List<TeamStatDTO> getTopRedCardsByTeamForSeason(List<UUID> seasonIds) {
-        List<TeamStatDTO> stats = matchEventRepository.countRedCardsByTeamForSeason(seasonIds);
-        return rankTeamStats(stats);
+        return assignRanks(matchEventRepository.countRedCardsByTeamForSeason(seasonIds),
+                TeamStatDTO::getRedCards, (dto, rank) -> dto.setRank(rank));
     }
 
     @Transactional(readOnly = true)
@@ -60,15 +60,13 @@ public class StatsService {
         int goals = matchEventRepository.countEventsByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.GOAL);
         int yellowCards = matchEventRepository.countEventsByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.YELLOW_CARD);
         int redCards = matchEventRepository.countEventsByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.RED_CARD);
-        
+
         int matchesPlayed = matchEventRepository.countMatchesByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.APPEARANCE);
-        
-        // If appearance wasn't explicitly logged, we might fallback to checking if any event exists per match, but appearance is standard.
-        if(matchesPlayed == 0) {
-            // Count distinct matches where the player had any event (goal, card) just in case
-            matchesPlayed = matchEventRepository.countMatchesByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.GOAL) + 
-                            matchEventRepository.countMatchesByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.YELLOW_CARD) + 
-                            matchEventRepository.countMatchesByPlayerIdAndEventType(playerId, MatchEvent.MatchEventType.RED_CARD);
+
+        // Fallback: count distinct matches where the player appeared (only APPEARANCE events are reliable)
+        // Note: summing other event types risks double-counting matches where a player scored AND got carded.
+        if (matchesPlayed == 0) {
+            matchesPlayed = matchEventRepository.countDistinctMatchesByPlayerId(playerId);
         }
 
         return PlayerProfileStatsDTO.builder()
@@ -76,18 +74,18 @@ public class StatsService {
                 .goals(goals)
                 .yellowCards(yellowCards)
                 .redCards(redCards)
-                .matchesPlayed(matchesPlayed > 0 ? matchesPlayed : 0) // Basic fallback
-                .suspendedUntilMatchday(null) // Suspension logic is out of scope for basic stats
+                .matchesPlayed(matchesPlayed)
+                .suspendedUntilMatchday(null)
                 .build();
     }
 
     @Transactional(readOnly = true)
     public List<TeamStandingDTO> calculateStandings(UUID seasonId) {
-        // 1. Initialize map of teams
-        List<TeamRegistration> teams = teamRegistrationRepository.findBySeasonIdAndStatus(seasonId, TeamRegistration.RegistrationStatus.APPROVED);
-        Map<UUID, TeamStandingDTO> standingsMap = new HashMap<>();
+        List<TeamRegistration> registrations = teamRegistrationRepository.findBySeasonIdAndStatus(
+                seasonId, TeamRegistration.RegistrationStatus.APPROVED);
 
-        for (TeamRegistration reg : teams) {
+        Map<UUID, TeamStandingDTO> standingsMap = new HashMap<>();
+        for (TeamRegistration reg : registrations) {
             standingsMap.put(reg.getTeam().getId(), TeamStandingDTO.builder()
                     .id(reg.getTeam().getId())
                     .team(reg.getTeam().getName())
@@ -98,133 +96,124 @@ public class StatsService {
                     .build());
         }
 
-        // 2. Fetch completed matches
         List<Match> matches = matchRepository.findBySeasonIdAndStatusIn(seasonId, List.of(Match.MatchStatus.FINISHED));
+        matches.sort(Comparator.nullsLast(Comparator.comparing(Match::getMatchDate)));
 
-        // Sort matches by date to calculate form correctly
-        matches.sort((m1, m2) -> {
-            if (m1.getMatchDate() == null || m2.getMatchDate() == null) return 0;
-            return m1.getMatchDate().compareTo(m2.getMatchDate());
-        });
-
-        // 3. Resolve points configuration from TenantSettings and SportRulesStrategy
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
         int winPoints = settings.getWinPointsOnWin();
-        // Use SOCCER strategy by default; future: derive sportType from the season/tenant
         SportRulesStrategy rulesStrategy = sportRulesService.getStrategy("SOCCER")
                 .orElseThrow(() -> new IllegalStateException("No se encontró una estrategia de reglas para el deporte SOCCER."));
 
-        // 4. Process matches
         for (Match match : matches) {
             if (match.getHomeTeam() == null || match.getAwayTeam() == null) continue;
-
             TeamStandingDTO home = standingsMap.get(match.getHomeTeam().getId());
             TeamStandingDTO away = standingsMap.get(match.getAwayTeam().getId());
-
             if (home == null || away == null) continue;
 
             int homeScore = match.getHomeScore() != null ? match.getHomeScore() : 0;
             int awayScore = match.getAwayScore() != null ? match.getAwayScore() : 0;
 
-            home.setPlayed(home.getPlayed() + 1);
-            away.setPlayed(away.getPlayed() + 1);
+            applyGoalStats(home, homeScore, awayScore);
+            applyGoalStats(away, awayScore, homeScore);
 
-            home.setGoalsFor(home.getGoalsFor() + homeScore);
-            home.setGoalsAgainst(home.getGoalsAgainst() + awayScore);
-            home.setGoalDifference(home.getGoalsFor() - home.getGoalsAgainst());
-
-            away.setGoalsFor(away.getGoalsFor() + awayScore);
-            away.setGoalsAgainst(away.getGoalsAgainst() + homeScore);
-            away.setGoalDifference(away.getGoalsFor() - away.getGoalsAgainst());
-
-            if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
-                home.setLost(home.getLost() + 1);
-                home.getForm().add("L");
-
-                away.setLost(away.getLost() + 1);
-                away.getForm().add("L");
-            } else if (homeScore > awayScore) {
-                int pts = rulesStrategy.calculateMatchPoints(
-                        SportRulesStrategy.MatchResult.builder().homeScore(homeScore).awayScore(awayScore).isHomeTeam(true).build(),
-                        winPoints);
-                home.setWon(home.getWon() + 1);
-                home.setPoints(home.getPoints() + pts);
-                home.getForm().add("W");
-
-                away.setLost(away.getLost() + 1);
-                away.getForm().add("L");
-            } else if (homeScore < awayScore) {
-                int pts = rulesStrategy.calculateMatchPoints(
-                        SportRulesStrategy.MatchResult.builder().homeScore(homeScore).awayScore(awayScore).isHomeTeam(false).build(),
-                        winPoints);
-                away.setWon(away.getWon() + 1);
-                away.setPoints(away.getPoints() + pts);
-                away.getForm().add("W");
-
-                home.setLost(home.getLost() + 1);
-                home.getForm().add("L");
-            } else {
-                int pts = rulesStrategy.calculateMatchPoints(
-                        SportRulesStrategy.MatchResult.builder().homeScore(homeScore).awayScore(awayScore).isHomeTeam(true).build(),
-                        winPoints);
-                home.setDrawn(home.getDrawn() + 1);
-                home.setPoints(home.getPoints() + pts);
-                home.getForm().add("D");
-
-                away.setDrawn(away.getDrawn() + 1);
-                away.setPoints(away.getPoints() + pts);
-                away.getForm().add("D");
-            }
+            applyMatchResult(home, away, match, homeScore, awayScore, rulesStrategy, winPoints);
         }
 
-        // 5. Truncate form to last 5 matches
-        for (TeamStandingDTO standing : standingsMap.values()) {
-            if (standing.getForm().size() > 5) {
-                standing.setForm(standing.getForm().subList(standing.getForm().size() - 5, standing.getForm().size()));
+        // Truncate form to last 5 matches
+        standingsMap.values().forEach(s -> {
+            if (s.getForm().size() > 5) {
+                s.setForm(s.getForm().subList(s.getForm().size() - 5, s.getForm().size()));
             }
-        }
+        });
 
-        // 6. Sort and assign rank
-        List<TeamStandingDTO> sortedStandings = standingsMap.values().stream()
-                .sorted((a, b) -> {
-                    if (a.getPoints() != b.getPoints()) return Integer.compare(b.getPoints(), a.getPoints());
-                    if (a.getGoalDifference() != b.getGoalDifference()) return Integer.compare(b.getGoalDifference(), a.getGoalDifference());
-                    return Integer.compare(b.getGoalsFor(), a.getGoalsFor());
-                })
+        // Sort and assign ranks
+        List<TeamStandingDTO> sorted = standingsMap.values().stream()
+                .sorted(Comparator
+                        .comparingInt(TeamStandingDTO::getPoints).reversed()
+                        .thenComparingInt(TeamStandingDTO::getGoalDifference).reversed()
+                        .thenComparingInt(TeamStandingDTO::getGoalsFor).reversed())
                 .collect(Collectors.toList());
 
-        for (int i = 0; i < sortedStandings.size(); i++) {
-            sortedStandings.get(i).setRank(i + 1);
+        for (int i = 0; i < sorted.size(); i++) {
+            sorted.get(i).setRank(i + 1);
         }
 
-        return sortedStandings;
+        return sorted;
     }
 
-    private List<PlayerStatDTO> rankPlayerStats(List<PlayerStatDTO> stats) {
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Generic rank assignment. Items must already be ordered by the ranking value (descending).
+     * Ties in value produce equal ranks (dense ranking style).
+     */
+    private <T> List<T> assignRanks(List<T> stats,
+                                     java.util.function.Function<T, Long> valueExtractor,
+                                     java.util.function.BiConsumer<T, Integer> rankSetter) {
         int currentRank = 1;
-        Long previousValue = -1L;
+        Long previousValue = null;
         for (int i = 0; i < stats.size(); i++) {
-            PlayerStatDTO stat = stats.get(i);
-            if (!stat.getRedCards().equals(previousValue)) {
+            T stat = stats.get(i);
+            Long value = valueExtractor.apply(stat);
+            if (!value.equals(previousValue)) {
                 currentRank = i + 1;
             }
-            stat.setRank(currentRank);
-            previousValue = stat.getRedCards();
+            rankSetter.accept(stat, currentRank);
+            previousValue = value;
         }
         return stats;
     }
 
-    private List<TeamStatDTO> rankTeamStats(List<TeamStatDTO> stats) {
-        int currentRank = 1;
-        Long previousValue = -1L;
-        for (int i = 0; i < stats.size(); i++) {
-            TeamStatDTO stat = stats.get(i);
-            if (!stat.getRedCards().equals(previousValue)) {
-                currentRank = i + 1;
-            }
-            stat.setRank(currentRank);
-            previousValue = stat.getRedCards();
+    private void applyGoalStats(TeamStandingDTO team, int goalsFor, int goalsAgainst) {
+        team.setPlayed(team.getPlayed() + 1);
+        team.setGoalsFor(team.getGoalsFor() + goalsFor);
+        team.setGoalsAgainst(team.getGoalsAgainst() + goalsAgainst);
+        team.setGoalDifference(team.getGoalsFor() - team.getGoalsAgainst());
+    }
+
+    private void applyMatchResult(TeamStandingDTO home, TeamStandingDTO away,
+                                   Match match, int homeScore, int awayScore,
+                                   SportRulesStrategy rules, int winPoints) {
+        if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
+            home.setLost(home.getLost() + 1);
+            home.getForm().add("L");
+            away.setLost(away.getLost() + 1);
+            away.getForm().add("L");
+            return;
         }
-        return stats;
+
+        if (homeScore > awayScore) {
+            int pts = rules.calculateMatchPoints(buildResult(homeScore, awayScore, true), winPoints);
+            home.setWon(home.getWon() + 1);
+            home.setPoints(home.getPoints() + pts);
+            home.getForm().add("W");
+            away.setLost(away.getLost() + 1);
+            away.getForm().add("L");
+        } else if (homeScore < awayScore) {
+            int pts = rules.calculateMatchPoints(buildResult(homeScore, awayScore, false), winPoints);
+            away.setWon(away.getWon() + 1);
+            away.setPoints(away.getPoints() + pts);
+            away.getForm().add("W");
+            home.setLost(home.getLost() + 1);
+            home.getForm().add("L");
+        } else {
+            int pts = rules.calculateMatchPoints(buildResult(homeScore, awayScore, true), winPoints);
+            home.setDrawn(home.getDrawn() + 1);
+            home.setPoints(home.getPoints() + pts);
+            home.getForm().add("D");
+            away.setDrawn(away.getDrawn() + 1);
+            away.setPoints(away.getPoints() + pts);
+            away.getForm().add("D");
+        }
+    }
+
+    private SportRulesStrategy.MatchResult buildResult(int homeScore, int awayScore, boolean isHomeTeam) {
+        return SportRulesStrategy.MatchResult.builder()
+                .homeScore(homeScore)
+                .awayScore(awayScore)
+                .isHomeTeam(isHomeTeam)
+                .build();
     }
 }
