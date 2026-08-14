@@ -2,11 +2,11 @@ package com.leagueos.modules.competition.service;
 
 import com.leagueos.core.sport.domain.SportRulesService;
 import com.leagueos.core.sport.domain.SportRulesStrategy;
+import com.leagueos.modules.competition.api.dto.MatchResultSummaryDTO;
 import com.leagueos.modules.competition.api.dto.PlayerProfileStatsDTO;
 import com.leagueos.modules.competition.api.dto.PlayerStatDTO;
 import com.leagueos.modules.competition.api.dto.TeamStandingDTO;
 import com.leagueos.modules.competition.api.dto.TeamStatDTO;
-import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.domain.MatchEvent;
 import com.leagueos.modules.competition.persistence.MatchEventRepository;
 import com.leagueos.modules.competition.persistence.MatchRepository;
@@ -96,18 +96,17 @@ public class StatsService {
                     .build());
         }
 
-        List<Match> matches = matchRepository.findBySeasonIdAndStatusIn(seasonId, List.of(Match.MatchStatus.FINISHED));
-        matches.sort(Comparator.nullsLast(Comparator.comparing(Match::getMatchDate)));
+        List<MatchResultSummaryDTO> matches = matchRepository.findFinishedMatchSummariesBySeasonId(seasonId);
 
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
         int winPoints = settings.getWinPointsOnWin();
         SportRulesStrategy rulesStrategy = sportRulesService.getStrategy("SOCCER")
                 .orElseThrow(() -> new IllegalStateException("No se encontró una estrategia de reglas para el deporte SOCCER."));
 
-        for (Match match : matches) {
-            if (match.getHomeTeam() == null || match.getAwayTeam() == null) continue;
-            TeamStandingDTO home = standingsMap.get(match.getHomeTeam().getId());
-            TeamStandingDTO away = standingsMap.get(match.getAwayTeam().getId());
+        for (MatchResultSummaryDTO match : matches) {
+            if (match.getHomeTeamId() == null || match.getAwayTeamId() == null) continue;
+            TeamStandingDTO home = standingsMap.get(match.getHomeTeamId());
+            TeamStandingDTO away = standingsMap.get(match.getAwayTeamId());
             if (home == null || away == null) continue;
 
             int homeScore = match.getHomeScore() != null ? match.getHomeScore() : 0;
@@ -174,7 +173,7 @@ public class StatsService {
     }
 
     private void applyMatchResult(TeamStandingDTO home, TeamStandingDTO away,
-                                   Match match, int homeScore, int awayScore,
+                                   MatchResultSummaryDTO match, int homeScore, int awayScore,
                                    SportRulesStrategy rules, int winPoints) {
         if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
             home.setLost(home.getLost() + 1);

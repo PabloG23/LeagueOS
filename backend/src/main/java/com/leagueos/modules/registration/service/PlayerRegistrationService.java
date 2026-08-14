@@ -24,10 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -89,15 +90,27 @@ public class PlayerRegistrationService {
         String lastName = normalizeUpperCase(request.getLastName());
 
         Season activeSeason = null;
-        List<SeasonRoster> existingRosters = List.of();
-
         if (team != null) {
             activeSeason = getActiveSeason();
-            existingRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
+            List<SeasonRoster> existingRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
 
-            validateActivePlayerLimit(activeSeason, teamId, existingRosters, 0);
-            validateNoDuplicateName(firstName, lastName, existingRosters, List.of());
-            validateJerseyNumber(request.getJerseyNumber(), existingRosters, List.of());
+            validateActivePlayerLimit(activeSeason, teamId, existingRosters.size(), 0);
+
+            Set<String> existingNames = extractNamesSet(existingRosters);
+            if (existingNames.contains(buildFullNameKey(firstName, lastName))) {
+                throw new BusinessRuleException("El jugador '" + firstName + " " + lastName + "' ya existe en el equipo.");
+            }
+
+            TenantSettings settings = tenantSettingsService.getCurrentSettings();
+            if (settings.isRequireJerseyNumbers()) {
+                if (request.getJerseyNumber() == null) {
+                    throw new BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
+                }
+                Set<Integer> existingJerseys = extractActiveJerseySet(existingRosters);
+                if (existingJerseys.contains(request.getJerseyNumber())) {
+                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador activo en el equipo.");
+                }
+            }
         }
 
         Person person = buildAndSavePerson(firstName, lastName, request.getBirthDate(), request.getProfilePhotoUrl(), tenantId);
@@ -129,37 +142,47 @@ public class PlayerRegistrationService {
             throw new BusinessRuleException("El archivo no contiene jugadores válidos.");
         }
 
-        validateActivePlayerLimit(activeSeason, teamId, existingRosters, validRequests.size());
+        long currentActiveCount = existingRosters.stream().filter(r -> r.getStatus() == PlayerStatus.ACTIVE).count();
+        if (currentActiveCount + validRequests.size() > activeSeason.getMaxActivePlayersPerTeam()) {
+            throw new BusinessRuleException(
+                    "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
+            );
+        }
 
-        // Accumulate new rosters in-memory to detect intra-batch duplicates
-        List<SeasonRoster> pendingRosters = new ArrayList<>();
-        List<Person> newPersons = new ArrayList<>();
-        List<Player> newPlayers = new ArrayList<>();
+        // Sets for O(1) duplicate checks instead of repeating Stream.concat
+        Set<String> knownNames = extractNamesSet(existingRosters);
+        Set<Integer> activeJerseys = settings.isRequireJerseyNumbers() ? extractActiveJerseySet(existingRosters) : null;
+
+        List<SeasonRoster> pendingRosters = new ArrayList<>(validRequests.size());
+        List<PlayerResponse> responses = new ArrayList<>(validRequests.size());
 
         for (BatchPlayerRegistrationRequest request : validRequests) {
             String firstName = normalizeUpperCase(request.getFirstName());
             String lastName = normalizeUpperCase(request.getLastName());
+            String nameKey = buildFullNameKey(firstName, lastName);
 
-            validateNoDuplicateName(firstName, lastName, existingRosters, pendingRosters);
+            if (!knownNames.add(nameKey)) {
+                throw new BusinessRuleException("El jugador '" + firstName + " " + lastName + "' ya existe en el equipo.");
+            }
+
             if (settings.isRequireJerseyNumbers()) {
-                validateJerseyNumber(request.getJerseyNumber(), existingRosters, pendingRosters);
+                if (request.getJerseyNumber() == null) {
+                    throw new BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
+                }
+                if (!activeJerseys.add(request.getJerseyNumber())) {
+                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador activo en el equipo.");
+                }
             }
 
             Person person = buildAndSavePerson(firstName, lastName.isEmpty() ? null : lastName, request.getBirthDate(), null, tenantId);
             Player player = buildAndSavePlayer(person, tenantId);
-            newPersons.add(person);
-            newPlayers.add(player);
-
             SeasonRoster roster = buildRoster(player, team, activeSeason, request.getJerseyNumber(), tenantId);
             pendingRosters.add(roster);
+
+            responses.add(mapToResponse(player, roster));
         }
 
         seasonRosterRepository.saveAll(pendingRosters);
-
-        List<PlayerResponse> responses = new ArrayList<>();
-        for (int i = 0; i < newPlayers.size(); i++) {
-            responses.add(mapToResponse(newPlayers.get(i), pendingRosters.get(i)));
-        }
         return responses;
     }
 
@@ -185,44 +208,37 @@ public class PlayerRegistrationService {
         return value != null ? value.trim().toUpperCase() : "";
     }
 
-    private void validateActivePlayerLimit(Season season, UUID teamId, List<SeasonRoster> existing, int incoming) {
-        long current = existing.stream().filter(r -> r.getStatus() == PlayerStatus.ACTIVE).count();
+    private static String buildFullNameKey(String firstName, String lastName) {
+        return firstName + "|" + (lastName != null ? lastName : "");
+    }
+
+    private Set<String> extractNamesSet(List<SeasonRoster> rosters) {
+        Set<String> set = new HashSet<>(rosters.size());
+        for (SeasonRoster r : rosters) {
+            if (r.getPlayer() != null && r.getPlayer().getPerson() != null) {
+                String first = normalizeUpperCase(r.getPlayer().getPerson().getFirstName());
+                String last = normalizeUpperCase(r.getPlayer().getPerson().getLastName());
+                set.add(buildFullNameKey(first, last));
+            }
+        }
+        return set;
+    }
+
+    private Set<Integer> extractActiveJerseySet(List<SeasonRoster> rosters) {
+        Set<Integer> set = new HashSet<>();
+        for (SeasonRoster r : rosters) {
+            if (r.getStatus() == PlayerStatus.ACTIVE && r.getJerseyNumber() != null) {
+                set.add(r.getJerseyNumber());
+            }
+        }
+        return set;
+    }
+
+    private void validateActivePlayerLimit(Season season, UUID teamId, int current, int incoming) {
         if (current + incoming >= season.getMaxActivePlayersPerTeam()) {
             throw new BusinessRuleException(
                     "El equipo ya ha alcanzado el límite máximo de " + season.getMaxActivePlayersPerTeam() + " jugadores activos."
             );
-        }
-    }
-
-    private void validateNoDuplicateName(String firstName, String lastName,
-                                          List<SeasonRoster> existing, List<SeasonRoster> pending) {
-        boolean duplicate = Stream.concat(existing.stream(), pending.stream())
-                .anyMatch(r -> {
-                    String pFirst = r.getPlayer().getPerson().getFirstName();
-                    String pLast = r.getPlayer().getPerson().getLastName();
-                    pLast = pLast != null ? pLast : "";
-                    return pFirst.equalsIgnoreCase(firstName) && pLast.equalsIgnoreCase(lastName);
-                });
-        if (duplicate) {
-            throw new BusinessRuleException("El jugador '" + firstName + " " + lastName + "' ya existe en el equipo.");
-        }
-    }
-
-    private void validateJerseyNumber(Integer jerseyNumber,
-                                       List<SeasonRoster> existing, List<SeasonRoster> pending) {
-        TenantSettings settings = tenantSettingsService.getCurrentSettings();
-        if (!settings.isRequireJerseyNumbers()) return;
-
-        if (jerseyNumber == null) {
-            throw new BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
-        }
-
-        boolean duplicate = Stream.concat(existing.stream(), pending.stream())
-                .anyMatch(r -> r.getStatus() == PlayerStatus.ACTIVE
-                        && r.getJerseyNumber() != null
-                        && r.getJerseyNumber().equals(jerseyNumber));
-        if (duplicate) {
-            throw new BusinessRuleException("El dorsal " + jerseyNumber + " ya está ocupado por otro jugador activo en el equipo.");
         }
     }
 

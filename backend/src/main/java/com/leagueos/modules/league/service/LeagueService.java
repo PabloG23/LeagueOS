@@ -50,7 +50,7 @@ public class LeagueService {
         if (tenantId != null) {
             return teamRepository.findByTenantIdAndIsActiveTrue(tenantId);
         }
-        return teamRepository.findAll().stream().filter(Team::isActive).collect(Collectors.toList());
+        return teamRepository.findByIsActiveTrue();
     }
 
     @Transactional

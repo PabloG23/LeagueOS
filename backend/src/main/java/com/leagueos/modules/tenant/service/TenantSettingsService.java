@@ -16,17 +16,14 @@ public class TenantSettingsService {
     private final TenantSettingsRepository repository;
 
     public TenantSettings getCurrentSettings() {
-        // Since the tenantFilter is enabled by the Aspect, findAll() will only return 
-        // records for the current tenant. We expect 0 or 1.
-        System.out.println("TenantSettingsService: Getting settings. Current Tenant Context: " + TenantContext.getCurrentTenant());
-        return repository.findAll().stream()
-                .findFirst()
-                .orElseGet(() -> {
-                    // Fallback: If no settings exist, return default object (not persisted)
-                    // or potentially create one. For now, returning default DTO-like object.
-                    TenantSettings defaultSettings = new TenantSettings();
-                    // We don't set ID or TenantID here as it's transient
-                    return defaultSettings; 
-                });
+        UUID tenantId = TenantContext.getCurrentTenant();
+        Optional<TenantSettings> settingsOpt = tenantId != null 
+                ? repository.findByTenantId(tenantId)
+                : repository.findAll().stream().findFirst();
+
+        return settingsOpt.orElseGet(() -> {
+            TenantSettings defaultSettings = new TenantSettings();
+            return defaultSettings;
+        });
     }
 }
