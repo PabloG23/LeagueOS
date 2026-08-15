@@ -34,7 +34,7 @@ export interface TenantSettings {
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
-    name: "Liga Mexiquense",
+    name: "LeagueOS",
     logoUrl: "/logo.png",
     boardMembers: [],
     showOffenseDefenseWidgets: true,
@@ -44,10 +44,10 @@ const DEFAULT_SETTINGS: TenantSettings = {
     allowTransfers: false,
     requireJerseyNumbers: false,
     themeClass: '',
-    footerAddress: "Joaquín Fernández de Lizardi 408-A.<br />Col. Sánchez Colin. Toluca, Estado de México.<br />C.P. 50150.",
-    footerPhone: "729 103 7941",
+    footerAddress: "Plataforma de Gestión Deportiva LeagueOS",
+    footerPhone: "",
     footerBackgroundClass: "bg-slate-900",
-    slogan: "Fomentando el deporte y la sana competencia en el Estado de México desde hace más de 50 años.",
+    slogan: "Plataforma de Gestión Deportiva",
     facebookUrl: "#",
     instagramUrl: "#",
     twitterUrl: "#",
@@ -88,16 +88,16 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
         const fetchSettings = async () => {
             setIsLoading(true);
             try {
-                // Determine Tenant from URL
-                let tenantId = '11111111-1111-1111-1111-111111111111'; // Default: Mexiquense
-                let name = "Liga Mexiquense";
+                // Neutral Platform Defaults
+                let tenantId = '00000000-0000-0000-0000-000000000000';
+                let name = "LeagueOS";
                 let logoUrl = "/logo.png";
                 let boardMembers: BoardMember[] = [];
                 let allowTransfers = true;
-                let footerAddress = "Joaquín Fernández de Lizardi 408-A.<br />Col. Sánchez Colin. Toluca, Estado de México.<br />C.P. 50150.";
-                let footerPhone = "729 103 7941";
+                let footerAddress = "Plataforma de Gestión Deportiva LeagueOS";
+                let footerPhone = "";
                 let footerBackgroundClass = "bg-slate-900";
-                let slogan = "Fomentando el deporte y la sana competencia en el Estado de México desde hace más de 50 años.";
+                let slogan = "Plataforma de Gestión Deportiva";
                 let facebookUrl: string | undefined = "#";
                 let instagramUrl: string | undefined = "#";
                 let twitterUrl: string | undefined = "#";
@@ -117,7 +117,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
 
                 if (normalizedSlug) {
                     console.log(`[TenantContext] Detected slug: ${slug} (normalized: ${normalizedSlug})`);
-                    if (normalizedSlug === 'ligasanlucas') {
+                    if (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas') {
                         tenantId = '22222222-2222-2222-2222-222222222222';
                         name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
                         logoUrl = "/san_lucas_logo.png";
@@ -141,15 +141,15 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                             { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
                             { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
                         ];
-                    } else if (normalizedSlug === 'ligamexiquense') {
+                    } else if (normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte') {
                         tenantId = '11111111-1111-1111-1111-111111111111';
-                        name = "Liga Mexiquense";
+                        name = "Liga Nuestro Deporte";
                         logoUrl = "/logo.png";
-                        allowTransfers = true; // Enable transfers for Mexiquense
-                        footerAddress = "Joaquín Fernández de Lizardi 408-A.<br />Col. Sánchez Colin. Toluca, Estado de México.<br />C.P. 50150.";
-                        footerPhone = "729 103 7941";
+                        allowTransfers = true;
+                        footerAddress = "Liga Nuestro Deporte";
+                        footerPhone = "";
                         footerBackgroundClass = "bg-slate-900";
-                        slogan = "Fomentando el deporte y la sana competencia en el Estado de México desde hace más de 50 años.";
+                        slogan = "Fomentando el deporte y la sana competencia.";
                         facebookUrl = "#";
                         instagramUrl = "#";
                         twitterUrl = "#";
@@ -158,16 +158,10 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         matchCardBackgroundClass = "bg-white/5";
                         matchTickerTextClass = "text-primary";
 
-                        boardMembers = [
-                            { role: 'Presidente', name: 'Dr. Hugo Alvarado López' },
-                            { role: 'Secretario', name: 'Lic. Santiago Téllez Pérez' },
-                            { role: 'Tesorero', name: 'Lic. Eduardo Gómez Álvarez' },
-                            { role: 'Comisión Disciplinaria', name: 'Lic. José Elías Nader Mata' },
-                            { role: 'DCM', name: 'Lic. Eduardo Escobar Garduño' },
-                        ];
+                        boardMembers = [];
                     }
                 } else {
-                    console.log(`[TenantContext] No slug detected, defaulting to Mexiquense`);
+                    console.log(`[TenantContext] No slug detected, using neutral LeagueOS platform settings`);
                 }
 
                 // Set Header via Interceptor (More reliable than defaults)

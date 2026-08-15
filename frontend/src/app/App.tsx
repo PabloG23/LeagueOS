@@ -19,8 +19,8 @@ function App() {
             <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
-                    {/* Default Redirect to Liga Mexiquense */}
-                    <Route path="/" element={<Navigate to="/ligaMexiquense" replace />} />
+                    {/* Default Redirect to Liga Nuestro Deporte */}
+                    <Route path="/" element={<Navigate to="/ligaNuestroDeporte" replace />} />
 
                     {/* Public Routes */}
                     <Route path="/login" element={<LoginPage />} />
@@ -30,7 +30,6 @@ function App() {
                     <Route path="/:leagueSlug" element={<LeagueDashboard />} />
                     <Route path="/:leagueSlug/team/:teamId" element={<RosterDashboard />} />
 
-                    {/* Admin Routes (Still Authenticated) */}
                     {/* Admin Routes (Still Authenticated) */}
                     <Route path="/:leagueSlug/admin/teams" element={
                         <AdminDashboardLayout>
@@ -59,13 +58,13 @@ function App() {
                         </AdminDashboardLayout>
                     } />
 
-                    {/* Legacy Admin Routes (For backward compatibility or default mexiquense) */}
-                    <Route path="/admin/teams" element={<Navigate to="/ligaMexiquense/admin/teams" replace />} />
-                    <Route path="/admin/matches" element={<Navigate to="/ligaMexiquense/admin/matches" replace />} />
-                    <Route path="/admin/transfers" element={<Navigate to="/ligaMexiquense/admin/transfers" replace />} />
+                    {/* Legacy Admin Routes (Backward compatibility redirects to ligaNuestroDeporte) */}
+                    <Route path="/admin/teams" element={<Navigate to="/ligaNuestroDeporte/admin/teams" replace />} />
+                    <Route path="/admin/matches" element={<Navigate to="/ligaNuestroDeporte/admin/matches" replace />} />
+                    <Route path="/admin/transfers" element={<Navigate to="/ligaNuestroDeporte/admin/transfers" replace />} />
 
                     {/* Team Rep Dashboard */}
-                    <Route path="/team-dashboard" element={<Navigate to="/ligaMexiquense/team-dashboard" replace />} />
+                    <Route path="/team-dashboard" element={<Navigate to="/ligaNuestroDeporte/team-dashboard" replace />} />
                     <Route path="/:leagueSlug/team-dashboard" element={<RosterDashboard />} />
 
                     <Route path="*" element={<Navigate to="/login" replace />} />

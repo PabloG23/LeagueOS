@@ -32,7 +32,7 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
     const [activeTab, setActiveTab] = useState<TabType>('general');
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaMexiquense'}/team/${teamId || '1'}`;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
     };
 
     const renderPlayerList = (players: DisciplinePlayer[], title: string, subtitle: string) => {

@@ -1,5 +1,5 @@
 import { Calendar, MapPin, Ticket } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 interface HeroMatchCardProps {
     homeTeam: string;
@@ -20,6 +20,9 @@ export const HeroMatchCard = ({
     venue,
     leagueName,
 }: HeroMatchCardProps) => {
+    const { leagueSlug } = useParams<{ leagueSlug?: string }>();
+    const currentLeague = leagueSlug || 'ligaNuestroDeporte';
+
     return (
         <div className="relative w-full h-[400px] rounded-xl overflow-hidden mb-8 group bg-card text-card-foreground shadow-sm border">
             {/* Background Image with Blur */}
@@ -30,15 +33,15 @@ export const HeroMatchCard = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10" />
 
             {/* Content */}
-            <div className="relative z-20 h-full flex flex-col justify-end p-8 text-white">
-                <div className="mb-4 flex items-center gap-2">
+            <div className="relative z-20 h-full flex flex-col justify-between p-8 text-white">
+                <div className="flex items-center justify-between">
                     <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-accent text-accent-foreground hover:bg-accent/90 border-none">PRÓXIMO PARTIDO</span>
                     <span className="text-sm font-medium tracking-wider opacity-90">{leagueName.toUpperCase()}</span>
                 </div>
 
                 <div className="flex items-center justify-between max-w-4xl w-full">
                     {/* Home Team */}
-                    <Link to={`/ligaMexiquense/team/1`} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
+                    <Link to={`/${currentLeague}/team/1`} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
                         <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl group-hover/team:scale-110 transition-transform duration-300">
                             {homeLogo ? (
                                 <img src={homeLogo} alt={homeTeam} className="w-full h-full object-contain" />
@@ -63,7 +66,7 @@ export const HeroMatchCard = ({
                     </div>
 
                     {/* Away Team */}
-                    <Link to={`/ligaMexiquense/team/2`} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
+                    <Link to={`/${currentLeague}/team/2`} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
                         <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl group-hover/team:scale-110 transition-transform duration-300">
                             {awayLogo ? (
                                 <img src={awayLogo} alt={awayTeam} className="w-full h-full object-contain" />

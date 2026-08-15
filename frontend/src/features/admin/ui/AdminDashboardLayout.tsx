@@ -14,12 +14,12 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
     const location = useLocation();
     const { settings } = useTenantSettings();
 
-    // Extract current league slug from URL or default to 'ligaMexiquense'
+    // Extract current league slug from URL or default to 'ligaNuestroDeporte'
     const currentPath = location.pathname;
     const pathParts = currentPath.split('/');
     // Assuming format /:leagueSlug/admin/...
-    // If path starts with /admin, default to ligaMexiquense (via redirect in App.tsx)
-    const leagueSlug = pathParts[1] === 'admin' ? 'ligaMexiquense' : pathParts[1];
+    // If path starts with /admin, default to ligaNuestroDeporte (via redirect in App.tsx)
+    const leagueSlug = pathParts[1] === 'admin' ? 'ligaNuestroDeporte' : pathParts[1];
 
     const menuItems = [
         { path: `/${leagueSlug}/admin/seasons`, icon: LayoutDashboard, label: 'Torneos' },

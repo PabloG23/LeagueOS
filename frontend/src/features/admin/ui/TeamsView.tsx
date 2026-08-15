@@ -12,7 +12,7 @@ interface ExtendedTeam extends Team {
 
 export const TeamsView = () => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
-    const currentLeague = leagueSlug || 'ligaMexiquense';
+    const currentLeague = leagueSlug || 'ligaNuestroDeporte';
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState<ExtendedTeam | null>(null);
     const { settings } = useTenantSettings();

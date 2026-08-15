@@ -15,7 +15,7 @@ export const TeamDashboardLayout = ({ children }: TeamDashboardLayoutProps) => {
     // Extract current league slug from URL
     const currentPath = location.pathname;
     const pathParts = currentPath.split('/');
-    const leagueSlug = pathParts[1] || 'ligaMexiquense';
+    const leagueSlug = pathParts[1] || 'ligaNuestroDeporte';
 
     const handleLogout = () => {
         localStorage.clear();

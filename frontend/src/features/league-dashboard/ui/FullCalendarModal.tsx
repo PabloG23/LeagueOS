@@ -40,7 +40,7 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
     }, [isOpen, onClose]);
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaMexiquense'}/team/${teamId || '1'}`;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
     };
 
     // Extract unique seasons

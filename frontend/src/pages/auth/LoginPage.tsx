@@ -13,7 +13,7 @@ export const LoginPage = () => {
 
     // Extract slug from URL to preserve tenant context
     const matchLeague = matchPath("/:leagueSlug/*", location.pathname);
-    const leagueSlug = matchLeague?.params.leagueSlug || 'ligaMexiquense';
+    const leagueSlug = matchLeague?.params.leagueSlug || 'ligaNuestroDeporte';
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,11 +46,11 @@ export const LoginPage = () => {
             }
 
             // Determine slug from Tenant ID (Trust backend over URL)
-            let targetSlug = 'ligaMexiquense';
+            let targetSlug = 'ligaNuestroDeporte';
             if (data.tenantId === '22222222-2222-2222-2222-222222222222') {
                 targetSlug = 'ligaSanLucas';
             } else if (data.tenantId === '11111111-1111-1111-1111-111111111111') {
-                targetSlug = 'ligaMexiquense';
+                targetSlug = 'ligaNuestroDeporte';
             } else {
                 // Fallback to URL or default
                 targetSlug = leagueSlug;

@@ -21,7 +21,7 @@ export const TopRedCardsWidget = ({ players }: TopRedCardsWidgetProps) => {
     const runnersUp = players.slice(1, 10); // Show up to 10 total
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaMexiquense'}/team/${teamId || '1'}`;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
     };
 
     return (

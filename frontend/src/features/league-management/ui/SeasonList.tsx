@@ -22,7 +22,7 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
     const { showToast } = useToast();
 
     const DIVISIONS = ['1ra Fuerza', '2da Fuerza', '3ra Fuerza'];
-    const currentLeague = leagueSlug || 'ligaMexiquense';
+    const currentLeague = leagueSlug || 'ligaNuestroDeporte';
 
     useEffect(() => {
         loadSeasons();

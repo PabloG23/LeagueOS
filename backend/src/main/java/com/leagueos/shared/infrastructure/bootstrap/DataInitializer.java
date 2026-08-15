@@ -28,10 +28,10 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("====== STARTING DEV DATA INITIALIZATION ======");
-        UUID tenantMexiquense = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        UUID tenantNuestroDeporte = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID tenantSanLucas = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
-        createTenantSettingsAndAdmin(tenantMexiquense, "admin_liga", "Administrador Principal", true, null);
+        createTenantSettingsAndAdmin(tenantNuestroDeporte, "admin_liga", "Administrador Nuestro Deporte", true, null);
         createTenantSettingsAndAdmin(tenantSanLucas, "admin_sanlucas", "Administrador San Lucas", false, "theme-san-lucas");
 
         log.info("====== DONE SEEDING DEV DATA ======");

@@ -22,7 +22,7 @@ export const TopScorersWidget = ({ scorers }: TopScorersWidgetProps) => {
     const runnersUp = scorers.slice(1);
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaMexiquense'}/team/${teamId || '1'}`;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
     };
 
     return (

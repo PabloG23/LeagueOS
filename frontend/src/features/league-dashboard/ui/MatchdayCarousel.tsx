@@ -23,7 +23,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
     }, [activeSeasons, activeTabId]);
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaMexiquense'}/team/${teamId || '1'}`;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
     };
 
     if (!settings || activeSeasons.length === 0) {
