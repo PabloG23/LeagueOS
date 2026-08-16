@@ -137,12 +137,12 @@ export const LeagueDashboard = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+        <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
             <Navbar />
             {/* Dynamic Carousels for all active seasons */}
-            <div className="w-full bg-slate-50 relative z-10 w-full overflow-hidden">
+            <div className="w-full relative z-10 overflow-hidden">
                 {loadingUpcoming ? (
-                    <section className={`${settings?.matchTickerBackgroundClass || 'bg-slate-900'} py-6 border-b border-white/10`}><div className="text-center text-white">Cargando próximas jornadas...</div></section>
+                    <section className={`${settings?.matchTickerBackgroundClass || 'bg-sidebar'} py-6 border-b border-white/10`}><div className="text-center text-white">Cargando próximas jornadas...</div></section>
                 ) : allActiveSeasons.length === 0 ? (
                     <section className={`${settings?.matchTickerBackgroundClass || 'bg-slate-900'} py-6 border-b border-white/10`}><div className="text-center text-white font-medium">No hay torneos activos.</div></section>
                 ) : (

@@ -88,6 +88,40 @@
     --sidebar: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
   }
+
+  /* Theme: Liga Nuestro Deporte (Dark Sport Premium — Royal Blue & Dark Navy) */
+  .theme-nuestro-deporte {
+    --background: 226 73% 6%;         /* #060B1A dark navy-black */
+    --foreground: 220 30% 98%;        /* #F8FAFF white */
+
+    --card: 222 58% 10%;             /* #0A1224 dark navy card */
+    --card-foreground: 220 30% 98%;
+
+    --popover: 222 58% 10%;
+    --popover-foreground: 220 30% 98%;
+
+    --primary: 222 100% 50%;          /* #0057FF Royal Blue (Matching official logo) */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 50% 15%;         /* #121F3D */
+    --secondary-foreground: 220 30% 90%;
+
+    --muted: 222 40% 14%;
+    --muted-foreground: 217 25% 65%;
+
+    --accent: 217 91% 60%;            /* #3B82F6 Electric Blue highlight */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 45% 18%;            /* #19284D */
+    --input: 222 45% 18%;
+    --ring: 222 100% 50%;
+
+    --sidebar: 226 73% 4%;            /* #040812 Deep Navy */
+    --sidebar-foreground: 220 30% 98%;
+  }
 }
 
 @layer base {

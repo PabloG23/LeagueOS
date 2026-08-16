@@ -75,7 +75,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
     // Effect to apply theme class to body
     useEffect(() => {
         // Remove any existing theme classes first
-        document.body.classList.remove('theme-san-lucas');
+        document.body.classList.remove('theme-san-lucas', 'theme-nuestro-deporte');
 
         if (settings.themeClass) {
             document.body.classList.add(settings.themeClass);
@@ -94,6 +94,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 let logoUrl = "/logo.png";
                 let boardMembers: BoardMember[] = [];
                 let allowTransfers = true;
+                let themeClass = '';
                 let footerAddress = "Plataforma de Gestión Deportiva LeagueOS";
                 let footerPhone = "";
                 let footerBackgroundClass = "bg-slate-900";
@@ -121,6 +122,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         tenantId = '22222222-2222-2222-2222-222222222222';
                         name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
                         logoUrl = "/san_lucas_logo.png";
+                        themeClass = 'theme-san-lucas';
                         allowTransfers = false; // Disable transfers for San Lucas
                         footerAddress = "Zaragoza S/N, San Sebastián, Metepec C.P. 52146";
                         footerPhone = "722 634 4082";
@@ -144,19 +146,20 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     } else if (normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte') {
                         tenantId = '11111111-1111-1111-1111-111111111111';
                         name = "Liga Nuestro Deporte";
-                        logoUrl = "/logo.png";
+                        logoUrl = "/nuestro_deporte_logo.png";
+                        themeClass = 'theme-nuestro-deporte';
                         allowTransfers = true;
                         footerAddress = "Liga Nuestro Deporte";
                         footerPhone = "";
-                        footerBackgroundClass = "bg-slate-900";
-                        slogan = "Fomentando el deporte y la sana competencia.";
+                        footerBackgroundClass = "bg-[#040812]";
+                        slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
                         facebookUrl = "#";
                         instagramUrl = "#";
                         twitterUrl = "#";
 
-                        matchTickerBackgroundClass = "bg-sidebar";
-                        matchCardBackgroundClass = "bg-white/5";
-                        matchTickerTextClass = "text-primary";
+                        matchTickerBackgroundClass = "bg-[#040812]";
+                        matchCardBackgroundClass = "bg-[#0A1224]";
+                        matchTickerTextClass = "text-blue-400";
 
                         boardMembers = [];
                     }
@@ -188,6 +191,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     ...(typeof responseData === 'object' ? responseData : {}),     // Overrides from backend (if any)
                     name,
                     logoUrl,
+                    themeClass,
                     boardMembers,
                     allowTransfers,
                     footerAddress,

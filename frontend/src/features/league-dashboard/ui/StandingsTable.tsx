@@ -75,14 +75,25 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
         return data[activeTab] || [];
     }, [data, activeTab]);
 
+    const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+
     const columns = useMemo<ColumnDef<TeamStanding>[]>(
         () => [
             {
                 accessorKey: 'rank',
-                header: '#',
+                header: () => <div className="text-center w-8">#</div>,
                 cell: (info) => (
-                    <div className="font-bold flex items-center justify-center w-7 h-7 rounded-md bg-slate-100/80 text-slate-700 text-sm shadow-sm border border-slate-200">
-                        {info.getValue<number>()}
+                    <div className="flex justify-center items-center">
+                        <span className={cn(
+                            "w-7 h-7 flex items-center justify-center rounded-lg font-black text-sm",
+                            info.getValue<number>() === 1
+                                ? isNuestroDeporte ? "bg-blue-600 text-white shadow-md shadow-blue-500/30" : "bg-amber-100 text-amber-900 border border-amber-300"
+                                : info.getValue<number>() <= 8
+                                    ? isNuestroDeporte ? "bg-blue-950/60 text-blue-300 border border-blue-800/50" : "bg-slate-100 text-slate-700"
+                                    : isNuestroDeporte ? "text-slate-500" : "text-slate-400"
+                        )}>
+                            {info.getValue<number>()}
+                        </span>
                     </div>
                 ),
             },
@@ -91,7 +102,10 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 header: 'Equipo',
                 cell: (info) => (
                     <div className="min-w-[200px]">
-                        <Link to={`/${leagueSlug || 'default'}/team/${info.row.original.id}`} className="font-bold text-slate-800 hover:text-blue-600 hover:underline transition-colors text-base whitespace-nowrap block truncate">
+                        <Link to={`/${leagueSlug || 'default'}/team/${info.row.original.id}`} className={cn(
+                            "font-bold hover:underline transition-colors text-base whitespace-nowrap block truncate",
+                            isNuestroDeporte ? "text-white hover:text-blue-400" : "text-slate-800 hover:text-blue-600"
+                        )}>
                             {info.getValue<string>()}
                         </Link>
                     </div>
@@ -100,32 +114,32 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
             {
                 accessorKey: 'played',
                 header: () => <div className="text-center">JJ</div>,
-                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-medium whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'won',
                 header: () => <div className="text-center">JG</div>,
-                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-medium whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'drawn',
                 header: () => <div className="text-center">JE</div>,
-                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-medium whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'lost',
                 header: () => <div className="text-center">JP</div>,
-                cell: (info) => <div className="text-center text-slate-500 font-medium whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-medium whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalsFor',
                 header: () => <div className="text-center hidden md:block">GF</div>,
-                cell: (info) => <div className="text-center text-slate-500 font-medium hidden md:block whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-medium hidden md:block whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalsAgainst',
                 header: () => <div className="text-center hidden md:block">GC</div>,
-                cell: (info) => <div className="text-center text-slate-500 font-medium hidden md:block whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-medium hidden md:block whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalDifference',
@@ -133,7 +147,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 cell: (info) => {
                     const diff = info.getValue<number>();
                     return (
-                        <div className={`text-center font-bold hidden md:block whitespace-nowrap ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                        <div className={`text-center font-bold hidden md:block whitespace-nowrap ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-rose-500' : isNuestroDeporte ? 'text-slate-400' : 'text-slate-500'}`}>
                             {diff > 0 ? `+${diff}` : diff}
                         </div>
                     );
@@ -144,15 +158,15 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 header: ({ column }) => {
                     return (
                         <div
-                            className="flex items-center justify-center cursor-pointer hover:text-slate-700 transition-colors font-black text-slate-900 whitespace-nowrap"
-                            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                            className={cn("flex items-center justify-center font-black cursor-pointer select-none", isNuestroDeporte ? "text-blue-400" : "text-slate-900")}
+                            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                         >
                             PTS
                             <ArrowUpDown className="ml-1 h-4 w-4 text-slate-400" />
                         </div>
                     )
                 },
-                cell: (info) => <div className="text-center font-black text-slate-900 text-xl whitespace-nowrap">{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-black text-xl whitespace-nowrap", isNuestroDeporte ? "text-blue-400" : "text-slate-900")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'form',
@@ -160,7 +174,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 cell: (info) => <RecentFormCell form={info.getValue<('W' | 'D' | 'L')[]>()} />,
             },
         ],
-        [leagueSlug]
+        [leagueSlug, isNuestroDeporte]
     );
 
     const table = useReactTable({
@@ -171,17 +185,31 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
     });
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-200/40 overflow-hidden flex flex-col">
+        <div className={cn(
+            "rounded-2xl border overflow-hidden flex flex-col transition-colors duration-300",
+            isNuestroDeporte
+                ? "border-blue-900/30 bg-[#0A1224] text-white shadow-2xl shadow-blue-950/50"
+                : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-200/40"
+        )}>
             {/* Top Toolbar: Title & Legends */}
-            <div className="p-5 border-b border-slate-100 flex flex-col xl:flex-row justify-between items-start xl:items-center bg-slate-50/50 gap-4">
+            <div className={cn(
+                "p-5 border-b flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4",
+                isNuestroDeporte ? "bg-[#060B1A]/80 border-blue-900/30" : "bg-slate-50/50 border-slate-100"
+            )}>
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full xl:w-auto">
-                    <h3 className="font-bold text-lg flex items-center gap-2 whitespace-nowrap text-slate-800">
-                        <Trophy className="w-5 h-5 text-amber-500 drop-shadow-sm" fill="currentColor" />
+                    <h3 className={cn(
+                        "font-bold text-lg flex items-center gap-2 whitespace-nowrap",
+                        isNuestroDeporte ? "text-white font-['Bebas_Neue'] tracking-wider text-xl" : "text-slate-800"
+                    )}>
+                        <Trophy className={cn("w-5 h-5 drop-shadow-sm", isNuestroDeporte ? "text-blue-400" : "text-amber-500")} fill="currentColor" />
                         Tabla General
                     </h3>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs font-medium text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                <div className={cn(
+                    "flex items-center gap-3 text-xs font-medium px-3 py-1.5 rounded-lg border shadow-sm",
+                    isNuestroDeporte ? "bg-[#0A1224] border-blue-900/40 text-slate-400" : "bg-white border-slate-100 text-slate-500"
+                )}>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-emerald-500" /> Ganado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-slate-400" /> Empatado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-500" /> Perdido</span>
@@ -190,7 +218,10 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
 
             {/* Header Tabs (Integrados a la tabla) */}
             {isMultiDivision && divisions.length > 1 && (
-                <div className="flex border-b border-slate-200 bg-white px-4 scrollbar-hide overflow-x-auto w-full justify-center">
+                <div className={cn(
+                    "flex border-b px-4 scrollbar-hide overflow-x-auto w-full justify-center",
+                    isNuestroDeporte ? "bg-[#060B1A] border-blue-900/30" : "bg-white border-slate-200"
+                )}>
                     <div className="flex space-x-8 min-w-max">
                         {divisions.map(division => {
                             const isActive = activeTab === division;
@@ -201,15 +232,15 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                     className={cn(
                                         "py-4 px-2 text-sm font-bold relative transition-colors duration-200 ease-out whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm",
                                         isActive
-                                            ? "text-slate-900"
-                                            : "text-slate-500 hover:text-slate-700"
+                                            ? isNuestroDeporte ? "text-blue-400" : "text-slate-900"
+                                            : isNuestroDeporte ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-700"
                                     )}
                                 >
                                     {division}
                                     {isActive && (
                                         <motion.div
                                             layoutId="headerTabUnderline"
-                                            className={cn("absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full", primaryColorClass)}
+                                            className={cn("absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full", isNuestroDeporte ? "bg-blue-500" : primaryColorClass)}
                                         />
                                     )}
                                 </button>
@@ -222,11 +253,17 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
             {/* Table Area */}
             <div className="relative w-full overflow-auto flex-1">
                 <table className="w-full caption-bottom text-sm">
-                    <thead className="[&_tr]:border-b bg-slate-50/50">
+                    <thead className={cn(
+                        "[&_tr]:border-b",
+                        isNuestroDeporte ? "bg-[#060B1A]/60" : "bg-slate-50/50"
+                    )}>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id} className="border-b border-slate-200">
+                            <tr key={headerGroup.id} className={cn("border-b", isNuestroDeporte ? "border-blue-900/20" : "border-slate-200")}>
                                 {headerGroup.headers.map((header) => (
-                                    <th key={header.id} className="h-10 px-3 text-left align-middle font-bold text-slate-500 uppercase tracking-widest text-[11px]">
+                                    <th key={header.id} className={cn(
+                                        "h-10 px-3 text-left align-middle font-bold uppercase tracking-widest text-[11px]",
+                                        isNuestroDeporte ? "text-slate-400" : "text-slate-500"
+                                    )}>
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
@@ -238,7 +275,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                             </tr>
                         ))}
                     </thead>
-                    <tbody className="[&_tr:last-child]:border-0 relative bg-white">
+                    <tbody className={cn("[&_tr:last-child]:border-0 relative", isNuestroDeporte ? "bg-[#0A1224]" : "bg-white")}>
                         <AnimatePresence mode="wait">
                             <Fragment key={activeTab}>
                                 {table.getRowModel().rows?.length ? (
@@ -250,8 +287,16 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                             exit={{ opacity: 0, y: -5, transition: { duration: 0.1 } }}
                                             transition={{ delay: i * 0.02, duration: 0.15, ease: "easeOut" }}
                                             className={cn(
-                                                "border-b border-slate-50 transition-colors hover:bg-slate-50 group",
-                                                i < 8 && "bg-emerald-100" // Liguilla
+                                                "border-b transition-colors group",
+                                                isNuestroDeporte
+                                                    ? cn(
+                                                        "border-blue-900/15 hover:bg-blue-950/30",
+                                                        i < 8 && "bg-blue-950/20"
+                                                    )
+                                                    : cn(
+                                                        "border-slate-50 hover:bg-slate-50",
+                                                        i < 8 && "bg-emerald-100"
+                                                    )
                                             )}
                                         >
                                             {row.getVisibleCells().map((cell) => (
