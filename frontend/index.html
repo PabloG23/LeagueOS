@@ -2,9 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LeagueOS - Modern Sport Management</title>
+    <script>
+      (function() {
+        var path = window.location.pathname.toLowerCase();
+        var iconUrl = '/league_logo_new.png';
+        if (path.indexOf('nuestrodeporte') !== -1) {
+          iconUrl = '/nuestro_deporte_logo.png';
+          document.title = 'Liga Nuestro Deporte - Portal Oficial';
+        } else if (path.indexOf('sanlucas') !== -1) {
+          iconUrl = '/san_lucas_logo.png';
+          document.title = 'Liga Ejidal de Futbol San Sebastian y San Lucas - Portal Oficial';
+        }
+        var link = document.createElement('link');
+        link.rel = 'icon';
+        link.type = 'image/png';
+        link.href = iconUrl;
+        document.head.appendChild(link);
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&display=swap" rel="stylesheet">

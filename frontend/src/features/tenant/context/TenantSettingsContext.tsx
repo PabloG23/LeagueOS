@@ -35,7 +35,7 @@ export interface TenantSettings {
 
 const DEFAULT_SETTINGS: TenantSettings = {
     name: "LeagueOS",
-    logoUrl: "/logo.png",
+    logoUrl: "/league_logo_new.png",
     boardMembers: [],
     showOffenseDefenseWidgets: true,
     showDisciplineWidget: false,
@@ -107,7 +107,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 // Neutral Platform Defaults
                 let tenantId = '00000000-0000-0000-0000-000000000000';
                 let name = "LeagueOS";
-                let logoUrl = "/logo.png";
+                let logoUrl = "/league_logo_new.png";
                 let boardMembers: BoardMember[] = [];
                 let allowTransfers = true;
                 let themeClass = '';
