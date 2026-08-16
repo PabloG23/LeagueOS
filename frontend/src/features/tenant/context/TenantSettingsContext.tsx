@@ -72,7 +72,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
     const [isLoading, setIsLoading] = useState(true);
     const location = useLocation();
 
-    // Effect to apply theme class to body
+    // Effect to apply theme class, favicon and title dynamically
     useEffect(() => {
         // Remove any existing theme classes first
         document.body.classList.remove('theme-san-lucas', 'theme-nuestro-deporte');
@@ -80,7 +80,23 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
         if (settings.themeClass) {
             document.body.classList.add(settings.themeClass);
         }
-    }, [settings.themeClass]);
+
+        // Update favicon dynamically
+        if (settings.logoUrl) {
+            let faviconLink = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+            if (!faviconLink) {
+                faviconLink = document.createElement('link');
+                faviconLink.rel = 'icon';
+                document.head.appendChild(faviconLink);
+            }
+            faviconLink.href = settings.logoUrl;
+        }
+
+        // Update page title
+        if (settings.name) {
+            document.title = `${settings.name} - Portal Oficial`;
+        }
+    }, [settings.themeClass, settings.logoUrl, settings.name]);
 
     useEffect(() => {
         let requestInterceptor: number | undefined;
