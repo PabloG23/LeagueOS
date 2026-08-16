@@ -7,8 +7,9 @@
     <script>
       (function() {
         var path = window.location.pathname.toLowerCase();
+        var host = window.location.hostname.toLowerCase();
         var iconUrl = '/league_logo_new.png';
-        if (path.indexOf('nuestrodeporte') !== -1) {
+        if (host.indexOf('nuestrodeporte') !== -1 || path.indexOf('nuestrodeporte') !== -1) {
           iconUrl = '/nuestro_deporte_logo.png';
           document.title = 'Liga Nuestro Deporte - Portal Oficial';
         } else if (path.indexOf('sanlucas') !== -1) {
