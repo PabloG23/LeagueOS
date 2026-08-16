@@ -3,23 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Liga Nuestro Deporte - Portal Oficial</title>
-    <meta name="description" content="Portal Oficial de Liga Nuestro Deporte. Desde 1985." />
+    <title>LeagueOS - Plataforma de Gestión Deportiva</title>
+    <meta name="description" content="Consulta estadísticas, tabla de posiciones, rol de juegos y resultados en vivo." />
 
     <!-- OpenGraph / WhatsApp / Facebook Preview Meta Tags -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Liga Nuestro Deporte" />
-    <meta property="og:title" content="Liga Nuestro Deporte - Portal Oficial" />
-    <meta property="og:description" content="Portal Oficial de Liga Nuestro Deporte. Desde 1985." />
-    <meta property="og:image" content="https://www.nuestrodeporte.com/nuestro_deporte_logo.png" />
+    <meta property="og:site_name" content="LeagueOS" />
+    <meta property="og:title" content="LeagueOS - Plataforma de Gestión Deportiva" />
+    <meta property="og:description" content="Consulta estadísticas, tabla de posiciones, rol de juegos y resultados en vivo." />
+    <meta property="og:image" content="https://league-os-weld.vercel.app/league_logo_new.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Liga Nuestro Deporte - Portal Oficial" />
-    <meta name="twitter:description" content="Portal Oficial de Liga Nuestro Deporte. Desde 1985." />
-    <meta name="twitter:image" content="https://www.nuestrodeporte.com/nuestro_deporte_logo.png" />
+    <meta name="twitter:title" content="LeagueOS - Plataforma de Gestión Deportiva" />
+    <meta name="twitter:description" content="Consulta estadísticas, tabla de posiciones, rol de juegos y resultados en vivo." />
+    <meta name="twitter:image" content="https://league-os-weld.vercel.app/league_logo_new.png" />
 
     <script>
       (function() {
@@ -30,33 +30,48 @@
 
         var title = 'LeagueOS - Plataforma de Gestión Deportiva';
         var desc = 'Consulta estadísticas, rol de juegos, tabla de posiciones y resultados en vivo.';
+        var siteName = 'LeagueOS';
         var iconUrl = '/league_logo_new.png';
 
         if (isSanLucas) {
           title = 'Liga Ejidal de Futbol San Sebastian y San Lucas - Portal Oficial';
           desc = 'Portal Oficial de la Liga Ejidal de Futbol San Sebastian y San Lucas. Uniendo tradición y pasión en cada encuentro deportivo.';
+          siteName = 'Liga San Lucas';
           iconUrl = '/san_lucas_logo.png';
         } else if (isNuestroDeporte) {
           title = 'Liga Nuestro Deporte - Portal Oficial';
           desc = 'Portal Oficial de Liga Nuestro Deporte. Desde 1985.';
+          siteName = 'Liga Nuestro Deporte';
           iconUrl = '/nuestro_deporte_logo.png';
         }
 
         document.title = title;
 
-        var link = document.createElement('link');
+        var link = document.querySelector("link[rel~='icon']") || document.createElement('link');
         link.rel = 'icon';
         link.type = 'image/png';
         link.href = iconUrl;
         document.head.appendChild(link);
 
+        var fullImageUrl = window.location.origin + iconUrl;
+
         // Update OpenGraph meta tags dynamically
         var ogTitle = document.querySelector('meta[property="og:title"]');
         if (ogTitle) ogTitle.setAttribute('content', title);
+        var ogSiteName = document.querySelector('meta[property="og:site_name"]');
+        if (ogSiteName) ogSiteName.setAttribute('content', siteName);
         var ogDesc = document.querySelector('meta[property="og:description"]');
         if (ogDesc) ogDesc.setAttribute('content', desc);
         var ogImage = document.querySelector('meta[property="og:image"]');
-        if (ogImage) ogImage.setAttribute('content', window.location.origin + iconUrl);
+        if (ogImage) ogImage.setAttribute('content', fullImageUrl);
+
+        // Update Twitter meta tags dynamically
+        var twTitle = document.querySelector('meta[name="twitter:title"]');
+        if (twTitle) twTitle.setAttribute('content', title);
+        var twDesc = document.querySelector('meta[name="twitter:description"]');
+        if (twDesc) twDesc.setAttribute('content', desc);
+        var twImage = document.querySelector('meta[name="twitter:image"]');
+        if (twImage) twImage.setAttribute('content', fullImageUrl);
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
