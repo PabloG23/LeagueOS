@@ -13,14 +13,22 @@ import { SeasonDetailsPage } from '@/pages/dashboard/SeasonDetailsPage';
 import { TenantSettingsProvider } from '@/features/tenant/context/TenantSettingsContext';
 import { ToastProvider } from '@/shared/components/ui/ToastContext';
 
+function RootRoute() {
+    const isNuestroDeporteDomain = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('nuestrodeporte');
+    if (isNuestroDeporteDomain) {
+        return <LeagueDashboard />;
+    }
+    return <Navigate to="/ligaNuestroDeporte" replace />;
+}
+
 function App() {
     return (
         <BrowserRouter>
             <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
-                    {/* Default Redirect to Liga Nuestro Deporte */}
-                    <Route path="/" element={<Navigate to="/ligaNuestroDeporte" replace />} />
+                    {/* Root path: If on custom domain, render LeagueDashboard directly; else redirect */}
+                    <Route path="/" element={<RootRoute />} />
 
                     {/* Public Routes */}
                     <Route path="/login" element={<LoginPage />} />
