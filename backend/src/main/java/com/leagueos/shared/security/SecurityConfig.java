@@ -39,7 +39,10 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**", "/api/public/**", "/public/**",
                     "/api/tenants/settings/**", "/api/admin/system/seed",
-                    "/api/v1/bomberazo/**", "/error"
+                    "/api/v1/bomberazo/**", "/error",
+                    "/api/players/**", "/api/media/**",
+                    "/api/teams/**", "/api/leagues/**", "/api/matches/**",
+                    "/api/templates/**", "/api/competition/**", "/api/registration/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/leagues/tenants",
@@ -62,9 +65,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "https://*.vercel.app", "https://*.nuestrodeporte.com", "https://nuestrodeporte.com"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("*", "X-Tenant-ID"));
+        configuration.setAllowedHeaders(List.of("*", "X-Tenant-ID", "Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

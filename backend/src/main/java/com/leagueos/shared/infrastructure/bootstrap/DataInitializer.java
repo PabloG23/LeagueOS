@@ -23,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final TenantSettingsRepository tenantSettingsRepository;
     private final PersonRepository personRepository;
+    private final com.leagueos.modules.league.persistence.SeasonRepository seasonRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -34,7 +35,25 @@ public class DataInitializer implements CommandLineRunner {
         createTenantSettingsAndAdmin(tenantNuestroDeporte, "admin_liga", "Administrador Nuestro Deporte", true, null);
         createTenantSettingsAndAdmin(tenantSanLucas, "admin_sanlucas", "Administrador San Lucas", false, "theme-san-lucas");
 
+        seedSeasonIfEmpty(tenantNuestroDeporte, "Temporada Regular 2026");
+        seedSeasonIfEmpty(tenantSanLucas, "Torneo Clausura 2026");
+
         log.info("====== DONE SEEDING DEV DATA ======");
+    }
+
+    private void seedSeasonIfEmpty(UUID tenantId, String seasonName) {
+        if (seasonRepository.findByTenantId(tenantId).isEmpty()) {
+            com.leagueos.modules.league.domain.Season season = new com.leagueos.modules.league.domain.Season();
+            season.setName(seasonName);
+            season.setStatus(com.leagueos.modules.league.domain.SeasonStatus.ACTIVE);
+            season.setTenantId(tenantId);
+            season.setStartDate(java.time.LocalDate.now());
+            season.setEndDate(java.time.LocalDate.now().plusMonths(6));
+            season.setCurrentMatchday(1);
+            season.setMaxActivePlayersPerTeam(25);
+            seasonRepository.save(season);
+            log.info("Seeded active season '{}' for tenant {}", seasonName, tenantId);
+        }
     }
 
     private void createTenantSettingsAndAdmin(UUID tenantId, String adminUsername,

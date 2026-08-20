@@ -31,6 +31,9 @@ export interface TenantSettings {
     matchTickerBackgroundClass: string;
     matchCardBackgroundClass: string;
     matchTickerTextClass: string;
+
+    // Feature flags
+    enableRoundRobinFixtures: boolean;
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -55,6 +58,8 @@ const DEFAULT_SETTINGS: TenantSettings = {
     matchTickerBackgroundClass: "bg-sidebar",
     matchCardBackgroundClass: "bg-white/5",
     matchTickerTextClass: "text-primary",
+
+    enableRoundRobinFixtures: true,
 };
 
 interface TenantSettingsContextType {
@@ -122,6 +127,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 let matchTickerBackgroundClass = "bg-sidebar";
                 let matchCardBackgroundClass = "bg-white/5";
                 let matchTickerTextClass = "text-primary";
+                let enableRoundRobinFixtures = true;
 
                 console.log(`[TenantContext] Analyzing URL: ${location.pathname}, Hostname: ${window.location.hostname}`);
 
@@ -155,6 +161,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     matchTickerTextClass = "text-blue-400";
 
                     boardMembers = [];
+                    enableRoundRobinFixtures = true;
                 } else if (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas') {
                     tenantId = '22222222-2222-2222-2222-222222222222';
                     name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
@@ -221,6 +228,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     matchTickerBackgroundClass,
                     matchCardBackgroundClass,
                     matchTickerTextClass,
+                    enableRoundRobinFixtures,
                     tenantId // <--- CRUCIAL: explicitly set tenantId
                 });
             } catch (error) {

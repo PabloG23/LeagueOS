@@ -11,6 +11,7 @@ public class PlayerResponse {
     private String firstName;
     private String lastName;
     private LocalDate birthDate;
+    private String curp;
     private String profilePhotoUrl;
     private UUID teamId;
     private Integer jerseyNumber;

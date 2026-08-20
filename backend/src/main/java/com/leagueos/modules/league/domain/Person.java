@@ -29,4 +29,7 @@ public class Person extends BaseEntity {
 
     @Column(name = "profile_photo_url")
     private String profilePhotoUrl;
+
+    @Column(name = "curp", length = 18)
+    private String curp;
 }

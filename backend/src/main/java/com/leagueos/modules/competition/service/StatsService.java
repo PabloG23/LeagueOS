@@ -89,6 +89,8 @@ public class StatsService {
             standingsMap.put(reg.getTeam().getId(), TeamStandingDTO.builder()
                     .id(reg.getTeam().getId())
                     .team(reg.getTeam().getName())
+                    .logoUrl(reg.getTeam().getLogoUrl())
+                    .signedLogoUrl(reg.getTeam().getSignedLogoUrl())
                     .played(0).won(0).drawn(0).lost(0)
                     .goalsFor(0).goalsAgainst(0).goalDifference(0)
                     .points(0)

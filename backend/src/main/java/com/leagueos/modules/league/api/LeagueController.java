@@ -68,6 +68,19 @@ public class LeagueController {
         }
     }
 
+    @PutMapping("/teams/{teamId}/activate")
+    public ResponseEntity<Void> activateTeam(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID teamId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            leagueService.activateTeam(teamId);
+            return ResponseEntity.ok().build();
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     @PutMapping("/teams/{teamId}")
     public Team updateTeam(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
@@ -76,6 +89,20 @@ public class LeagueController {
         TenantContext.setCurrentTenant(tenantId);
         try {
             return leagueService.updateTeam(teamId, team);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PostMapping(value = "/teams/{teamId}/logo", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Team> uploadTeamLogo(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID teamId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws Exception {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            Team updated = leagueService.uploadTeamLogo(teamId, file.getBytes(), file.getContentType(), tenantId);
+            return ResponseEntity.ok(updated);
         } finally {
             TenantContext.clear();
         }
@@ -130,6 +157,37 @@ public class LeagueController {
         }
     }
 
+    @PutMapping("/seasons/{id}/current-matchday")
+    public ResponseEntity<Season> updateCurrentMatchday(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id,
+            @RequestParam int matchday) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(leagueService.updateCurrentMatchday(id, matchday));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    /**
+     * Preview-only endpoint — returns fixture list WITHOUT persisting to the database.
+     * Idempotent (GET): safe to call multiple times (each call re-shuffles teams).
+     */
+    @GetMapping("/seasons/{id}/preview-fixtures/round-robin")
+    public ResponseEntity<?> previewRoundRobinFixtures(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID id) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(fixtureGeneratorService.previewRoundRobinFixtures(id));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     @PostMapping("/seasons/{id}/generate-fixtures/round-robin")
     public ResponseEntity<?> generateRoundRobinFixtures(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
@@ -143,6 +201,7 @@ public class LeagueController {
             TenantContext.clear();
         }
     }
+
 
     @PostMapping("/seasons/{id}/import-calendar")
     public ResponseEntity<?> importCalendar(

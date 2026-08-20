@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Shield, Trophy, Loader2 } from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi } from '@/shared/api/league-api';
+import { SecureImage } from './SecureImage';
 
 interface Player {
     id: string;
@@ -9,6 +10,8 @@ interface Player {
     photoUrl: string;
     isActive: boolean;
     jerseyNumber?: number;
+    curp?: string;
+    birthDate?: string;
     // Mock stats for demo
     stats?: {
         matchesPlayed: number;
@@ -84,6 +87,19 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
     const isEligible = minMatches === 0 || stats.matchesPlayed >= minMatches;
     const progressPercent = minMatches > 0 ? Math.min(100, (stats.matchesPlayed / minMatches) * 100) : 100;
 
+    const calculateAge = (birthDateString?: string) => {
+        if (!birthDateString) return null;
+        const today = new Date();
+        const birthDate = new Date(birthDateString);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    };
+    const age = calculateAge(player.birthDate);
+
     return (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div
@@ -99,11 +115,12 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
                 </button>
 
                 {/* Header / Banner */}
-                <div className="h-32 bg-gradient-to-br from-blue-600 to-blue-900 relative">
-                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-                        <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 shadow-md p-1">
-                            <img
-                                src={player.photoUrl}
+                <div className="h-40 bg-gradient-to-br from-blue-600 to-blue-900 relative">
+                    <div className="absolute -bottom-16 left-1/2 -translate-x-1/2">
+                        <div className="w-32 h-32 rounded-full border-4 border-white bg-slate-100 shadow-xl p-1 overflow-hidden">
+                            <SecureImage
+                                srcKey={player.photoUrl}
+                                fallbackSrc={`https://api.dicebear.com/7.x/initials/svg?seed=${player.name}`}
                                 alt={player.name}
                                 className="w-full h-full rounded-full object-cover"
                             />
@@ -112,16 +129,24 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
                 </div>
 
                 {/* Content */}
-                <div className="pt-14 pb-8 px-6 text-center">
+                <div className="pt-20 pb-8 px-6 text-center">
                     <h2 className="text-2xl font-bold text-slate-900 flex items-center justify-center gap-2">
-                        {settings?.requireJerseyNumbers && player.jerseyNumber && (
-                            <span className="inline-flex items-center justify-center min-w-[32px] h-8 px-2 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-sm font-black tracking-tighter" title="Dorsal">
-                                {player.jerseyNumber}
-                            </span>
-                        )}
                         {player.name}
                     </h2>
-                    <p className="text-slate-500 font-medium mb-4">{player.teamName || 'Equipo'}</p>
+                    <p className="text-slate-500 font-medium mt-1 mb-3">{player.teamName || 'Equipo'}</p>
+
+                    {/* Additional Player Info */}
+                    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-6 text-sm text-slate-600 bg-slate-50 border border-slate-100 rounded-lg py-2 px-4 mx-auto w-fit">
+                        {player.jerseyNumber !== undefined && (
+                            <span className="flex items-center gap-1.5 border-r border-slate-200 pr-4 last:border-0 last:pr-0"><span className="font-semibold text-slate-400 uppercase text-xs">Dorsal</span> <span className="font-bold text-slate-700">{player.jerseyNumber}</span></span>
+                        )}
+                        {age !== null && (
+                            <span className="flex items-center gap-1.5 border-r border-slate-200 pr-4 last:border-0 last:pr-0"><span className="font-semibold text-slate-400 uppercase text-xs">Edad</span> <span className="font-bold text-slate-700">{age} años</span></span>
+                        )}
+                        {player.curp && (
+                            <span className="flex items-center gap-1.5 border-r border-slate-200 pr-4 last:border-0 last:pr-0"><span className="font-semibold text-slate-400 uppercase text-xs">CURP</span> <span className="font-bold text-slate-700 uppercase">{player.curp}</span></span>
+                        )}
+                    </div>
 
                     {/* Status Badge */}
                     <div className="flex justify-center mb-6">

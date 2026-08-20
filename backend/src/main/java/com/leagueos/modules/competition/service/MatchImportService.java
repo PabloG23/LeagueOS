@@ -25,7 +25,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,6 +40,14 @@ public class MatchImportService {
     private final TeamRegistrationRepository teamRegistrationRepository;
     private final SeasonRepository seasonRepository;
 
+    /**
+     * Imports matches from an Excel file.
+     *
+     * Complexity:
+     *   Time:  O(n + r)  where n = enrolled teams, r = Excel rows
+     *          (O(n) to build the index, O(1) per row lookup — no more O(n*r))
+     *   Space: O(n + r)  for the team index and the match list
+     */
     @Transactional
     public List<Match> importMatchesFromExcel(String seasonId, MultipartFile file) {
         UUID tenantId = TenantContext.getCurrentTenant();
@@ -49,9 +59,17 @@ public class MatchImportService {
             throw new IllegalStateException("Este torneo ya tiene un calendario cargado. Si deseas subir uno nuevo, por favor elimina este torneo y crea uno nuevo.");
         }
 
-        List<Match> importedMatches = new ArrayList<>();
         List<TeamRegistration> enrolledTeams = teamRegistrationRepository.findBySeasonIdAndStatus(
                 parsedSeasonId, TeamRegistration.RegistrationStatus.APPROVED);
+
+        // Build name → registration index once — O(n) build, O(1) per-row lookup
+        // Initial capacity = n*2 to minimize HashMap rehashing (load factor 0.75)
+        Map<String, TeamRegistration> teamIndex = new HashMap<>(enrolledTeams.size() * 2);
+        for (TeamRegistration reg : enrolledTeams) {
+            teamIndex.put(reg.getTeam().getName().toLowerCase(), reg);
+        }
+
+        List<Match> importedMatches = new ArrayList<>();
 
         try (InputStream is = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(is)) {
@@ -75,15 +93,20 @@ public class MatchImportService {
                     continue;
                 }
 
-                TeamRegistration homeReg = findTeamRegistrationByName(enrolledTeams, homeTeamName)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                String.format("Fila %d: El equipo local '%s' no está inscrito y aprobado en este torneo.",
-                                        row.getRowNum() + 1, homeTeamName)));
+                // O(1) lookup via pre-built HashMap index
+                TeamRegistration homeReg = teamIndex.get(homeTeamName.toLowerCase());
+                if (homeReg == null) {
+                    throw new IllegalArgumentException(
+                            String.format("Fila %d: El equipo local '%s' no está inscrito y aprobado en este torneo.",
+                                    row.getRowNum() + 1, homeTeamName));
+                }
 
-                TeamRegistration awayReg = findTeamRegistrationByName(enrolledTeams, awayTeamName)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                String.format("Fila %d: El equipo visitante '%s' no está inscrito y aprobado en este torneo.",
-                                        row.getRowNum() + 1, awayTeamName)));
+                TeamRegistration awayReg = teamIndex.get(awayTeamName.toLowerCase());
+                if (awayReg == null) {
+                    throw new IllegalArgumentException(
+                            String.format("Fila %d: El equipo visitante '%s' no está inscrito y aprobado en este torneo.",
+                                    row.getRowNum() + 1, awayTeamName));
+                }
 
                 Match match = new Match();
                 match.setTenantId(tenantId);
@@ -98,6 +121,7 @@ public class MatchImportService {
                 importedMatches.add(match);
             }
 
+            // Single batch insert — O(1) DB round trips
             return matchRepository.saveAll(importedMatches);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -110,12 +134,6 @@ public class MatchImportService {
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
-
-    private Optional<TeamRegistration> findTeamRegistrationByName(List<TeamRegistration> registrations, String name) {
-        return registrations.stream()
-                .filter(reg -> reg.getTeam().getName().equalsIgnoreCase(name))
-                .findFirst();
-    }
 
     private Optional<LocalDateTime> parseDateCell(Row row, int cellIndex, DateTimeFormatter formatter) {
         Cell cell = row.getCell(cellIndex);

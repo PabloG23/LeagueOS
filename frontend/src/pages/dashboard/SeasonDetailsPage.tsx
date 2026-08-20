@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { leagueApi, Season, TeamRegistration } from '@/shared/api/league-api';
+import { leagueApi, Season, TeamRegistration, MatchPreviewDTO } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { EnrollTeamsModal } from '@/features/admin/ui/EnrollTeamsModal';
 import { GeneratePlayoffsModal } from '@/features/league-management/ui/GeneratePlayoffsModal';
 import { PlayoffsBracketView } from '@/features/league-management/ui/PlayoffsBracketView';
+import { CalendarMethodSelectorModal } from '@/features/fixture-generator/ui/CalendarMethodSelectorModal';
+import { RoundRobinPreviewModal } from '@/features/fixture-generator/ui/RoundRobinPreviewModal';
 import { useToast } from '@/shared/components/ui/ToastContext';
-import { UserPlus, Trash2, Lock, CheckCircle2, ArrowRight, UploadCloud, FileSpreadsheet, Download, AlertCircle, AlertTriangle, X, Trophy } from 'lucide-react';
+import { UserPlus, Trash2, Lock, CheckCircle2, ArrowRight, UploadCloud, FileSpreadsheet, Download, AlertCircle, AlertTriangle, X, Trophy, Shield, CalendarDays, Shuffle, Sparkles, Loader2, ArrowUpRight, CalendarCheck } from 'lucide-react';
 
 export const SeasonDetailsPage = () => {
     const { leagueSlug, seasonId } = useParams();
@@ -27,10 +29,16 @@ export const SeasonDetailsPage = () => {
     const [isDeletingSeason, setIsDeletingSeason] = useState(false);
     const [showDeleteSeasonModal, setShowDeleteSeasonModal] = useState(false);
     const [isActivating, setIsActivating] = useState(false);
+    const [hasCalendar, setHasCalendar] = useState<boolean | null>(null); // null = not yet checked
+    const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
+    const [isRoundRobinPreviewOpen, setIsRoundRobinPreviewOpen] = useState(false);
+    const [roundRobinPreviews, setRoundRobinPreviews] = useState<MatchPreviewDTO[]>([]);
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { settings } = useTenantSettings();
     const tenantId = settings?.tenantId;
     const { showToast, showConfirm } = useToast();
+    const enableRoundRobin = settings?.enableRoundRobinFixtures ?? true;
 
     useEffect(() => {
         if (!seasonId || !tenantId) return;
@@ -48,6 +56,16 @@ export const SeasonDetailsPage = () => {
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     }, [seasonId, tenantId]);
+
+    // Check whether a calendar already exists for this season when the calendar tab is opened.
+    // O(1) — single API call, result stored as a boolean flag.
+    useEffect(() => {
+        if (activeTab !== 'calendar' || !seasonId || !tenantId) return;
+        leagueApi.getSeasonMatches(tenantId, seasonId)
+            .then(res => setHasCalendar(res.data.length > 0))
+            .catch(() => setHasCalendar(false));
+    }, [activeTab, seasonId, tenantId]);
+
 
     const loadTeams = async () => {
         if (!seasonId || !tenantId) return;
@@ -106,16 +124,31 @@ export const SeasonDetailsPage = () => {
         }
     };
 
-    const handleAutoGenerate = async () => {
+    const handleOpenRoundRobin = async () => {
         if (!seasonId || !tenantId) return;
-        try {
-            await leagueApi.generateRoundRobinFixtures(tenantId, seasonId);
-            showToast("Calendario generado exitosamente!", "success");
-            // Reload or switch view
-        } catch (error) {
-            console.error(error);
-            showToast("Error generando calendario. Revisa que haya al menos 2 equipos aprobados.", "error");
+        if (enrolledTeams.length < 2) {
+            showToast("Se necesitan al menos 2 equipos inscritos para generar el calendario.", "error");
+            return;
         }
+        setIsLoadingPreview(true);
+        try {
+            const res = await leagueApi.previewRoundRobinFixtures(tenantId, seasonId);
+            setRoundRobinPreviews(res.data);
+            setIsRoundRobinPreviewOpen(true);
+        } catch (err: any) {
+            console.error("Error fetching round robin preview:", err);
+            const msg = err.response?.data?.error || "No se pudo generar la vista previa. Revisa que haya al menos 2 equipos aprobados.";
+            showToast(msg, "error");
+        } finally {
+            setIsLoadingPreview(false);
+        }
+    };
+
+    const handleRoundRobinConfirmed = () => {
+        setIsRoundRobinPreviewOpen(false);
+        setHasCalendar(true);
+        setUploadSuccess(true);
+        showToast("¡Calendario Round Robin generado y guardado exitosamente!", "success");
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,178 +289,278 @@ export const SeasonDetailsPage = () => {
 
             <div className="mt-6">
                 {activeTab === 'calendar' && (
-                    <div className="border border-slate-200 rounded-3xl p-8 md:p-16 flex flex-col items-center justify-center text-center bg-white shadow-sm relative overflow-hidden">
-                        {/* Decorative Background Elements */}
-                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-green-50/50 to-transparent"></div>
-                        <div className="absolute -left-10 -top-10 w-40 h-40 bg-green-400/5 rounded-full blur-3xl"></div>
-                        <div className="absolute -right-10 top-20 w-32 h-32 bg-blue-400/5 rounded-full blur-3xl"></div>
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        {/* Hidden file input for Excel upload */}
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                        />
 
-                        <div className="max-w-lg relative z-10 w-full">
-                            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-green-500/20 transform -rotate-6 hover:rotate-0 transition-transform duration-300">
-                                <FileSpreadsheet className="w-10 h-10" />
-                            </div>
-
-                            <h3 className="text-3xl font-black mb-3 text-slate-800 tracking-tight">Cargar Calendario</h3>
-                            <p className="text-slate-500 mb-10 text-lg leading-relaxed">
-                                Importa tu calendario de juegos desde un archivo Excel. El sistema validará automáticamente que los equipos coincidan.
-                            </p>
-
-                            <div className="w-full">
-                                <input
-                                    type="file"
-                                    accept=".xlsx, .xls"
-                                    className="hidden"
-                                    ref={fileInputRef}
-                                    onChange={handleFileUpload}
-                                />
-
-                                {uploadError && (
-                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-4 text-left animate-in fade-in slide-in-from-top-4 relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
-                                        <div className="bg-red-100 p-2 rounded-full shrink-0 mt-0.5">
-                                            <AlertCircle className="w-5 h-5 text-red-600" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-red-900 text-lg mb-1 tracking-tight">Carga Interrumpida</h4>
-                                            <p className="text-red-700 text-sm leading-relaxed mb-4">
-                                                {uploadError}
-                                            </p>
-                                            <div className="bg-white/60 rounded-lg p-3 border border-red-100/50 flex flex-col gap-1.5 shadow-sm">
-                                                <p className="text-[11px] font-bold text-red-800 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                                                    Estado del Sistema
-                                                </p>
-                                                <p className="text-xs font-medium text-slate-600 leading-tight">
-                                                    No te preocupes, <strong className="text-slate-800">ningún partido fue guardado</strong> para proteger la integridad de los datos. Por favor, corrige el error en el Excel o inscribe al equipo faltante y vuelve a intentarlo.
-                                                </p>
-                                            </div>
-                                        </div>
-                                </div>
-                                )}
-
-                                {uploadSuccess && (
-                                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left animate-in fade-in slide-in-from-top-4 relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                                        <div className="bg-green-100 p-2 rounded-full shrink-0 mt-0.5 hidden sm:block">
-                                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-bold text-green-900 text-lg mb-1 tracking-tight">¡Calendario Importado!</h4>
-                                            <p className="text-green-700 text-sm leading-relaxed mb-4">
-                                                Los partidos han sido programados correctamente en el sistema.
-                                            </p>
-                                            
-                                            {season.status === 'DRAFT' && (
-                                                <div className="bg-white/60 rounded-xl p-4 border border-green-100 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-                                                    <div className="text-left">
-                                                        <p className="text-xs font-bold text-green-800 uppercase tracking-wider mb-1">Paso Final</p>
-                                                        <p className="text-sm font-medium text-slate-700 leading-tight">Activa el torneo para publicar el calendario y abrir el tablero de posiciones.</p>
-                                                    </div>
-                                                    <button
-                                                        onClick={handleActivateSeason}
-                                                        disabled={isActivating}
-                                                        className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white hover:bg-green-700 font-bold rounded-xl transition-all shadow-md shadow-green-500/20 disabled:opacity-50 shrink-0 w-full sm:w-auto justify-center"
-                                                    >
-                                                        {isActivating ? (
-                                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                                        ) : (
-                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                                              <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
-                                                            </svg>
-                                                        )}
-                                                        Activar Torneo
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                        {/* If calendar is already loaded / generated */}
+                        {hasCalendar === true && (
+                            <div className="p-8 bg-white border border-slate-200 rounded-3xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
+                                <div className="flex items-center gap-5">
+                                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                                        <CalendarCheck className="w-8 h-8" />
                                     </div>
-                                )}
-
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploading}
-                                    className={`w-full group relative flex flex-col items-center justify-center p-10 bg-slate-50 border-2 border-dashed rounded-2xl transition-all duration-500 ease-out overflow-hidden ${uploading ? 'border-green-400 bg-green-50/50' : 'border-slate-300 hover:border-green-500 hover:bg-green-50/80 hover:shadow-2xl hover:shadow-green-500/10'}`}
-                                >
-                                    {uploading ? (
-                                        <div className="flex flex-col items-center animate-in fade-in duration-300">
-                                            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
-                                            <span className="font-bold text-green-700 text-lg">Procesando archivo...</span>
-                                            <span className="text-green-600/70 text-sm mt-1">Espera un momento</span>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Calendario Configurado</h3>
+                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">Activo</span>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                                            <div className="bg-white p-4 rounded-full shadow-md mb-5 group-hover:-translate-y-2 transition-transform duration-500 group-hover:shadow-lg">
-                                                <UploadCloud className="w-8 h-8 text-green-500" />
-                                            </div>
-
-                                            <span className="font-bold text-slate-700 text-xl mb-2 group-hover:text-green-700 transition-colors duration-300">
-                                                Seleccionar Archivo Excel
-                                            </span>
-                                            <span className="text-sm font-medium text-slate-400 bg-white px-4 py-1.5 rounded-full border border-slate-100 shadow-sm mt-2">
-                                                Formatos soportados: .xlsx, .xls
-                                            </span>
-                                        </>
-                                    )}
-                                </button>
-
-                                {!uploading && (
-                                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
-                                        <span className="text-sm font-medium text-slate-500">¿No tienes la plantilla de la liga?</span>
+                                        <p className="text-slate-500 text-sm mt-1">
+                                            Los enfrentamientos de este torneo ya han sido programados. Puedes consultar o editar las fechas, horarios y sedes en la sección de Partidos.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+                                    <button
+                                        onClick={() => navigate(`/${leagueSlug}/admin/matches`)}
+                                        className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-md w-full md:w-auto"
+                                    >
+                                        Ver y Gestionar Partidos
+                                        <ArrowUpRight className="w-4 h-4" />
+                                    </button>
+                                    {season?.status === 'DRAFT' && (
                                         <button
-                                            onClick={handleDownloadTemplate}
-                                            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-lg transition-colors"
+                                            onClick={handleActivateSeason}
+                                            disabled={isActivating}
+                                            className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 w-full md:w-auto"
                                         >
-                                            <Download className="w-4 h-4" />
-                                            Descargar Formato Base
+                                            {isActivating ? (
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 className="w-4 h-4" />
+                                            )}
+                                            Activar Torneo
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Error Alert */}
+                        {uploadError && (
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-4 text-left animate-in fade-in relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500" />
+                                <div className="bg-red-100 p-2 rounded-full shrink-0 mt-0.5">
+                                    <AlertCircle className="w-5 h-5 text-red-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-red-900 text-base mb-1">Error al importar calendario</h4>
+                                    <p className="text-red-700 text-sm leading-relaxed mb-3">{uploadError}</p>
+                                    <div className="bg-white/70 rounded-xl p-3 border border-red-100 text-xs text-slate-600">
+                                        Ningún partido fue guardado. Por favor corrige el archivo o utiliza la generación Round Robin automática.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Success Alert */}
+                        {uploadSuccess && hasCalendar !== true && (
+                            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between gap-4 animate-in fade-in">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-emerald-100 p-2 rounded-full text-emerald-600">
+                                        <CheckCircle2 className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-emerald-900 font-bold text-sm">
+                                        ¡Calendario generado y guardado exitosamente!
+                                    </p>
+                                </div>
+                                {season?.status === 'DRAFT' && (
+                                    <button
+                                        onClick={handleActivateSeason}
+                                        disabled={isActivating}
+                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+                                    >
+                                        Activar Torneo Ahora
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Method Selection Cards (when hasCalendar is not yet confirmed true) */}
+                        {hasCalendar !== true && (
+                            <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-10 shadow-xs space-y-8">
+                                <div className="text-center max-w-2xl mx-auto">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-700 text-xs font-bold uppercase tracking-wider mb-3">
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        Paso 2: Generación de Enfrentamientos
+                                    </div>
+                                    <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                                        Elige el Método para tu Calendario
+                                    </h3>
+                                    <p className="text-slate-500 text-sm md:text-base mt-2">
+                                        Selecciona cómo deseas armar los partidos entre los <strong className="text-slate-700">{enrolledTeams.length} equipos inscritos</strong>.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Option 1: Round Robin Aleatorio */}
+                                    <div className="group relative bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 border-2 border-indigo-200/80 hover:border-indigo-500 rounded-3xl p-7 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10">
+                                        <div>
+                                            <div className="mb-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
+                                                    <Shuffle className="w-7 h-7" />
+                                                </div>
+                                            </div>
+                                            <h4 className="text-xl font-black text-slate-900 tracking-tight mb-2 group-hover:text-indigo-600 transition-colors">
+                                                Round Robin Aleatorio
+                                            </h4>
+                                            <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                                                Genera automáticamente todas las jornadas con vista previa antes de guardar.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            id="btn-generate-round-robin"
+                                            onClick={handleOpenRoundRobin}
+                                            disabled={isLoadingPreview || enrolledTeams.length < 2}
+                                            className="w-full flex items-center justify-center gap-2.5 py-3.5 px-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isLoadingPreview ? (
+                                                <>
+                                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                                    Calculando jornadas...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Shuffle className="w-5 h-5" />
+                                                    Generar con Round Robin
+                                                </>
+                                            )}
                                         </button>
                                     </div>
-                                )}
+
+                                    {/* Option 2: Carga Masiva con Excel */}
+                                    <div className="group relative bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 border-2 border-emerald-200/80 hover:border-emerald-500 rounded-3xl p-7 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10">
+                                        <div>
+                                            <div className="mb-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform duration-300">
+                                                    <FileSpreadsheet className="w-7 h-7" />
+                                                </div>
+                                            </div>
+                                            <h4 className="text-xl font-black text-slate-900 tracking-tight mb-2 group-hover:text-emerald-600 transition-colors">
+                                                Carga Masiva Excel
+                                            </h4>
+                                            <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                                                Importa tu rol de juegos directamente desde la plantilla Excel de la liga.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <button
+                                                id="btn-upload-excel"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploading}
+                                                className="w-full flex items-center justify-center gap-2.5 py-3.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                                            >
+                                                {uploading ? (
+                                                    <>
+                                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                                        Procesando archivo...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <UploadCloud className="w-5 h-5" />
+                                                        Subir Archivo Excel
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            <div className="text-center">
+                                                <button
+                                                    onClick={handleDownloadTemplate}
+                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors"
+                                                >
+                                                    <Download className="w-3.5 h-3.5" />
+                                                    Descargar plantilla oficial de la liga (.xlsx)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
+
                 {activeTab === 'teams' && (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-xl font-bold">Equipos Inscritos ({enrolledTeams.length})</h2>
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+                            <div>
+                                <div className="flex items-center gap-2.5">
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Equipos Inscritos</h2>
+                                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700">
+                                        {enrolledTeams.length}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 font-medium mt-1">
+                                    Planteles confirmados y listos para competir en este torneo
+                                </p>
+                            </div>
                             <button
                                 onClick={() => setIsEnrollModalOpen(true)}
-                                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors"
+                                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-600/20 transition-all transform hover:scale-[1.02]"
                             >
-                                <UserPlus className="w-5 h-5" />
+                                <UserPlus className="w-4 h-4" />
                                 Añadir Equipos
                             </button>
                         </div>
 
                         {enrolledTeams.length === 0 ? (
-                            <div className="border border-dashed rounded-xl p-12 text-center text-slate-500 bg-slate-50">
-                                Aún no hay equipos inscritos en este torneo.
+                            <div className="border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center bg-slate-50/50 flex flex-col items-center justify-center">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
+                                    <Shield className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-1">Aún no hay equipos inscritos</h3>
+                                <p className="text-sm text-slate-500 max-w-sm mb-6">
+                                    Inscribe a los equipos del catálogo general para comenzar a armar el torneo y su calendario.
+                                </p>
+                                <button
+                                    onClick={() => setIsEnrollModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20"
+                                >
+                                    <UserPlus className="w-4 h-4" />
+                                    Inscribir Primeros Equipos
+                                </button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                                 {enrolledTeams.map((reg) => (
-                                    <div key={reg.id} className="p-4 border rounded-xl flex items-center justify-between bg-white hover:border-slate-300 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-full border bg-slate-50 flex items-center justify-center overflow-hidden">
-                                                {reg.team.logoUrl ? (
-                                                    <img src={reg.team.logoUrl} alt={reg.team.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="font-bold text-slate-500">{reg.team.name.substring(0, 2).toUpperCase()}</span>
-                                                )}
+                                    <div
+                                        key={reg.id}
+                                        className="p-4 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between hover:border-blue-300 hover:shadow-md transition-all group"
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            {/* Generic Team Shield Icon */}
+                                            <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-200">
+                                                <Shield className="w-5 h-5" />
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-slate-900">{reg.team.name}</p>
-                                                <p className="text-xs text-slate-500 font-medium">ESTADO: {reg.status}</p>
+
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-slate-900 text-sm truncate group-hover:text-blue-900 transition-colors">
+                                                    {reg.team.name}
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                        Confirmado
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
+
                                         <button
                                             onClick={() => handleUnenrollClick(reg.team.id, reg.team.name)}
-                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Quitar equipo"
+                                            className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shrink-0 opacity-80 group-hover:opacity-100"
+                                            title="Dar de baja del torneo"
                                         >
-                                            <Trash2 className="w-5 h-5" />
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 ))}
@@ -595,6 +728,35 @@ export const SeasonDetailsPage = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Calendar Method Selector Modal — optional helper if opened */}
+            {isMethodSelectorOpen && seasonId && tenantId && (
+                <CalendarMethodSelectorModal
+                    tenantId={tenantId}
+                    seasonId={seasonId}
+                    onSelectExcel={() => {
+                        setIsMethodSelectorOpen(false);
+                        setTimeout(() => fileInputRef.current?.click(), 100);
+                    }}
+                    onClose={() => setIsMethodSelectorOpen(false)}
+                    onConfirmed={() => {
+                        setIsMethodSelectorOpen(false);
+                        setHasCalendar(true);
+                        setUploadSuccess(true);
+                    }}
+                />
+            )}
+
+            {/* Round Robin Preview Modal */}
+            {isRoundRobinPreviewOpen && seasonId && tenantId && (
+                <RoundRobinPreviewModal
+                    tenantId={tenantId}
+                    seasonId={seasonId}
+                    initialPreviews={roundRobinPreviews}
+                    onClose={() => setIsRoundRobinPreviewOpen(false)}
+                    onConfirmed={handleRoundRobinConfirmed}
+                />
             )}
         </div>
     );

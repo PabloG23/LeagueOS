@@ -19,9 +19,12 @@ import com.leagueos.modules.tenant.domain.TenantSettings;
 import com.leagueos.modules.tenant.service.TenantSettingsService;
 import com.leagueos.shared.domain.exception.BusinessRuleException;
 import com.leagueos.shared.domain.exception.ResourceNotFoundException;
+import com.leagueos.shared.util.NameUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,6 +43,7 @@ public class PlayerRegistrationService {
     private final PersonRepository personRepository;
     private final TenantSettingsService tenantSettingsService;
     private final SeasonRosterRepository seasonRosterRepository;
+    private final com.leagueos.modules.media.service.StorageService storageService;
 
     @Transactional
     public void activatePlayer(UUID playerId) {
@@ -75,49 +79,137 @@ public class PlayerRegistrationService {
         seasonRosterRepository.save(roster);
     }
 
-    @Transactional
-    public PlayerResponse registerPlayer(PlayerRegistrationRequest request, UUID defaultTeamId, UUID tenantId) {
+    @Transactional(readOnly = true)
+    public void validateRegistrationPreconditions(PlayerRegistrationRequest request, UUID defaultTeamId, UUID tenantId) {
         if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
             throw new BusinessRuleException("El nombre del jugador es obligatorio.");
         }
 
         UUID teamId = request.getTeamId() != null ? request.getTeamId() : defaultTeamId;
-        Team team = teamId != null
-                ? teamRepository.findById(teamId).orElseThrow(() -> new ResourceNotFoundException("Team not found"))
-                : null;
+        String firstName = normalizeUpperCase(request.getFirstName());
+        String lastName = normalizeUpperCase(request.getLastName());
+        TenantSettings settings = tenantSettingsService.getCurrentSettings();
+
+        boolean isForeign = Boolean.TRUE.equals(request.getIsForeign());
+
+        // Step 1: Early CURP validation and requirement check (foreign players do not require or use CURP)
+        if (!isForeign) {
+            if (request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+                String curpUpper = request.getCurp().trim().toUpperCase();
+                if (!CurpUtils.isValid(curpUpper)) {
+                    throw new BusinessRuleException("El CURP ingresado ('" + curpUpper + "') no tiene un formato válido o su dígito verificador es incorrecto.");
+                }
+            } else if (settings.isRequireCurp()) {
+                throw new BusinessRuleException("El CURP es obligatorio para registrar jugadores en esta liga.");
+            }
+        }
+
+        if (teamId != null) {
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+            Season activeSeason = getActiveSeason();
+            List<SeasonRoster> existingRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
+
+            // Step 2: Check if player already exists and is active in the same team
+            Optional<SeasonRoster> existingRosterOpt = existingRosters.stream()
+                    .filter(r -> {
+                        Person p = r.getPlayer() != null ? r.getPlayer().getPerson() : null;
+                        if (p == null) return false;
+                        if (request.getCurp() != null && !request.getCurp().isBlank() && request.getCurp().equalsIgnoreCase(p.getCurp())) {
+                            return true;
+                        }
+                        return buildFullNameKey(firstName, lastName).equalsIgnoreCase(
+                                buildFullNameKey(normalizeUpperCase(p.getFirstName()), normalizeUpperCase(p.getLastName())));
+                    })
+                    .findFirst();
+
+            if (existingRosterOpt.isPresent()) {
+                SeasonRoster existingRoster = existingRosterOpt.get();
+                if (existingRoster.getStatus() == PlayerStatus.ACTIVE) {
+                    throw new BusinessRuleException("El jugador '" + firstName + (lastName != null && !lastName.isBlank() ? " " + lastName : "") + "' ya se encuentra registrado y activo en este equipo.");
+                }
+            }
+
+            // Step 3: Validate duplicate across different teams in the active season
+            if (!settings.isAllowMultipleTeamsPerPlayer()) {
+                List<SeasonRoster> allSeasonRosters = seasonRosterRepository.findBySeasonId(activeSeason.getId());
+                Optional<SeasonRoster> conflict = allSeasonRosters.stream()
+                        .filter(r -> !r.getTeam().getId().equals(teamId)) // excluding current team
+                        .filter(r -> {
+                            Person p = r.getPlayer() != null ? r.getPlayer().getPerson() : null;
+                            if (p == null) return false;
+                            if (request.getCurp() != null && !request.getCurp().isBlank() && request.getCurp().equalsIgnoreCase(p.getCurp())) {
+                                return true;
+                            }
+                            return buildFullNameKey(firstName, lastName).equalsIgnoreCase(
+                                    buildFullNameKey(normalizeUpperCase(p.getFirstName()), normalizeUpperCase(p.getLastName())));
+                        })
+                        .findFirst();
+                if (conflict.isPresent()) {
+                    String conflictTeamName = conflict.get().getTeam() != null ? conflict.get().getTeam().getName() : "otro equipo";
+                    throw new BusinessRuleException("El jugador ya está registrado en el equipo '" + conflictTeamName + "'. No se permite registrar al mismo jugador en múltiples equipos de esta liga.");
+                }
+            }
+
+            validateActivePlayerLimit(activeSeason, teamId, existingRosters.size(), 0);
+
+            if (request.getJerseyNumber() == null) {
+                throw new BusinessRuleException("El número de playera/dorsal es obligatorio.");
+            }
+            Set<Integer> existingJerseys = extractActiveJerseySet(existingRosters);
+            if (existingJerseys.contains(request.getJerseyNumber())) {
+                throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
+            }
+        }
+    }
+
+    @Transactional
+    public PlayerResponse registerPlayer(PlayerRegistrationRequest request, UUID defaultTeamId, UUID tenantId) {
+        validateRegistrationPreconditions(request, defaultTeamId, tenantId);
+
+        UUID teamId = request.getTeamId() != null ? request.getTeamId() : defaultTeamId;
+        Team team = teamId != null ? teamRepository.findById(teamId).orElse(null) : null;
 
         String firstName = normalizeUpperCase(request.getFirstName());
         String lastName = normalizeUpperCase(request.getLastName());
+        boolean isForeign = Boolean.TRUE.equals(request.getIsForeign());
+
+        if (!isForeign && request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+            request.setCurp(request.getCurp().trim().toUpperCase());
+        } else {
+            request.setCurp(null);
+        }
 
         Season activeSeason = null;
         if (team != null) {
             activeSeason = getActiveSeason();
             List<SeasonRoster> existingRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
 
-            validateActivePlayerLimit(activeSeason, teamId, existingRosters.size(), 0);
+            Optional<SeasonRoster> existingRosterOpt = existingRosters.stream()
+                    .filter(r -> {
+                        Person p = r.getPlayer() != null ? r.getPlayer().getPerson() : null;
+                        if (p == null) return false;
+                        if (request.getCurp() != null && !request.getCurp().isBlank() && request.getCurp().equalsIgnoreCase(p.getCurp())) {
+                            return true;
+                        }
+                        return buildFullNameKey(firstName, lastName).equalsIgnoreCase(
+                                buildFullNameKey(normalizeUpperCase(p.getFirstName()), normalizeUpperCase(p.getLastName())));
+                    })
+                    .findFirst();
 
-            Set<String> existingNames = extractNamesSet(existingRosters);
-            if (existingNames.contains(buildFullNameKey(firstName, lastName))) {
-                throw new BusinessRuleException("El jugador '" + firstName + " " + lastName + "' ya existe en el equipo.");
-            }
-
-            TenantSettings settings = tenantSettingsService.getCurrentSettings();
-            if (settings.isRequireJerseyNumbers()) {
-                if (request.getJerseyNumber() == null) {
-                    throw new BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
-                }
-                Set<Integer> existingJerseys = extractActiveJerseySet(existingRosters);
-                if (existingJerseys.contains(request.getJerseyNumber())) {
-                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador activo en el equipo.");
+            if (existingRosterOpt.isPresent()) {
+                SeasonRoster existingRoster = existingRosterOpt.get();
+                if (existingRoster.getStatus() == PlayerStatus.PENDING_VERIFICATION) {
+                    return verifyPlayer(existingRoster.getPlayer().getId(), request, tenantId);
                 }
             }
         }
 
-        Person person = buildAndSavePerson(firstName, lastName, request.getBirthDate(), request.getProfilePhotoUrl(), tenantId);
+        Person person = buildAndSavePerson(firstName, lastName, request.getCurp(), request.getBirthDate(), request.getProfilePhotoUrl(), tenantId);
         Player player = buildAndSavePlayer(person, tenantId);
 
         if (team != null && activeSeason != null) {
-            SeasonRoster roster = buildRoster(player, team, activeSeason, request.getJerseyNumber(), tenantId);
+            SeasonRoster roster = buildRoster(player, team, activeSeason, request.getJerseyNumber(), PlayerStatus.ACTIVE, tenantId);
             seasonRosterRepository.save(roster);
             return mapToResponse(player, roster);
         }
@@ -151,7 +243,7 @@ public class PlayerRegistrationService {
 
         // Sets for O(1) duplicate checks instead of repeating Stream.concat
         Set<String> knownNames = extractNamesSet(existingRosters);
-        Set<Integer> activeJerseys = settings.isRequireJerseyNumbers() ? extractActiveJerseySet(existingRosters) : null;
+        Set<Integer> activeJerseys = extractActiveJerseySet(existingRosters);
 
         List<SeasonRoster> pendingRosters = new ArrayList<>(validRequests.size());
         List<PlayerResponse> responses = new ArrayList<>(validRequests.size());
@@ -165,18 +257,46 @@ public class PlayerRegistrationService {
                 throw new BusinessRuleException("El jugador '" + firstName + " " + lastName + "' ya existe en el equipo.");
             }
 
-            if (settings.isRequireJerseyNumbers()) {
-                if (request.getJerseyNumber() == null) {
-                    throw new BusinessRuleException("El número de playera/dorsal es obligatorio en esta liga.");
+            boolean isForeign = Boolean.TRUE.equals(request.getIsForeign());
+            if (!isForeign && request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+                String curpUpper = request.getCurp().trim().toUpperCase();
+                if (!CurpUtils.isValid(curpUpper)) {
+                    throw new BusinessRuleException("El CURP ingresado ('" + curpUpper + "') para '" + firstName + " " + lastName + "' no es válido o su dígito verificador es incorrecto.");
                 }
-                if (!activeJerseys.add(request.getJerseyNumber())) {
-                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador activo en el equipo.");
+                request.setCurp(curpUpper);
+            } else {
+                request.setCurp(null);
+            }
+
+            if (!settings.isAllowMultipleTeamsPerPlayer()) {
+                List<SeasonRoster> allSeasonRosters = seasonRosterRepository.findBySeasonId(activeSeason.getId());
+                Optional<SeasonRoster> conflict = allSeasonRosters.stream()
+                        .filter(r -> !r.getTeam().getId().equals(teamId))
+                        .filter(r -> {
+                            Person p = r.getPlayer() != null ? r.getPlayer().getPerson() : null;
+                            if (p == null) return false;
+                            if (request.getCurp() != null && !request.getCurp().isBlank() && request.getCurp().equalsIgnoreCase(p.getCurp())) {
+                                return true;
+                            }
+                            return buildFullNameKey(firstName, lastName).equalsIgnoreCase(
+                                    buildFullNameKey(normalizeUpperCase(p.getFirstName()), normalizeUpperCase(p.getLastName())));
+                        })
+                        .findFirst();
+                if (conflict.isPresent()) {
+                    String conflictTeamName = conflict.get().getTeam() != null ? conflict.get().getTeam().getName() : "otro equipo";
+                    throw new BusinessRuleException("El jugador '" + firstName + " " + lastName + "' ya está registrado en el equipo '" + conflictTeamName + "'. No se permite registrar al mismo jugador en múltiples equipos de esta liga.");
                 }
             }
 
-            Person person = buildAndSavePerson(firstName, lastName.isEmpty() ? null : lastName, request.getBirthDate(), null, tenantId);
+            if (request.getJerseyNumber() != null) {
+                if (!activeJerseys.add(request.getJerseyNumber())) {
+                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
+                }
+            }
+
+            Person person = buildAndSavePerson(firstName, lastName.isEmpty() ? null : lastName, request.getCurp(), request.getBirthDate(), null, tenantId);
             Player player = buildAndSavePlayer(person, tenantId);
-            SeasonRoster roster = buildRoster(player, team, activeSeason, request.getJerseyNumber(), tenantId);
+            SeasonRoster roster = buildRoster(player, team, activeSeason, request.getJerseyNumber(), PlayerStatus.PENDING_VERIFICATION, tenantId);
             pendingRosters.add(roster);
 
             responses.add(mapToResponse(player, roster));
@@ -187,12 +307,145 @@ public class PlayerRegistrationService {
     }
 
     @Transactional(readOnly = true)
+    public void validateVerificationPreconditions(UUID playerId, PlayerRegistrationRequest request, UUID tenantId) {
+        Season activeSeason = getActiveSeason();
+        SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Player is not assigned to a team in the active season"));
+
+        UUID teamId = roster.getTeam().getId();
+        TenantSettings settings = tenantSettingsService.getCurrentSettings();
+
+        String firstName = normalizeUpperCase(request.getFirstName());
+        String lastName = normalizeUpperCase(request.getLastName());
+        String curpUpper = request.getCurp() != null ? request.getCurp().trim().toUpperCase() : null;
+
+        // Validate that the identity on the document matches the registered pending player
+        Person existingPerson = roster.getPlayer() != null ? roster.getPlayer().getPerson() : null;
+        if (existingPerson != null && existingPerson.getFirstName() != null && !existingPerson.getFirstName().isBlank()) {
+            boolean nameMatches = NameUtils.isNameCompatible(
+                    existingPerson.getFirstName(),
+                    existingPerson.getLastName(),
+                    firstName,
+                    lastName
+            );
+            if (!nameMatches) {
+                String existingFullName = (existingPerson.getFirstName() + " " + (existingPerson.getLastName() != null ? existingPerson.getLastName() : "")).trim();
+                String scannedFullName = (firstName + " " + (lastName != null ? lastName : "")).trim();
+                throw new BusinessRuleException(
+                        "El nombre en la identificación ('" + scannedFullName + "') no coincide con el jugador registrado en la plantilla ('" + existingFullName + "')."
+                );
+            }
+        }
+
+        if (curpUpper != null && !curpUpper.isEmpty()) {
+            if (!CurpUtils.isValid(curpUpper)) {
+                throw new BusinessRuleException("El CURP extraído ('" + curpUpper + "') no tiene un formato válido o su dígito verificador es incorrecto.");
+            }
+        } else if (settings.isRequireCurp() && !Boolean.TRUE.equals(request.getIsForeign())) {
+            throw new BusinessRuleException("El CURP es obligatorio para verificar y activar al jugador.");
+        }
+
+        // Validate multi-team conflict across the league
+        if (!settings.isAllowMultipleTeamsPerPlayer()) {
+            List<SeasonRoster> allSeasonRosters = seasonRosterRepository.findBySeasonId(activeSeason.getId());
+            Optional<SeasonRoster> conflict = allSeasonRosters.stream()
+                    .filter(r -> !r.getTeam().getId().equals(teamId))
+                    .filter(r -> {
+                        Person p = r.getPlayer() != null ? r.getPlayer().getPerson() : null;
+                        if (p == null) return false;
+                        if (curpUpper != null && !curpUpper.isBlank() && curpUpper.equalsIgnoreCase(p.getCurp())) {
+                            return true;
+                        }
+                        return buildFullNameKey(firstName, lastName).equalsIgnoreCase(
+                                buildFullNameKey(normalizeUpperCase(p.getFirstName()), normalizeUpperCase(p.getLastName())));
+                    })
+                    .findFirst();
+            if (conflict.isPresent()) {
+                String conflictTeamName = conflict.get().getTeam() != null ? conflict.get().getTeam().getName() : "otro equipo";
+                throw new BusinessRuleException("El jugador ya está registrado en el equipo '" + conflictTeamName + "'. No se permite registrar al mismo jugador en múltiples equipos de esta liga.");
+            }
+        }
+
+        // Validate duplicate against other ACTIVE players in the SAME team
+        List<SeasonRoster> sameTeamRosters = seasonRosterRepository.findByTeamIdAndSeasonId(teamId, activeSeason.getId());
+        boolean duplicateInTeam = sameTeamRosters.stream()
+                .filter(r -> !r.getPlayer().getId().equals(playerId))
+                .filter(r -> r.getStatus() == PlayerStatus.ACTIVE)
+                .anyMatch(r -> {
+                    Person p = r.getPlayer() != null ? r.getPlayer().getPerson() : null;
+                    if (p == null) return false;
+                    if (curpUpper != null && !curpUpper.isBlank() && curpUpper.equalsIgnoreCase(p.getCurp())) {
+                        return true;
+                    }
+                    return buildFullNameKey(firstName, lastName).equalsIgnoreCase(
+                            buildFullNameKey(normalizeUpperCase(p.getFirstName()), normalizeUpperCase(p.getLastName())));
+                });
+        if (duplicateInTeam) {
+            throw new BusinessRuleException("Ya existe otro jugador activo registrado con los mismos datos en este equipo.");
+        }
+
+        // Validate jersey number uniqueness against other players in the team
+        if (request.getJerseyNumber() != null) {
+            boolean jerseyTaken = sameTeamRosters.stream()
+                    .filter(r -> !r.getPlayer().getId().equals(playerId))
+                    .filter(r -> r.getStatus() != PlayerStatus.INACTIVE)
+                    .anyMatch(r -> request.getJerseyNumber().equals(r.getJerseyNumber()));
+            if (jerseyTaken) {
+                throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
+            }
+        }
+    }
+
+    @Transactional
+    public PlayerResponse verifyPlayer(UUID playerId, PlayerRegistrationRequest request, UUID tenantId) {
+        validateVerificationPreconditions(playerId, request, tenantId);
+
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player not found"));
+        
+        Person person = player.getPerson();
+        if (request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+            person.setCurp(request.getCurp().trim().toUpperCase());
+        }
+        person.setFirstName(normalizeUpperCase(request.getFirstName()));
+        
+        String lastName = request.getLastName();
+        person.setLastName(lastName != null && lastName.isEmpty() ? null : normalizeUpperCase(lastName));
+        
+        if (request.getBirthDate() != null) {
+            person.setBirthDate(request.getBirthDate());
+        }
+        if (request.getProfilePhotoUrl() != null) {
+            String oldPhoto = person.getProfilePhotoUrl();
+            if (oldPhoto != null && !oldPhoto.isBlank() && !oldPhoto.equals(request.getProfilePhotoUrl())) {
+                storageService.deleteFile(oldPhoto);
+            }
+            person.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        }
+        personRepository.save(person);
+
+        Season activeSeason = getActiveSeason();
+        SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Player is not assigned to a team in the active season"));
+
+        roster.setStatus(PlayerStatus.ACTIVE);
+        if (request.getJerseyNumber() != null) {
+            roster.setJerseyNumber(request.getJerseyNumber());
+        }
+        seasonRosterRepository.save(roster);
+
+        return mapToResponse(player, roster);
+    }
+
+    @Transactional(readOnly = true)
     public List<PlayerResponse> getPlayersByTeam(UUID teamId) {
-        return seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE)
-                .map(season -> seasonRosterRepository.findByTeamIdAndSeasonId(teamId, season.getId()).stream()
-                        .map(roster -> mapToResponse(roster.getPlayer(), roster))
-                        .collect(Collectors.toList()))
-                .orElse(List.of());
+        Season season = getActiveSeason();
+        if (season == null) {
+            return List.of();
+        }
+        return seasonRosterRepository.findByTeamIdAndSeasonId(teamId, season.getId()).stream()
+                .map(roster -> mapToResponse(roster.getPlayer(), roster))
+                .collect(Collectors.toList());
     }
 
     // -------------------------------------------------------------------------
@@ -200,8 +453,30 @@ public class PlayerRegistrationService {
     // -------------------------------------------------------------------------
 
     private Season getActiveSeason() {
+        UUID tenantId = com.leagueos.shared.context.TenantContext.getCurrentTenant();
+        if (tenantId != null) {
+            List<Season> activeSeasons = seasonRepository.findByTenantIdAndStatus(tenantId, SeasonStatus.ACTIVE);
+            if (!activeSeasons.isEmpty()) {
+                return activeSeasons.get(0);
+            }
+            List<Season> tenantSeasons = seasonRepository.findByTenantId(tenantId);
+            if (!tenantSeasons.isEmpty()) {
+                return tenantSeasons.get(0);
+            }
+        }
         return seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException("No active season found"));
+                .orElseGet(() -> {
+                    UUID effectiveTenant = tenantId != null ? tenantId : UUID.fromString("11111111-1111-1111-1111-111111111111");
+                    Season newSeason = new Season();
+                    newSeason.setName("Temporada Regular 2026");
+                    newSeason.setStatus(SeasonStatus.ACTIVE);
+                    newSeason.setTenantId(effectiveTenant);
+                    newSeason.setStartDate(java.time.LocalDate.now());
+                    newSeason.setEndDate(java.time.LocalDate.now().plusMonths(6));
+                    newSeason.setCurrentMatchday(1);
+                    newSeason.setMaxActivePlayersPerTeam(30);
+                    return seasonRepository.save(newSeason);
+                });
     }
 
     private static String normalizeUpperCase(String value) {
@@ -227,7 +502,7 @@ public class PlayerRegistrationService {
     private Set<Integer> extractActiveJerseySet(List<SeasonRoster> rosters) {
         Set<Integer> set = new HashSet<>();
         for (SeasonRoster r : rosters) {
-            if (r.getStatus() == PlayerStatus.ACTIVE && r.getJerseyNumber() != null) {
+            if (r.getStatus() != PlayerStatus.INACTIVE && r.getJerseyNumber() != null) {
                 set.add(r.getJerseyNumber());
             }
         }
@@ -242,10 +517,11 @@ public class PlayerRegistrationService {
         }
     }
 
-    private Person buildAndSavePerson(String firstName, String lastName, java.time.LocalDate birthDate, String photoUrl, UUID tenantId) {
+    private Person buildAndSavePerson(String firstName, String lastName, String curp, java.time.LocalDate birthDate, String photoUrl, UUID tenantId) {
         Person person = new Person();
         person.setFirstName(firstName);
         person.setLastName(lastName != null && lastName.isEmpty() ? null : lastName);
+        person.setCurp(curp);
         person.setBirthDate(birthDate);
         person.setProfilePhotoUrl(photoUrl);
         person.setTenantId(tenantId);
@@ -259,12 +535,12 @@ public class PlayerRegistrationService {
         return playerRepository.save(player);
     }
 
-    private SeasonRoster buildRoster(Player player, Team team, Season season, Integer jerseyNumber, UUID tenantId) {
+    private SeasonRoster buildRoster(Player player, Team team, Season season, Integer jerseyNumber, PlayerStatus status, UUID tenantId) {
         SeasonRoster roster = new SeasonRoster();
         roster.setPlayer(player);
         roster.setTeam(team);
         roster.setSeason(season);
-        roster.setStatus(PlayerStatus.ACTIVE);
+        roster.setStatus(status);
         roster.setJerseyNumber(jerseyNumber);
         roster.setTenantId(tenantId);
         return roster;
@@ -277,6 +553,7 @@ public class PlayerRegistrationService {
             response.setFirstName(player.getPerson().getFirstName());
             response.setLastName(player.getPerson().getLastName());
             response.setBirthDate(player.getPerson().getBirthDate());
+            response.setCurp(player.getPerson().getCurp());
             response.setProfilePhotoUrl(player.getPerson().getProfilePhotoUrl());
         }
         if (roster != null) {

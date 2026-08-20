@@ -10,4 +10,6 @@ public class BatchPlayerRegistrationRequest {
     private String lastName;
     private Integer jerseyNumber;
     private LocalDate birthDate;
+    private String curp;
+    private Boolean isForeign;
 }

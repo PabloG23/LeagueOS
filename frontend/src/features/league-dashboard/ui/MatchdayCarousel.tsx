@@ -4,6 +4,7 @@ import { Calendar, ChevronRight } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Season } from '@/shared/api/league-api';
+import { TeamLogo } from '@/shared/components/TeamLogo';
 
 interface MatchdayCarouselProps {
     activeSeasons: Season[];
@@ -149,8 +150,12 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                     {/* Home Team */}
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">
-                                                {match.homeTeam?.name?.substring(0, 2) || match.homeTeamId.substring(0, 2)}
+                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <TeamLogo 
+                                                    teamName={match.homeTeam?.name || match.homeTeamId} 
+                                                    logoUrl={match.homeTeam?.signedLogoUrl || match.homeTeam?.logoUrl} 
+                                                    fallbackClass="text-[10px] font-bold text-white"
+                                                />
                                             </div>
                                             <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.homeScore || 0) > (match.awayScore || 0) ? 'text-white' : 'text-slate-400'}`}>
                                                 {match.homeTeam?.name || 'Local'}
@@ -162,8 +167,12 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                     {/* Away Team */}
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">
-                                                {match.awayTeam?.name?.substring(0, 2) || match.awayTeamId.substring(0, 2)}
+                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <TeamLogo 
+                                                    teamName={match.awayTeam?.name || match.awayTeamId} 
+                                                    logoUrl={match.awayTeam?.signedLogoUrl || match.awayTeam?.logoUrl} 
+                                                    fallbackClass="text-[10px] font-bold text-white"
+                                                />
                                             </div>
                                             <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.awayScore || 0) > (match.homeScore || 0) ? 'text-white' : 'text-slate-400'}`}>
                                                 {match.awayTeam?.name || 'Visitante'}

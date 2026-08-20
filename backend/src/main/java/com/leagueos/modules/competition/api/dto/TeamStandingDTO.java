@@ -16,6 +16,8 @@ public class TeamStandingDTO {
     private UUID id;
     private Integer rank;
     private String team;
+    private String logoUrl;
+    private String signedLogoUrl;
     
     // Match Stats
     private int played;

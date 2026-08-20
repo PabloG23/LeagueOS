@@ -44,13 +44,10 @@ public class PublicMatchController {
                 
                 if (regularMatches.isEmpty()) continue;
                 
-                int maxMatchday = regularMatches.stream()
-                        .mapToInt(Match::getMatchday)
-                        .max()
-                        .orElse(1);
+                int currentMatchday = season.getCurrentMatchday() != null ? season.getCurrentMatchday() : 1;
                         
                 for (Match m : regularMatches) {
-                    if (m.getMatchday() == maxMatchday) {
+                    if (m.getMatchday() == currentMatchday) {
                         upcomingMatches.add(m);
                     }
                 }

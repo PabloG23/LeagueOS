@@ -39,10 +39,14 @@ public class PlayerRegistrationController {
     }
 
     @PostMapping("/teams/{teamId}/players/batch")
-    public ResponseEntity<List<PlayerResponse>> registerPlayersBatch(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                             @PathVariable UUID teamId,
-                                                             @RequestBody List<com.leagueos.modules.registration.api.dto.BatchPlayerRegistrationRequest> requestList) {
-        return ResponseEntity.ok(playerRegistrationService.registerPlayersBatch(requestList, teamId, UUID.fromString(userDetails.getTenantId())));
+    public ResponseEntity<List<PlayerResponse>> registerPlayersBatch(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID teamId,
+            @RequestBody List<com.leagueos.modules.registration.api.dto.BatchPlayerRegistrationRequest> requestList) {
+        UUID tenantId = (userDetails != null && userDetails.getTenantId() != null)
+                ? UUID.fromString(userDetails.getTenantId())
+                : com.leagueos.shared.context.TenantContext.getCurrentTenant();
+        return ResponseEntity.ok(playerRegistrationService.registerPlayersBatch(requestList, teamId, tenantId));
     }
 
     @PatchMapping("/players/{id}/activate")

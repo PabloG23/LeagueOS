@@ -9,6 +9,8 @@ import java.util.UUID;
 @Repository
 public interface TeamRepository extends JpaRepository<Team, UUID> {
     java.util.List<Team> findByTenantId(UUID tenantId);
+    java.util.List<Team> findByTenantIdOrderByNameAsc(UUID tenantId);
+    java.util.List<Team> findAllByOrderByNameAsc();
     java.util.List<Team> findByTenantIdAndIsActiveTrue(UUID tenantId);
     java.util.List<Team> findByIsActiveTrue();
     java.util.Optional<Team> findByIdAndTenantId(UUID id, UUID tenantId);

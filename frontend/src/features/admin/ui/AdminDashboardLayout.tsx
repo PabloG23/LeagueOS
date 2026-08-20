@@ -40,43 +40,55 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
 
             {/* Sidebar */}
             <aside className={`
-                fixed md:relative inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground flex flex-col transform transition-transform duration-200 ease-in-out
+                fixed md:sticky top-0 inset-y-0 left-0 z-50 w-64 h-screen bg-sidebar text-sidebar-foreground flex flex-col transform transition-transform duration-200 ease-in-out shrink-0
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
-                <div className="h-20 flex items-center justify-center border-b border-white/10">
-                    <img
-                        src={settings.logoUrl}
-                        alt={settings.name}
-                        className="h-12 w-12 object-contain"
-                    />
+                {/* Brand / Logo Header */}
+                <div className="p-5 flex flex-col items-center justify-center border-b border-white/10 bg-black/10 gap-2 shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 p-2 shadow-inner flex items-center justify-center backdrop-blur-sm group hover:scale-105 transition-all">
+                        <img
+                            src={settings.logoUrl}
+                            alt={settings.name}
+                            className="w-full h-full object-contain drop-shadow-md"
+                        />
+                    </div>
+                    <div className="text-center w-full px-2">
+                        <h2 className="text-sm font-bold text-white tracking-wide truncate">{settings.name}</h2>
+                        <span className="text-[11px] font-medium text-emerald-400/90 uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                            Panel de Control
+                        </span>
+                    </div>
                 </div>
 
-                <nav className="p-4 space-y-2 flex-grow overflow-y-auto">
+                {/* Navigation Menu (Scrollable if lots of items) */}
+                <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto min-h-0">
                     {menuItems.map((item) => (
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === item.path
-                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                : 'text-sidebar-foreground/70 hover:text-white hover:bg-white/10'
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${location.pathname === item.path
+                                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 font-semibold'
+                                : 'text-sidebar-foreground/75 hover:text-white hover:bg-white/10'
                                 }`}
                         >
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.label}</span>
+                            <item.icon className="w-5 h-5 shrink-0" />
+                            <span className="truncate">{item.label}</span>
                         </Link>
                     ))}
                 </nav>
 
-                <div className="mt-auto p-4 border-t border-white/10">
+                {/* Sticky Logout Footer */}
+                <div className="p-4 border-t border-white/10 bg-sidebar shrink-0 sticky bottom-0 z-10 shadow-lg">
                     <button
                         onClick={() => {
                             localStorage.clear();
-                            window.location.href = `/${leagueSlug}`;
+                            const isCustomHost = window.location.hostname.toLowerCase().includes('nuestrodeporte');
+                            window.location.href = isCustomHost ? '/' : `/${leagueSlug}`;
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-sidebar-foreground/70 hover:text-destructive hover:bg-white/10 rounded-lg transition-colors text-left"
+                        className="flex items-center justify-center gap-3 w-full px-4 py-3 text-red-400 hover:text-white hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all font-semibold text-sm group shadow-sm"
                     >
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Cerrar Sesión</span>
+                        <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+                        <span>Cerrar Sesión</span>
                     </button>
                 </div>
             </aside>

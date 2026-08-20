@@ -33,7 +33,7 @@ export interface Season {
 }
 
 export interface Person {
-    id: string;
+    id?: string;
     firstName: string;
     lastName: string;
     phone?: string;
@@ -45,6 +45,9 @@ export interface Team {
     tenantId: string;
     name: string;
     logoUrl?: string;
+    signedLogoUrl?: string;
+    isActive?: boolean;
+    activePlayersCount?: number;
     representative?: Person;
 }
 
@@ -61,6 +64,8 @@ export interface Player {
     lastName: string;
     teamId: string;
     jerseyNumber?: number;
+    status?: string;
+    profilePhotoUrl?: string;
 }
 
 export interface Match {
@@ -77,6 +82,19 @@ export interface Match {
     homeScore?: number;
     awayScore?: number;
     status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+}
+
+/**
+ * Lightweight preview DTO for round-robin fixture generation.
+ * matchDate is always null ("Por definir") — dates are set manually by the admin.
+ */
+export interface MatchPreviewDTO {
+    matchday: number;
+    homeTeamId: string;
+    homeTeamName: string;
+    awayTeamId: string;
+    awayTeamName: string;
+    matchDate: string | null;
 }
 
 export const leagueApi = {
@@ -113,8 +131,15 @@ export const leagueApi = {
         api.post<Team>('/leagues/teams', team, { headers: { 'X-Tenant-ID': tenantId } }),
     updateTeam: (tenantId: string, teamId: string, team: Partial<Team>) =>
         api.put<Team>(`/leagues/teams/${teamId}`, team, { headers: { 'X-Tenant-ID': tenantId } }),
+    uploadTeamLogo: (tenantId: string, teamId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<Team>(`/leagues/teams/${teamId}/logo`, formData, { headers: { 'X-Tenant-ID': tenantId } });
+    },
     deleteTeam: (tenantId: string, teamId: string) =>
         api.delete(`/leagues/teams/${teamId}`, { headers: { 'X-Tenant-ID': tenantId } }),
+    activateTeam: (tenantId: string, teamId: string) =>
+        api.put(`/leagues/teams/${teamId}/activate`, null, { headers: { 'X-Tenant-ID': tenantId } }),
     enrollTeamsToSeason: (tenantId: string, seasonId: string, teamIds: string[]) =>
         api.post<TeamRegistration[]>(`/leagues/seasons/${seasonId}/enroll`, teamIds, { headers: { 'X-Tenant-ID': tenantId } }),
     getEnrolledTeams: (tenantId: string, seasonId: string) =>
@@ -125,6 +150,14 @@ export const leagueApi = {
     // Registration
     registerPlayer: (tenantId: string, player: any) =>
         api.post<Player>('/registration/players', player, { headers: { 'X-Tenant-ID': tenantId } }),
+    verifyIne: (tenantId: string, formData: FormData) =>
+        api.post<Player>('/players/verify-ine', formData, { headers: { 'X-Tenant-ID': tenantId } }),
+    verifyExistingIne: (tenantId: string, playerId: string, formData: FormData) =>
+        api.post<Player>(`/players/${playerId}/verify-ine`, formData, { headers: { 'X-Tenant-ID': tenantId } }),
+    registerForeign: (tenantId: string, formData: FormData) =>
+        api.post<Player>('/players/register-foreign', formData, { headers: { 'X-Tenant-ID': tenantId } }),
+    verifyExistingForeign: (tenantId: string, playerId: string, formData: FormData) =>
+        api.post<Player>(`/players/${playerId}/verify-foreign`, formData, { headers: { 'X-Tenant-ID': tenantId } }),
     batchCreatePlayers: (tenantId: string, teamId: string, players: any[]) =>
         api.post<Player[]>(`/teams/${teamId}/players/batch`, players, { headers: { 'X-Tenant-ID': tenantId } }),
     activatePlayer: (tenantId: string, playerId: string) => api.patch(`/players/${playerId}/activate`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
@@ -142,6 +175,8 @@ export const leagueApi = {
     getMatches: (tenantId: string, matchday: number) => api.get<Match[]>(`/matches/${matchday}`, { headers: { 'X-Tenant-ID': tenantId } }),
     submitMatchReport: (tenantId: string, matchId: string, events: any[]) => api.post(`/matches/${matchId}/report`, events, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatchReport: (tenantId: string, matchId: string) => api.get<any[]>(`/matches/${matchId}/report`, { headers: { 'X-Tenant-ID': tenantId } }),
+    previewRoundRobinFixtures: (tenantId: string, seasonId: string) =>
+        api.get<MatchPreviewDTO[]>(`/leagues/seasons/${seasonId}/preview-fixtures/round-robin`, { headers: { 'X-Tenant-ID': tenantId } }),
     generateRoundRobinFixtures: (tenantId: string, seasonId: string) =>
         api.post(`/leagues/seasons/${seasonId}/generate-fixtures/round-robin`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
     importCalendar: (tenantId: string, seasonId: string, file: File) => {
@@ -171,6 +206,14 @@ export const leagueApi = {
         api.get<any[]>(`/public/stats/seasons/${seasonId}/standings`, { headers: { 'X-Tenant-ID': tenantId } }),
     getPlayerStats: (playerId: string, tenantId: string) =>
         api.get<any>(`/public/stats/players/${playerId}`, { headers: { 'X-Tenant-ID': tenantId } }),
+
+    // Media
+    getSignedUrl: (key: string) => api.get<{url: string}>(`/media/signed-url?key=${encodeURIComponent(key)}`),
+    getProxyUrl: (key: string) => `${api.defaults.baseURL}/media/proxy?key=${encodeURIComponent(key)}`,
+
+    // Leagues & Seasons
+    updateCurrentMatchday: (tenantId: string, seasonId: string, matchday: number) =>
+        api.put<Season>(`/leagues/seasons/${seasonId}/current-matchday?matchday=${matchday}`, null, { headers: { 'X-Tenant-ID': tenantId } }),
 };
 
 export default api;

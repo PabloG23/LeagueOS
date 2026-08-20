@@ -6,7 +6,6 @@ interface ParsedPlayer {
     firstName: string;
     lastName: string;
     jerseyNumber?: number;
-    birthDate?: string;
     _error?: string;
 }
 
@@ -27,7 +26,12 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
     if (!isOpen) return null;
 
     const downloadTemplate = () => {
-        const ws = XLSX.utils.aoa_to_sheet([['Nombre', 'Apellido', 'Dorsal', 'Fecha Nacimiento (dd/mm/aaaa)']]);
+        const ws = XLSX.utils.aoa_to_sheet([['Nombre', 'Apellido', 'Dorsal']]);
+        ws['!cols'] = [
+            { wch: 25 },
+            { wch: 25 },
+            { wch: 15 }
+        ];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Plantilla Jugadores");
         XLSX.writeFile(wb, "plantilla_jugadores.xlsx");
@@ -59,46 +63,30 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
 
                 const players: ParsedPlayer[] = results.map((row: any) => {
                     const firstName = (row['Nombre'] || '').toString().trim();
-                    const lastName = (row['Apellido'] || '').toString().trim();
+                    const lastName = (row['Apellido'] || row['Apellidos'] || '').toString().trim();
                     const rawJersey = (row['Dorsal'] || row['Numero'] || '').toString().trim();
-                    const jerseyNumber = rawJersey ? parseInt(rawJersey, 10) : undefined;
-                    
-                    const rawBirthDate = (row['Fecha Nacimiento (dd/mm/aaaa)'] || row['Fecha Nacimiento'] || row['Fecha de Nacimiento'] || '').toString().trim();
-                    let formattedDate = undefined;
-                    let dateError = false;
+                    let jerseyNumber: number | undefined = undefined;
+                    let error: string | undefined = undefined;
 
-                    if (rawBirthDate) {
-                        // Check if it's an Excel date serial number
-                        if (!isNaN(Number(rawBirthDate)) && Number(rawBirthDate) > 30000) {
-                             const dateObj = new Date(Math.round((Number(rawBirthDate) - 25569)*86400*1000));
-                             const iso = dateObj.toISOString();
-                             formattedDate = iso.split('T')[0];
-                        } else {
-                            const dateRegex = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/;
-                            const match = rawBirthDate.match(dateRegex);
-                            if (match) {
-                                const [_, day, month, year] = match;
-                                formattedDate = `${year}-${month}-${day}`;
-                                const dObj = new Date(formattedDate);
-                                if (isNaN(dObj.getTime())) dateError = true;
-                            } else {
-                                dateError = true;
-                            }
-                        }
+                    if (!firstName) {
+                        error = "Nombre es requerido";
                     }
 
-                    let error;
-                    if (!firstName) error = "Nombre es requerido";
-                    else if (requireJerseyNumbers && isNaN(jerseyNumber as number)) error = "Dorsal inválido o faltante";
-                    else if (dateError) error = "Fecha de Nacimiento inválida (usa dd/mm/aaaa)";
+                    if (rawJersey) {
+                        const parsed = parseInt(rawJersey, 10);
+                        if (isNaN(parsed) || parsed < 0 || parsed > 999) {
+                            error = "Dorsal inválido (debe ser un número)";
+                        } else {
+                            jerseyNumber = parsed;
+                        }
+                    }
 
                     const profilePhotoUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${firstName} ${lastName}`;
 
                     return { 
                         firstName, 
                         lastName, 
-                        jerseyNumber: isNaN(jerseyNumber as number) ? undefined : jerseyNumber, 
-                        birthDate: formattedDate,
+                        jerseyNumber, 
                         profilePhotoUrl,
                         _error: error 
                     };
@@ -159,16 +147,18 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
     const updateRow = (index: number, field: keyof ParsedPlayer, value: string) => {
         const newData = [...parsedData];
         if (field === 'jerseyNumber') {
-            const num = parseInt(value, 10);
-            newData[index] = { ...newData[index], jerseyNumber: isNaN(num) ? undefined : num };
+            const trimmed = value.trim();
+            const num = trimmed ? parseInt(trimmed, 10) : undefined;
+            newData[index] = { ...newData[index], jerseyNumber: (num !== undefined && isNaN(num)) ? undefined : num };
         } else {
             newData[index] = { ...newData[index], [field]: value };
         }
 
         // Re-validate
-        let error;
-        if (!newData[index].firstName) error = "Nombre es requerido";
-        else if (requireJerseyNumbers && newData[index].jerseyNumber === undefined) error = "Dorsal requerido";
+        let error: string | undefined = undefined;
+        if (!newData[index].firstName?.trim()) {
+            error = "Nombre es requerido";
+        }
         newData[index]._error = error;
 
         setParsedData(newData);
@@ -193,7 +183,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                     <div className="text-center mb-8 w-full">
                         <h3 className="text-2xl font-black text-slate-900 mb-2">Carga Masiva de Jugadores</h3>
                         <p className="text-[15px] text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
-                            Importa múltiples jugadores desde un archivo Excel. El sistema validará automáticamente el formato de los datos.
+                            Importa múltiples jugadores desde un archivo Excel. El dorsal es opcional y puedes asignarlo ahora o después.
                         </p>
                     </div>
                     {uploadError && (
@@ -202,6 +192,13 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                             <div className="text-sm font-medium text-red-800">{uploadError}</div>
                         </div>
                     )}
+
+                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 w-full max-w-lg mx-auto text-left">
+                        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="text-sm text-amber-900">
+                            <strong>Nota:</strong> Los jugadores importados por este medio se guardarán con estado <strong>Pendiente de Verificar</strong>. Para poder jugar, cada jugador deberá subir su foto posteriormente desde la vista de la plantilla.
+                        </div>
+                    </div>
 
                     {parsedData.length === 0 ? (
                         <div className="w-full max-w-lg mb-8">
@@ -223,7 +220,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                             </div>
 
                             <div className="mt-8 flex items-center justify-center gap-4">
-                                <span className="text-sm font-semibold text-slate-500">¿No tienes la plantilla de la plantilla?</span>
+                                <span className="text-sm font-semibold text-slate-500">¿No tienes la plantilla base?</span>
                                 <button type="button" onClick={downloadTemplate} className="flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl transition-colors">
                                     <Download className="w-4 h-4" />
                                     Descargar Formato Base
@@ -235,7 +232,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                             <div className="flex justify-between items-end border-b border-slate-200 pb-2">
                                 <div>
                                     <h4 className="text-sm font-bold text-slate-800">Vista Previa de Jugadores</h4>
-                                    <p className="text-xs text-slate-500">{parsedData.length} registros detectados. Puedes corregir los errores directamente en esta tabla.</p>
+                                    <p className="text-xs text-slate-500">{parsedData.length} registros detectados. Puedes editar o completar dorsales directamente en esta tabla.</p>
                                 </div>
                                 <button type="button" onClick={() => setParsedData([])} className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
                                     Cargar otro archivo
@@ -249,14 +246,13 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                                             <th className="font-semibold text-slate-500 p-3 text-xs uppercase w-8 text-center">#</th>
                                             <th className="font-semibold text-slate-500 p-3 text-xs uppercase">Nombre</th>
                                             <th className="font-semibold text-slate-500 p-3 text-xs uppercase">Apellido</th>
-                                            <th className="font-semibold text-slate-500 p-3 text-xs uppercase w-24 text-center">Dorsal</th>
-                                            <th className="font-semibold text-slate-500 p-3 text-xs uppercase w-32 text-center">Nacimiento</th>
+                                            <th className="font-semibold text-slate-500 p-3 text-xs uppercase w-28 text-center">Dorsal</th>
                                             <th className="font-semibold text-slate-500 p-3 w-10"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {parsedData.map((row, i) => (
-                                            <tr key={i} className={`border-b last:border-0 hover:bg-slate-50 transition-colors ${row._error ? 'bg-red-50/30' : ''}`}>
+                                             <tr key={i} className={`border-b last:border-0 hover:bg-slate-50 transition-colors ${row._error ? 'bg-red-50/30' : ''}`}>
                                                 <td className="p-3 text-center text-slate-400 text-xs font-mono">{i + 1}</td>
                                                 <td className="p-2">
                                                     <input type="text" value={row.firstName} onChange={(e) => updateRow(i, 'firstName', e.target.value)}
@@ -268,11 +264,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                                                 </td>
                                                 <td className="p-2">
                                                     <input type="text" value={row.jerseyNumber ?? ''} onChange={(e) => updateRow(i, 'jerseyNumber', e.target.value)}
-                                                        className={`w-full bg-transparent border-0 focus:ring-1 p-1 px-2 rounded text-center text-slate-600 font-mono ${(requireJerseyNumbers && !row.jerseyNumber) ? 'focus:ring-red-400 bg-red-50' : 'focus:ring-blue-400'}`} placeholder="--" />
-                                                </td>
-                                                <td className="p-2">
-                                                    <input type="date" value={row.birthDate ?? ''} onChange={(e) => updateRow(i, 'birthDate', e.target.value)}
-                                                        className={`w-full bg-transparent border-0 focus:ring-1 p-1 px-2 rounded font-mono text-slate-600 text-xs focus:ring-blue-400`} />
+                                                        className="w-full bg-transparent border-0 focus:ring-1 p-1 px-2 rounded text-center text-slate-600 font-mono focus:ring-blue-400" placeholder="--" />
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     {row._error && <div title={row._error}><AlertCircle className="w-4 h-4 text-red-500 inline-block" /></div>}

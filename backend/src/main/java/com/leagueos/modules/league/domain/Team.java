@@ -30,6 +30,12 @@ public class Team extends BaseEntity {
     private Person representative;
 
     @jakarta.persistence.Transient
+    private Integer activePlayersCount = 0;
+
+    @jakarta.persistence.Transient
+    private String signedLogoUrl;
+
+    @jakarta.persistence.Transient
     public String getRepresentativeName() {
         if (representative == null) return null;
         String first = representative.getFirstName() != null ? representative.getFirstName() : "";

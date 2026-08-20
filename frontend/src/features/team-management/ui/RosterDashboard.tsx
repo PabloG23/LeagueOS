@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, ArrowLeft, Upload } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Upload, Printer, Loader2 } from 'lucide-react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { TeamDashboardLayout } from './TeamDashboardLayout';
 import { AdminDashboardLayout } from '../../admin/ui/AdminDashboardLayout';
@@ -11,6 +11,7 @@ import { Navbar } from '../../league-dashboard/ui/Navbar';
 import { GlobalFooter } from '../../league-dashboard/ui/GlobalFooter';
 import { TeamStanding } from '../../league-dashboard/ui/StandingsTable';
 import { TeamOverviewWidget } from './TeamOverviewWidget';
+import { SecureImage } from './SecureImage';
 import { leagueApi } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { useToast } from '@/shared/components/ui/ToastContext';
@@ -51,10 +52,37 @@ export const RosterDashboard = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isMassUploadModalOpen, setIsMassUploadModalOpen] = useState(false);
     const [selectedPlayer, setSelectedPlayer] = useState<ExtendedPlayer | null>(null);
+    const [verifyingPlayer, setVerifyingPlayer] = useState<Player | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [teamName, setTeamName] = useState('Cargando...');
+    const [teamLogo, setTeamLogo] = useState<string | undefined>(undefined);
     const [teamRep, setTeamRep] = useState<{ name: string, phone: string | null, photoUrl?: string | null }>({ name: 'Sin Asignar', phone: null });
     const { showToast, showConfirm } = useToast();
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+    const handleDownloadCredentials = async () => {
+        if (!settings?.tenantId || !teamId) return;
+        try {
+            setIsGeneratingPdf(true);
+            const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, teamId);
+            
+            // Re-import dynamically to avoid circular dependencies or heavy initial loads if needed
+            // But we can just use the regular import
+            const { generateCredentialsPdf } = await import('../lib/generateCredentialsPdf');
+            
+            await generateCredentialsPdf({
+                team: { id: teamId, name: teamName, logoUrl: teamLogo } as any,
+                players: rawPlayers,
+                leagueLogoUrl: settings.logoUrl
+            });
+            showToast('Credenciales generadas con éxito', 'success');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            showToast('Ocurrió un error al generar las credenciales', 'error');
+        } finally {
+            setIsGeneratingPdf(false);
+        }
+    };
 
     // Layout Selection
     const Layout = isAdminMode ? AdminDashboardLayout : (isTeamRepMode ? TeamDashboardLayout : PublicTeamLayout);
@@ -81,6 +109,7 @@ export const RosterDashboard = () => {
                 if (targetTeamId) {
                     const team = allTeams.find(t => t.id === targetTeamId);
                     setTeamName(team?.name || 'Equipo Desconocido');
+                    setTeamLogo(team?.logoUrl);
                     if (team && team.representative) {
                         const { firstName, lastName, phone, profilePhotoUrl } = team.representative;
                         const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'Sin Asignar';
@@ -100,12 +129,15 @@ export const RosterDashboard = () => {
                         name: `${p.firstName} ${p.lastName}`,
                         photoUrl: p.profilePhotoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${p.firstName} ${p.lastName}`,
                         isActive: p.status === 'ACTIVE',
-                        jerseyNumber: p.jerseyNumber
+                        status: p.status,
+                        jerseyNumber: p.jerseyNumber,
+                        curp: p.curp,
+                        birthDate: p.birthDate
                     })));
                 }
             } catch (error) {
-                console.error("Failed to load roster:", error);
-                setTeamName("Error al cargar equipo");
+                console.error("Error fetching roster data:", error);
+                showToast("Error al cargar la plantilla", "error");
             } finally {
                 setIsLoading(false);
             }
@@ -116,7 +148,7 @@ export const RosterDashboard = () => {
 
 
     const isSanLucas = settings?.tenantId === '22222222-2222-2222-2222-222222222222';
-    const maxActivePlayers = isSanLucas ? 25 : 26;
+    const maxActivePlayers = isSanLucas ? 25 : 30;
     const activePlayersCount = players.filter(p => p.isActive).length;
     const inactivePlayersCount = players.length - activePlayersCount;
 
@@ -213,21 +245,32 @@ export const RosterDashboard = () => {
 
                 {/* Header Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                    <div className="flex items-center gap-4">
-                        <img
-                            src={`https://api.dicebear.com/7.x/identicon/svg?seed=${teamName}`}
-                            alt="Escudo Equipo"
-                            className="w-24 h-24 object-contain bg-slate-100 rounded-lg p-2 border border-slate-200"
-                        />
+                    <div className="flex items-center gap-5">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white border border-slate-100 p-3 shadow-lg ring-4 ring-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                            <SecureImage
+                                srcKey={teamLogo}
+                                fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(teamName)}`}
+                                alt={teamName}
+                                className="w-full h-full object-contain filter drop-shadow-sm"
+                            />
+                        </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-900">{teamName}</h1>
-                            <p className="text-slate-500">
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">{teamName}</h1>
+                            <p className="text-sm font-semibold text-slate-500 mt-0.5">
                                 {isAdminMode ? 'Gestión de Plantilla (Admin)' : isTeamRepMode ? 'Mi Plantilla' : 'Plantilla Oficial'}
                             </p>
                         </div>
                     </div>
                     {canEdit && (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center flex-wrap justify-end gap-3">
+                            <button
+                                onClick={handleDownloadCredentials}
+                                disabled={isGeneratingPdf}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                                <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'Descargar Credenciales'}</span>
+                            </button>
                             <button
                                 onClick={() => setIsMassUploadModalOpen(true)}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all"
@@ -264,7 +307,7 @@ export const RosterDashboard = () => {
                             placeholder="Buscar por nombre..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 text-slate-900 font-medium placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
                         />
                     </div>
                 </div>
@@ -272,10 +315,17 @@ export const RosterDashboard = () => {
                 {/* Players Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredPlayers.map(player => (
-                        <div key={player.id} className="cursor-pointer" onClick={() => setSelectedPlayer({ ...player, teamName })}>
+                        <div key={player.id} className="cursor-pointer" onClick={() => {
+                            if (player.status === 'PENDING_VERIFICATION' && canEdit) {
+                                setVerifyingPlayer(player);
+                                setIsAddModalOpen(true);
+                            } else if (player.status !== 'PENDING_VERIFICATION') {
+                                setSelectedPlayer({ ...player, teamName });
+                            }
+                        }}>
                             <PlayerCard
                                 player={player}
-                                onToggleStatus={canEdit ? handleToggleStatus : undefined}
+                                onToggleStatus={canEdit && player.status !== 'PENDING_VERIFICATION' ? handleToggleStatus : undefined}
                                 requireJerseyNumbers={settings?.requireJerseyNumbers}
                             />
                         </div>
@@ -289,14 +339,20 @@ export const RosterDashboard = () => {
                     )}
                 </div>
 
-                {/* Add Player (Admin/Rep) */}
+                {/* Add/Verify Player (Admin/Rep) */}
                 {canEdit && (
                     <>
                         <AddPlayerModal
                             isOpen={isAddModalOpen}
-                            onClose={() => setIsAddModalOpen(false)}
-                            onSave={handleAddPlayer}
+                            onClose={() => {
+                                setIsAddModalOpen(false);
+                                setVerifyingPlayer(null);
+                            }}
+                            onSuccess={() => window.location.reload()}
+                            teamId={teamId}
+                            tenantId={settings?.tenantId}
                             requireJerseyNumbers={settings?.requireJerseyNumbers}
+                            existingPlayer={verifyingPlayer}
                         />
                         <MassUploadPlayerModal
                             isOpen={isMassUploadModalOpen}
@@ -309,7 +365,7 @@ export const RosterDashboard = () => {
 
                 {/* View Player (Public/All) */}
                 <PlayerProfileModal
-                    isOpen={!!selectedPlayer}
+                    isOpen={!!selectedPlayer && selectedPlayer.status !== 'PENDING_VERIFICATION'}
                     onClose={() => setSelectedPlayer(null)}
                     player={selectedPlayer as any}
                 />

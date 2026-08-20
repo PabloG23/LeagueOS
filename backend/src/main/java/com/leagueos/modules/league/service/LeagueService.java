@@ -11,6 +11,7 @@ import com.leagueos.modules.league.persistence.SeasonRepository;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.modules.league.persistence.TeamRepository;
 import com.leagueos.modules.league.persistence.TenantRepository;
+import com.leagueos.modules.media.service.StorageService;
 import com.leagueos.shared.context.TenantContext;
 import com.leagueos.shared.domain.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
@@ -35,6 +36,34 @@ public class LeagueService {
     private final MatchRepository matchRepository;
     private final PlayoffTieRepository playoffTieRepository;
     private final EntityManager entityManager;
+    private final com.leagueos.modules.media.service.StorageService storageService;
+    private final com.leagueos.modules.registration.persistence.SeasonRosterRepository seasonRosterRepository;
+
+    @Transactional
+    public Team uploadTeamLogo(UUID teamId, byte[] imageBytes, String contentType, UUID tenantId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + teamId));
+
+        if (!team.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Unauthorized tenant access.");
+        }
+
+        String extension = contentType != null && contentType.contains("png") ? ".png" : (contentType != null && contentType.contains("svg") ? ".svg" : ".webp");
+        String teamSlug = StorageService.toSlug(team.getName());
+        String shortId = UUID.randomUUID().toString().substring(0, 8);
+        String filename = storageService.buildTenantKey(tenantId, "teams", teamSlug + "_" + shortId + extension);
+
+        String oldLogo = team.getLogoUrl();
+        if (oldLogo != null && (oldLogo.contains("/teams/") || oldLogo.startsWith("tenants/"))) {
+            storageService.deleteFile(oldLogo);
+        }
+
+        storageService.uploadFile(filename, imageBytes, contentType != null ? contentType : "image/jpeg");
+        team.setLogoUrl(filename);
+        Team saved = teamRepository.save(team);
+        saved.setSignedLogoUrl(storageService.getSignedUrl(filename, 120));
+        return saved;
+    }
 
     @Transactional(readOnly = true)
     public List<Tenant> getAllTenants() {
@@ -47,10 +76,34 @@ public class LeagueService {
     @Transactional(readOnly = true)
     public List<Team> getAllTeams() {
         UUID tenantId = TenantContext.getCurrentTenant();
-        if (tenantId != null) {
-            return teamRepository.findByTenantIdAndIsActiveTrue(tenantId);
+        List<Team> teams = tenantId != null
+                ? teamRepository.findByTenantIdOrderByNameAsc(tenantId)
+                : teamRepository.findAllByOrderByNameAsc();
+
+        Optional<Season> activeSeason = tenantId != null
+                ? seasonRepository.findByTenantIdAndStatus(tenantId, SeasonStatus.ACTIVE).stream().findFirst()
+                : seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE);
+
+        List<Object[]> counts = activeSeason.isPresent()
+                ? seasonRosterRepository.countActivePlayersBySeason(activeSeason.get().getId(), com.leagueos.modules.registration.domain.PlayerStatus.ACTIVE)
+                : seasonRosterRepository.countActivePlayersAll(com.leagueos.modules.registration.domain.PlayerStatus.ACTIVE);
+        java.util.Map<UUID, Integer> countMap = new java.util.HashMap<>();
+        for (Object[] row : counts) {
+            UUID tId = (UUID) row[0];
+            Number num = (Number) row[1];
+            countMap.put(tId, num != null ? num.intValue() : 0);
         }
-        return teamRepository.findByIsActiveTrue();
+
+        for (Team team : teams) {
+            team.setActivePlayersCount(countMap.getOrDefault(team.getId(), 0));
+            if (team.getLogoUrl() != null && !team.getLogoUrl().startsWith("http")) {
+                team.setSignedLogoUrl(storageService.getSignedUrl(team.getLogoUrl(), 120));
+            } else {
+                team.setSignedLogoUrl(team.getLogoUrl());
+            }
+        }
+
+        return teams;
     }
 
     @Transactional
@@ -75,7 +128,13 @@ public class LeagueService {
             team.getRepresentative().setTenantId(tenantId);
         }
 
-        return teamRepository.save(team);
+        Team saved = teamRepository.save(team);
+        if (saved.getLogoUrl() != null && !saved.getLogoUrl().startsWith("http")) {
+            saved.setSignedLogoUrl(storageService.getSignedUrl(saved.getLogoUrl(), 120));
+        } else {
+            saved.setSignedLogoUrl(saved.getLogoUrl());
+        }
+        return saved;
     }
 
     @Transactional
@@ -104,7 +163,13 @@ public class LeagueService {
             }
         }
 
-        return teamRepository.save(team);
+        Team saved = teamRepository.save(team);
+        if (saved.getLogoUrl() != null && !saved.getLogoUrl().startsWith("http")) {
+            saved.setSignedLogoUrl(storageService.getSignedUrl(saved.getLogoUrl(), 120));
+        } else {
+            saved.setSignedLogoUrl(saved.getLogoUrl());
+        }
+        return saved;
     }
 
     @Transactional
@@ -112,6 +177,14 @@ public class LeagueService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + teamId));
         team.setActive(false);
+        teamRepository.save(team);
+    }
+
+    @Transactional
+    public void activateTeam(UUID teamId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + teamId));
+        team.setActive(true);
         teamRepository.save(team);
     }
 
@@ -134,7 +207,7 @@ public class LeagueService {
         UUID tenantId = TenantContext.getCurrentTenant();
         // Default max players — configure via TenantSettings when the field is added
         if (tenantId != null && season.getMaxActivePlayersPerTeam() <= 0) {
-            season.setMaxActivePlayersPerTeam(26);
+            season.setMaxActivePlayersPerTeam(30);
         }
         return seasonRepository.save(season);
     }
@@ -165,6 +238,14 @@ public class LeagueService {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Season not found: " + seasonId));
         season.setCurrentMatchday(season.getCurrentMatchday() + 1);
+        return seasonRepository.save(season);
+    }
+
+    @Transactional
+    public Season updateCurrentMatchday(UUID seasonId, int matchday) {
+        Season season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new ResourceNotFoundException("Season not found: " + seasonId));
+        season.setCurrentMatchday(matchday);
         return seasonRepository.save(season);
     }
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search } from 'lucide-react';
+import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search, Shield } from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Player } from '@/shared/api/league-api';
 
@@ -208,134 +208,150 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
         );
 
         return (
-            <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col h-full">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col h-full">
                 {/* Header */}
-                <div className="px-6 py-4 sticky top-0 z-10 bg-[#22c55e] border-b border-[#16a34a] flex flex-col gap-3">
-                    <h3 className="font-bold text-lg text-black">{teamName}</h3>
+                <div className="px-5 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/60 flex flex-col gap-3 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                                <Shield className="w-4 h-4" />
+                            </div>
+                            <h3 className="font-black text-base text-white tracking-tight truncate">{teamName}</h3>
+                        </div>
+                        <span className="text-xs font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10 shrink-0">
+                            {filteredRoster.length} jugadores
+                        </span>
+                    </div>
                     <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar jugador..."
+                            placeholder="Buscar jugador por nombre..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 rounded-lg border-0 bg-white/90 focus:bg-white text-sm text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-green-700 outline-none transition-all shadow-sm"
+                            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 text-sm font-medium border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-xs"
                         />
                     </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-4 space-y-3 overflow-y-auto">
+                <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1 bg-slate-50/50">
                     {filteredRoster.length === 0 ? (
-                        <div className="text-center py-8 text-slate-500 text-sm font-medium">No se encontraron jugadores</div>
+                        <div className="text-center py-12 text-slate-400 text-sm font-medium">No se encontraron jugadores</div>
                     ) : (
                         filteredRoster.map(player => {
                             const stats = getStats(player.id);
                             return (
-                                <div key={player.id} className={`flex flex-col rounded-xl border transition-all duration-200 relative overflow-hidden ${stats.played ? 'bg-white border-blue-200 shadow-sm' : 'bg-white border-transparent hover:border-slate-200'}`}>
+                                <div key={player.id} className={`flex flex-col rounded-2xl border transition-all duration-200 relative overflow-hidden ${stats.played ? 'bg-white border-blue-300 shadow-xs' : 'bg-white/90 border-slate-200/80 hover:border-slate-300'}`}>
                                     <div className="flex items-center gap-3 p-3 w-full">
                                         {/* Played Toggle */}
                                         <button
                                             onClick={() => updateStats(player.id, { played: !stats.played })}
                                             className={`
-                                    w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0
-                                    ${stats.played
-                                                    ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-500 ring-offset-2'
-                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}
-                                `}
-                                            title={stats.played ? "Jugó" : "No jugó"}
+                                                w-10 h-10 rounded-2xl flex items-center justify-center transition-all shrink-0 font-bold
+                                                ${stats.played
+                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-blue-600/30'
+                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'}
+                                            `}
+                                            title={stats.played ? "En cancha (Clic para marcar sin actividad)" : "Sin actividad (Clic para marcar en cancha)"}
                                         >
                                             <Shirt className="w-5 h-5" />
                                         </button>
+                                        
                                         {/* Player Info */}
-                                        <div className="flex-1 min-w-0 mr-2 py-1">
-                                            <div className="flex items-start gap-3">
+                                        <div className="flex-1 min-w-0 mr-1 py-0.5">
+                                            <div className="flex items-start gap-2.5">
                                                 {settings?.requireJerseyNumbers && (
-                                                    <div className={`mt-0.5 flex items-center justify-center w-7 h-7 rounded-md shadow-sm border text-xs font-black shrink-0 transition-colors ${stats.played ? 'bg-slate-800 text-white border-slate-700' : 'bg-slate-100 text-slate-400 border-slate-200'}`} title="Dorsal">
+                                                    <div className={`mt-0.5 flex items-center justify-center w-7 h-7 rounded-lg shadow-2xs border text-xs font-black shrink-0 transition-colors ${stats.played ? 'bg-slate-900 text-white border-slate-800' : 'bg-slate-100 text-slate-500 border-slate-200'}`} title="Dorsal">
                                                         {player.jerseyNumber || '-'}
                                                     </div>
                                                 )}
                                                 <div className="flex-1 min-w-0">
-                                                    <div className={`font-bold text-sm sm:text-base leading-snug whitespace-normal break-words ${stats.played ? 'text-slate-900' : 'text-slate-500'}`}>
+                                                    <div className={`font-black text-sm leading-snug whitespace-normal break-words ${stats.played ? 'text-slate-900' : 'text-slate-700'}`}>
                                                         {player.firstName} {player.lastName}
                                                     </div>
-                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
-                                                        {stats.played ? 'En Cancha' : 'Sin Actividad'}
+                                                    <p className="text-[10px] font-black uppercase tracking-wider mt-1 flex items-center gap-1.5">
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${stats.played ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                                        <span className={stats.played ? 'text-emerald-700 font-black' : 'text-slate-400 font-bold'}>
+                                                            {stats.played ? 'En Cancha' : 'Sin Actividad'}
+                                                        </span>
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Actions Group */}
-                                        <div className={`flex items-center gap-2 sm:gap-4 transition-opacity duration-200 ${stats.played ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
+                                        <div className={`flex items-center gap-2 sm:gap-3 transition-opacity duration-200 ${stats.played ? 'opacity-100' : 'opacity-40 hover:opacity-80'}`}>
 
                                             {/* Goals Counter */}
-                                            <div className="flex flex-col items-center gap-1">
-                                                <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
-                                                    <div className="px-1.5 text-slate-400">
+                                            <div className="flex flex-col items-center gap-0.5">
+                                                <div className="flex items-center bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80 shadow-2xs">
+                                                    <div className="px-1 text-slate-500">
                                                         <SoccerBall className="w-3.5 h-3.5" />
                                                     </div>
                                                     <button
-                                                        className="w-7 h-7 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-blue-600 font-bold active:scale-95 transition-transform text-sm"
+                                                        className="w-7 h-7 flex items-center justify-center bg-white rounded-lg shadow-xs text-slate-700 hover:text-blue-600 font-black active:scale-95 transition-all text-sm border border-slate-200/80"
                                                         onClick={() => updateStats(player.id, { goals: Math.max(0, stats.goals - 1) })}
                                                     >
                                                         -
                                                     </button>
-                                                    <span className="w-8 text-center font-bold text-base text-slate-800 tabular-nums">
+                                                    <span className="w-7 text-center font-black text-sm text-slate-900 tabular-nums">
                                                         {stats.goals}
                                                     </span>
                                                     <button
-                                                        className="w-7 h-7 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-blue-600 font-bold active:scale-95 transition-transform text-sm"
+                                                        className="w-7 h-7 flex items-center justify-center bg-white rounded-lg shadow-xs text-slate-700 hover:text-blue-600 font-black active:scale-95 transition-all text-sm border border-slate-200/80"
                                                         onClick={() => updateStats(player.id, { goals: stats.goals + 1 })}
                                                     >
                                                         +
                                                     </button>
                                                 </div>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Goles</span>
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Goles</span>
                                             </div>
 
                                             {/* Divider */}
-                                            <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+                                            <div className="hidden sm:block w-px h-7 bg-slate-200"></div>
 
                                             {/* Cards */}
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5">
                                                 {/* Yellow Card */}
-                                                <div className="flex flex-col items-center gap-1">
+                                                <div className="flex flex-col items-center gap-0.5">
                                                     <button
                                                         onClick={() => updateStats(player.id, { yellowCards: (stats.yellowCards + 1) % 3 })}
                                                         className={`
-                                                w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all active:scale-95 shadow-sm
-                                                ${stats.yellowCards > 0
-                                                                ? 'bg-yellow-100 border-yellow-400 text-yellow-600'
-                                                                : 'bg-white border-slate-200 text-slate-300 hover:border-yellow-200 hover:text-yellow-400'}
-                                            `}
+                                                            w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all active:scale-95 shadow-xs
+                                                            ${stats.yellowCards > 0
+                                                                ? 'bg-amber-100 border-amber-400 text-amber-600'
+                                                                : 'bg-white border-slate-200 text-slate-300 hover:border-amber-300 hover:text-amber-500'}
+                                                        `}
+                                                        title="Tarjeta Amarilla"
                                                     >
                                                         <div className="relative">
-                                                            <Square className="w-4 h-4 fill-current" />
+                                                            <Square className="w-3.5 h-3.5 fill-current" />
                                                             {stats.yellowCards > 1 && (
-                                                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold shadow-sm">
+                                                                <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-black shadow-xs">
                                                                     2
                                                                 </span>
                                                             )}
                                                         </div>
                                                     </button>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Ama</span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ama</span>
                                                 </div>
 
                                                 {/* Red Card */}
-                                                <div className="flex flex-col items-center gap-1">
+                                                <div className="flex flex-col items-center gap-0.5">
                                                     <button
                                                         onClick={() => updateStats(player.id, { redCard: !stats.redCard })}
                                                         className={`
-                                                w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all active:scale-95 shadow-sm
-                                                ${stats.redCard
+                                                            w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all active:scale-95 shadow-xs
+                                                            ${stats.redCard
                                                                 ? 'bg-red-100 border-red-500 text-red-600'
-                                                                : 'bg-white border-slate-200 text-slate-300 hover:border-red-200 hover:text-red-400'}
-                                            `}
+                                                                : 'bg-white border-slate-200 text-slate-300 hover:border-red-300 hover:text-red-500'}
+                                                        `}
+                                                        title="Tarjeta Roja"
                                                     >
-                                                        <Square className="w-4 h-4 fill-current" />
+                                                        <Square className="w-3.5 h-3.5 fill-current" />
                                                     </button>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Roja</span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Roja</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -343,35 +359,35 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
                                     {/* Red Card Expanded Panel */}
                                     {stats.redCard && (
-                                        <div className="bg-red-50/80 border-t border-red-100 p-3 pt-4 px-4 pb-4 w-full animate-in slide-in-from-top-4 fade-in duration-300">
-                                            <div className="flex flex-col sm:flex-row gap-4">
+                                        <div className="bg-red-50/90 border-t border-red-100 p-3.5 px-4 w-full animate-in slide-in-from-top-3 fade-in duration-200">
+                                            <div className="flex flex-col sm:flex-row gap-3">
                                                 <div className="flex-1">
-                                                    <label className="text-xs font-bold text-red-900 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                                        Causal de Expulsión <span className="text-[9px] bg-white border border-red-200 text-red-700 px-1.5 py-0.5 rounded uppercase">(Opcional)</span>
+                                                    <label className="text-xs font-black text-red-900 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                                                        Causal de Expulsión <span className="text-[9px] bg-white border border-red-200 text-red-700 px-1.5 py-0.5 rounded font-bold uppercase">(Opcional)</span>
                                                     </label>
                                                     <textarea
-                                                        className="w-full bg-white border border-red-200 rounded-lg p-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-shadow placeholder:text-slate-400 font-medium whitespace-pre-wrap"
-                                                        placeholder="Describe el motivo (ej. Conducta violenta, Insultos al árbitro...)"
+                                                        className="w-full bg-white border border-red-200 rounded-xl p-2.5 text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all shadow-2xs"
+                                                        placeholder="Describe el motivo (ej. Conducta antideportiva, falta grave...)"
                                                         rows={2}
                                                         value={stats.notes || ''}
                                                         onChange={(e) => updateStats(player.id, { notes: e.target.value })}
                                                     />
                                                 </div>
                                                 <div className="w-full sm:w-auto shrink-0 flex flex-col justify-start">
-                                                    <label className="text-xs font-bold text-red-900 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                                    <label className="text-xs font-black text-red-900 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                                                         Partidos Suspendido
                                                     </label>
-                                                    <div className="flex bg-white border border-red-200 rounded-lg p-1 items-center justify-between w-[120px] mt-0.5 shadow-sm">
+                                                    <div className="flex bg-white border border-red-200 rounded-xl p-1 items-center justify-between w-[120px] shadow-2xs">
                                                         <button
                                                             onClick={() => updateStats(player.id, { suspensionMatchdays: Math.max(1, (stats.suspensionMatchdays || 1) - 1) })}
-                                                            className="w-8 h-8 flex items-center justify-center bg-red-50 rounded-md text-red-600 font-bold hover:bg-red-100 hover:text-red-700 transition-colors shadow-sm cursor-pointer border border-red-100"
+                                                            className="w-8 h-8 flex items-center justify-center bg-red-50 rounded-lg text-red-600 font-black hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer border border-red-100"
                                                         >
                                                             -
                                                         </button>
-                                                        <span className="font-black text-slate-800 text-sm flex-1 text-center">{stats.suspensionMatchdays || 1}</span>
+                                                        <span className="font-black text-slate-900 text-sm flex-1 text-center">{stats.suspensionMatchdays || 1}</span>
                                                         <button
                                                             onClick={() => updateStats(player.id, { suspensionMatchdays: (stats.suspensionMatchdays || 1) + 1 })}
-                                                            className="w-8 h-8 flex items-center justify-center bg-red-50 rounded-md text-red-600 font-bold hover:bg-red-100 hover:text-red-700 transition-colors shadow-sm cursor-pointer border border-red-100"
+                                                            className="w-8 h-8 flex items-center justify-center bg-red-50 rounded-lg text-red-600 font-black hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer border border-red-100"
                                                         >
                                                             +
                                                         </button>
@@ -390,42 +406,42 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
                 {/* Header */}
-                <div className="p-4 border-b flex items-center justify-between bg-white z-10">
+                <div className="p-5 px-6 border-b border-slate-100 flex items-center justify-between bg-white z-10 shrink-0">
                     <div>
-                        <h2 className="text-xl font-bold flex items-center gap-2">
+                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
                             Cédula Digital
-                            <span className="text-sm font-bold text-green-700 px-3 py-0.5 bg-green-100 rounded-full border border-green-200">
+                            <span className="text-xs font-black text-indigo-700 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 uppercase tracking-wider">
                                 Paso {step} de 2
                             </span>
                         </h2>
-                        <p className="text-sm text-slate-500">
-                            {step === 1 && "Registra asistencia, goles y tarjetas."}
-                            {step === 2 && "Confirma los eventos del partido."}
+                        <p className="text-xs font-bold text-slate-500 mt-0.5">
+                            {step === 1 && "Registra asistencia, goles y tarjetas de cada plantel."}
+                            {step === 2 && "Confirma y valida el resultado final del encuentro."}
                         </p>
-                    </div >
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
-                        <X className="w-6 h-6" />
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors">
+                        <X className="w-5 h-5" />
                     </button>
-                </div >
+                </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-auto p-6 bg-slate-50/50 relative">
+                <div className="flex-1 overflow-hidden p-6 bg-slate-50/50 relative flex flex-col min-h-0">
                     {isLoadingEvents && (
-                        <div className="absolute inset-0 z-20 bg-white/50 backdrop-blur-sm flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                        <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-xs flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         </div>
                     )}
                     {step === 1 && (
-                        <div className="flex flex-col gap-6 pb-20 min-h-0 h-full">
+                        <div className="flex flex-col gap-4 min-h-0 flex-1">
                             {/* Double Forfeit Toggle */}
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                            <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-2xs">
                                 <div>
-                                    <h4 className="font-bold text-red-900 text-sm">Situación Extraordinaria: Ambos Equipos Pierden</h4>
-                                    <p className="text-xs text-red-700 mt-1">
-                                        Activar en caso de incidentes (ej. riña). Puedes usar esta vista para añadir expulsiones o notas. Ambos equipos registrarán una derrota y 0 puntos al finalizar.
+                                    <h4 className="font-black text-amber-900 text-xs uppercase tracking-wider">Situación Extraordinaria: Ambos Equipos Pierden</h4>
+                                    <p className="text-xs text-amber-800 font-medium mt-0.5">
+                                        Activar en caso de incidentes (ej. riña). Ambos equipos registrarán una derrota y 0 puntos.
                                     </p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -439,7 +455,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                 </label>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1 min-h-0">
                                 {renderRosterGrid(homeRoster, homeTeamName || "Local", homeSearch, setHomeSearch)}
                                 {renderRosterGrid(awayRoster, awayTeamName || "Visitante", awaySearch, setAwaySearch)}
                             </div>
@@ -448,83 +464,83 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
                     {
                         step === 2 && (
-                            <div className="max-w-5xl mx-auto space-y-8">
+                            <div className="max-w-5xl mx-auto space-y-6 overflow-y-auto flex-1 pr-1">
                                 {/* Scoreboard Header */}
-                                <div className="bg-white rounded-2xl p-6 border shadow-sm text-center relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Marcador Final</h3>
-                                    <div className="flex items-center justify-center gap-12">
-                                        <div className="text-right">
-                                            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{homeTeamName || "Local"}</h2>
+                                <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm text-center relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
+                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5">Marcador Calculado</h3>
+                                    <div className="flex items-center justify-center gap-6 md:gap-12">
+                                        <div className="text-right flex-1 min-w-0">
+                                            <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate">{homeTeamName || "Local"}</h2>
                                         </div>
-                                        <div className="flex items-center gap-6 bg-slate-50 px-8 py-2 rounded-xl border border-slate-100">
-                                            <span className="text-5xl font-black text-slate-900">{calculatedHomeScore}</span>
-                                            <span className="text-2xl text-slate-300 font-light">-</span>
-                                            <span className="text-5xl font-black text-slate-900">{calculatedAwayScore}</span>
+                                        <div className="flex items-center gap-4 md:gap-6 bg-slate-900 px-6 md:px-8 py-3 rounded-2xl shadow-md shrink-0">
+                                            <span className="text-4xl md:text-5xl font-black text-white">{calculatedHomeScore}</span>
+                                            <span className="text-2xl text-slate-400 font-light">-</span>
+                                            <span className="text-4xl md:text-5xl font-black text-white">{calculatedAwayScore}</span>
                                         </div>
-                                        <div className="text-left">
-                                            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{awayTeamName || "Visitante"}</h2>
+                                        <div className="text-left flex-1 min-w-0">
+                                            <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate">{awayTeamName || "Visitante"}</h2>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Team Summaries Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     {/* Home Team Column */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-bold text-slate-700 mx-1 flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    <div className="space-y-3">
+                                        <h4 className="font-black text-slate-800 text-sm mx-1 flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                                             Resumen {homeTeamName || "Local"}
                                         </h4>
-                                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
                                             <div className="divide-y divide-slate-100">
                                                 {homeRoster
                                                     .filter(p => getStats(p.id).played)
                                                     .map(p => {
                                                         const s = getStats(p.id);
                                                         return (
-                                                            <div key={p.id} className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                                                <div className="flex items-start gap-3 min-w-0 flex-1 pr-4">
-                                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0 mt-0.5">
+                                                            <div key={p.id} className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
+                                                                <div className="flex items-start gap-3 min-w-0 flex-1 pr-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-600 shrink-0 mt-0.5">
                                                                         {p.firstName[0]}
                                                                     </div>
                                                                     <div className="flex-1 min-w-0 pt-0.5">
                                                                         <div className="flex items-start gap-2">
                                                                             {settings?.requireJerseyNumbers && (
-                                                                                <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-slate-800 border border-slate-700 text-[10px] font-bold text-white shrink-0 shadow-sm" title="Dorsal">
+                                                                                <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-slate-900 border border-slate-800 text-[10px] font-black text-white shrink-0 shadow-2xs" title="Dorsal">
                                                                                     {p.jerseyNumber || '-'}
                                                                                 </span>
                                                                             )}
-                                                                            <span className="font-bold text-slate-900 text-sm whitespace-normal break-words leading-tight">{p.firstName} {p.lastName}</span>
+                                                                            <span className="font-black text-slate-900 text-sm whitespace-normal break-words leading-tight">{p.firstName} {p.lastName}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-1.5">
+                                                                <div className="flex items-center gap-1.5 shrink-0">
                                                                     {/* Goals */}
                                                                     {s.goals > 0 && Array.from({ length: s.goals }).map((_, i) => (
                                                                         <div key={`goal-${i}`} title="Gol">
-                                                                            <SoccerBall className="w-3.5 h-3.5 text-slate-700 fill-slate-700/20" />
+                                                                            <SoccerBall className="w-3.5 h-3.5 text-slate-800 fill-slate-800/20" />
                                                                         </div>
                                                                     ))}
 
                                                                     {/* Cards */}
                                                                     {s.yellowCards > 0 && Array.from({ length: s.yellowCards }).map((_, i) => (
-                                                                        <div key={`yellow-${i}`} title="Amarilla" className="w-3.5 h-4 bg-yellow-400 rounded-sm border border-yellow-500/50 shadow-sm" />
+                                                                        <div key={`yellow-${i}`} title="Amarilla" className="w-3.5 h-4 bg-amber-400 rounded-xs border border-amber-500/50 shadow-2xs" />
                                                                     ))}
                                                                     {s.redCard && (
-                                                                        <div title="Roja" className="w-3.5 h-4 bg-red-500 rounded-sm border border-red-600/50 shadow-sm" />
+                                                                        <div title="Roja" className="w-3.5 h-4 bg-red-600 rounded-xs border border-red-700/50 shadow-2xs" />
                                                                     )}
 
                                                                     {/* Played indicator if nothing else */}
                                                                     {s.goals === 0 && s.yellowCards === 0 && !s.redCard && (
-                                                                        <div title="Jugó" className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                                                        <div title="Jugó" className="w-2 h-2 rounded-full bg-emerald-500" />
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         );
                                                     })}
                                                 {homeRoster.filter(p => getStats(p.id).played).length === 0 && (
-                                                    <div className="p-8 text-center text-slate-400 text-sm italic">
+                                                    <div className="p-8 text-center text-slate-400 text-sm font-medium italic">
                                                         Sin actividad registrada
                                                     </div>
                                                 )}
@@ -533,60 +549,60 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                     </div>
 
                                     {/* Away Team Column */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-bold text-slate-700 mx-1 flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                    <div className="space-y-3">
+                                        <h4 className="font-black text-slate-800 text-sm mx-1 flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-purple-600"></span>
                                             Resumen {awayTeamName || "Visitante"}
                                         </h4>
-                                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
                                             <div className="divide-y divide-slate-100">
                                                 {awayRoster
                                                     .filter(p => getStats(p.id).played)
                                                     .map(p => {
                                                         const s = getStats(p.id);
                                                         return (
-                                                            <div key={p.id} className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                                                <div className="flex items-start gap-3 min-w-0 flex-1 pr-4">
-                                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0 mt-0.5">
+                                                            <div key={p.id} className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
+                                                                <div className="flex items-start gap-3 min-w-0 flex-1 pr-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-600 shrink-0 mt-0.5">
                                                                         {p.firstName[0]}
                                                                     </div>
                                                                     <div className="flex-1 min-w-0 pt-0.5">
                                                                         <div className="flex items-start gap-2">
                                                                             {settings?.requireJerseyNumbers && (
-                                                                                <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-slate-800 border border-slate-700 text-[10px] font-bold text-white shrink-0 shadow-sm" title="Dorsal">
+                                                                                <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-slate-900 border border-slate-800 text-[10px] font-black text-white shrink-0 shadow-2xs" title="Dorsal">
                                                                                     {p.jerseyNumber || '-'}
                                                                                 </span>
                                                                             )}
-                                                                            <span className="font-bold text-slate-900 text-sm whitespace-normal break-words leading-tight">{p.firstName} {p.lastName}</span>
+                                                                            <span className="font-black text-slate-900 text-sm whitespace-normal break-words leading-tight">{p.firstName} {p.lastName}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-1.5">
+                                                                <div className="flex items-center gap-1.5 shrink-0">
                                                                     {/* Goals */}
                                                                     {s.goals > 0 && Array.from({ length: s.goals }).map((_, i) => (
                                                                         <div key={`goal-${i}`} title="Gol">
-                                                                            <SoccerBall className="w-3.5 h-3.5 text-slate-700 fill-slate-700/20" />
+                                                                            <SoccerBall className="w-3.5 h-3.5 text-slate-800 fill-slate-800/20" />
                                                                         </div>
                                                                     ))}
 
                                                                     {/* Cards */}
                                                                     {s.yellowCards > 0 && Array.from({ length: s.yellowCards }).map((_, i) => (
-                                                                        <div key={`yellow-${i}`} title="Amarilla" className="w-3.5 h-4 bg-yellow-400 rounded-sm border border-yellow-500/50 shadow-sm" />
+                                                                        <div key={`yellow-${i}`} title="Amarilla" className="w-3.5 h-4 bg-amber-400 rounded-xs border border-amber-500/50 shadow-2xs" />
                                                                     ))}
                                                                     {s.redCard && (
-                                                                        <div title="Roja" className="w-3.5 h-4 bg-red-500 rounded-sm border border-red-600/50 shadow-sm" />
+                                                                        <div title="Roja" className="w-3.5 h-4 bg-red-600 rounded-xs border border-red-700/50 shadow-2xs" />
                                                                     )}
 
                                                                     {/* Played indicator if nothing else */}
                                                                     {s.goals === 0 && s.yellowCards === 0 && !s.redCard && (
-                                                                        <div title="Jugó" className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                                                        <div title="Jugó" className="w-2 h-2 rounded-full bg-emerald-500" />
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         );
                                                     })}
                                                 {awayRoster.filter(p => getStats(p.id).played).length === 0 && (
-                                                    <div className="p-8 text-center text-slate-400 text-sm italic">
+                                                    <div className="p-8 text-center text-slate-400 text-sm font-medium italic">
                                                         Sin actividad registrada
                                                     </div>
                                                 )}
@@ -597,13 +613,13 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                             </div>
                         )
                     }
-                </div >
+                </div>
 
                 {/* Footer Actions */}
-                < div className="p-4 border-t bg-white flex justify-between items-center" >
+                <div className="p-4 px-6 border-t border-slate-100 bg-white flex justify-between items-center shrink-0">
                     <button
                         onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
+                        className="flex items-center gap-2 px-4 py-2.5 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors text-sm"
                     >
                         <ArrowLeft className="w-4 h-4" />
                         Atrás
@@ -613,7 +629,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                         step < 2 ? (
                             <button
                                 onClick={handleNext}
-                                className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white font-black rounded-xl hover:bg-slate-800 transition-colors shadow-md shadow-slate-900/10 text-sm"
                             >
                                 Siguiente
                                 <ArrowRight className="w-4 h-4" />
@@ -622,15 +638,15 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                             <button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
-                                className="flex items-center gap-2 px-8 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20"
+                                className="flex items-center gap-2 px-8 py-2.5 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 active:bg-emerald-800 transition-all shadow-md shadow-emerald-600/20 text-sm disabled:opacity-50"
                             >
                                 {isSubmitting ? 'Guardando...' : 'Confirmar Cédula'}
                                 <Save className="w-4 h-4" />
                             </button>
                         )
                     }
-                </div >
-            </div >
-        </div >
+                </div>
+            </div>
+        </div>
     );
 };

@@ -11,11 +11,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpDown, Trophy, Check, Minus, X } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
+import { TeamLogo } from '@/shared/components/TeamLogo';
 
 export type TeamStanding = {
     id: string;
     rank: number;
     team: string;
+    logoUrl?: string;
+    signedLogoUrl?: string;
     played: number;
     won: number;
     drawn: number;
@@ -101,7 +104,14 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 accessorKey: 'team',
                 header: 'Equipo',
                 cell: (info) => (
-                    <div className="min-w-[200px]">
+                    <div className="min-w-[200px] flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200/20">
+                            <TeamLogo 
+                                teamName={info.getValue<string>()} 
+                                logoUrl={info.row.original.signedLogoUrl || info.row.original.logoUrl} 
+                                fallbackClass={cn("text-xs font-bold", isNuestroDeporte ? "text-white" : "text-slate-500")}
+                            />
+                        </div>
                         <Link to={`/${leagueSlug || 'default'}/team/${info.row.original.id}`} className={cn(
                             "font-bold hover:underline transition-colors text-base whitespace-nowrap block truncate",
                             isNuestroDeporte ? "text-white hover:text-blue-400" : "text-slate-800 hover:text-blue-600"

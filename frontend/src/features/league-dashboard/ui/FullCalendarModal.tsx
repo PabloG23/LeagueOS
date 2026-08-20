@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
-import { X, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Loader2, MapPin, Clock } from 'lucide-react';
 import { leagueApi, Match } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
+import { TeamLogo } from '@/shared/components/TeamLogo';
 import { Link, useParams } from 'react-router-dom';
 
 interface FullCalendarModalProps {
@@ -185,20 +186,35 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                 <div key={match.id} className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex flex-col gap-4 hover:bg-slate-800/80 hover:border-white/20 transition-all group">
 
                                                     {/* Status Badge & Location */}
-                                                    <div className="flex justify-between items-center text-xs font-semibold text-slate-400">
-                                                        <div className="flex items-center gap-2">
-                                                            <span>
-                                                                {match.matchDate
-                                                                    ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                                                    : 'Horario por definir'}
-                                                            </span>
-                                                            {match.location && <span className="hidden sm:inline">| {match.location}</span>}
+                                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-2 pb-3 border-b border-white/5">
+                                                        {/* Match Info (Date & Location) */}
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+                                                                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                                                                <span className="capitalize">
+                                                                    {match.matchDate
+                                                                        ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                                                        : 'Horario por definir'}
+                                                                </span>
+                                                            </div>
+                                                            {match.location && (
+                                                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                                                                    <MapPin className="w-3 h-3 text-slate-500" />
+                                                                    <span className="truncate max-w-[200px] sm:max-w-[250px] uppercase tracking-wider">{match.location}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <span className={`px-2.5 py-1 rounded-md uppercase tracking-wider text-[10px] ${
-                                                            isFinished ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-700 text-slate-300'
-                                                        }`}>
-                                                            {isFinished ? 'Finalizado' : match.status === 'CANCELLED' ? 'Cancelado' : 'Por Jugar'}
-                                                        </span>
+
+                                                        {/* Status Badge */}
+                                                        <div className="self-start sm:self-auto">
+                                                            <span className={`px-2.5 py-1 rounded-md uppercase tracking-wider text-[10px] font-bold shadow-sm ${
+                                                                isFinished ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20' 
+                                                                : match.status === 'CANCELLED' ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
+                                                                : 'bg-slate-700/50 text-slate-300 ring-1 ring-white/10'
+                                                            }`}>
+                                                                {isFinished ? 'Finalizado' : match.status === 'CANCELLED' ? 'Cancelado' : 'Por Jugar'}
+                                                            </span>
+                                                        </div>
                                                     </div>
 
                                                     {/* Teams and Scores Horizontal Layout */}
@@ -206,11 +222,11 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                         {/* Home Team */}
                                                         <div className="flex flex-col items-center gap-3 w-[30%]">
                                                             <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center font-bold text-base text-slate-300 relative overflow-hidden group-hover:bg-slate-700 transition-colors shadow-inner ring-1 ring-white/10">
-                                                                {match.homeTeam?.logoUrl ? (
-                                                                    <img src={match.homeTeam.logoUrl} alt={match.homeTeam.name} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    match.homeTeam?.name?.substring(0, 2).toUpperCase() || 'LO'
-                                                                )}
+                                                                <TeamLogo 
+                                                                    teamName={match.homeTeam?.name || 'Local'} 
+                                                                    logoUrl={match.homeTeam?.signedLogoUrl || match.homeTeam?.logoUrl} 
+                                                                    fallbackClass="text-sm font-bold text-slate-300"
+                                                                />
                                                             </div>
                                                             <Link to={getTeamLink(match.homeTeamId)} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${homeWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
                                                                 {match.homeTeam?.name || 'Local'}
@@ -231,11 +247,11 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                         {/* Away Team */}
                                                         <div className="flex flex-col items-center gap-3 w-[30%]">
                                                             <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center font-bold text-base text-slate-300 relative overflow-hidden group-hover:bg-slate-700 transition-colors shadow-inner ring-1 ring-white/10">
-                                                                {match.awayTeam?.logoUrl ? (
-                                                                    <img src={match.awayTeam.logoUrl} alt={match.awayTeam.name} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    match.awayTeam?.name?.substring(0, 2).toUpperCase() || 'VI'
-                                                                )}
+                                                                <TeamLogo 
+                                                                    teamName={match.awayTeam?.name || 'Visitante'} 
+                                                                    logoUrl={match.awayTeam?.signedLogoUrl || match.awayTeam?.logoUrl} 
+                                                                    fallbackClass="text-sm font-bold text-slate-300"
+                                                                />
                                                             </div>
                                                             <Link to={getTeamLink(match.awayTeamId)} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${awayWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
                                                                 {match.awayTeam?.name || 'Visitante'}

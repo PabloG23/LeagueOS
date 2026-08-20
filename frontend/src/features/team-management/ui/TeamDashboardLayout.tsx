@@ -19,7 +19,8 @@ export const TeamDashboardLayout = ({ children }: TeamDashboardLayoutProps) => {
 
     const handleLogout = () => {
         localStorage.clear();
-        window.location.href = `/${leagueSlug}`;
+        const isCustomHost = window.location.hostname.toLowerCase().includes('nuestrodeporte');
+        window.location.href = isCustomHost ? '/' : `/${leagueSlug}`;
     };
 
     return (

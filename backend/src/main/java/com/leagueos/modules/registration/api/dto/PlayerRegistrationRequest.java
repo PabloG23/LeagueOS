@@ -12,4 +12,6 @@ public class PlayerRegistrationRequest {
     private String profilePhotoUrl;
     private UUID teamId;
     private Integer jerseyNumber;
+    private String curp;
+    private Boolean isForeign;
 }

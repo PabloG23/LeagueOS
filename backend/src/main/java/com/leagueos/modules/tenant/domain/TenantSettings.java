@@ -33,4 +33,10 @@ public class TenantSettings extends BaseEntity {
 
     @Column(name = "win_points_on_win")
     private int winPointsOnWin = 3;
+
+    @Column(name = "allow_multiple_teams_per_player")
+    private boolean allowMultipleTeamsPerPlayer = true;
+
+    @Column(name = "require_curp")
+    private boolean requireCurp = false;
 }
