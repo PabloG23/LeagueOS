@@ -251,13 +251,13 @@ export const MatchResultsView = () => {
     };
 
     const handlePublishMatchday = async () => {
-        if (!selectedSeasonId || !selectedMatchday) return;
+        if (!selectedSeasonId || !selectedMatchday || !settings?.tenantId) return;
         setIsPublishingMatchday(true);
         try {
-            await leagueApi.updateCurrentMatchday(settings!.tenantId, selectedSeasonId, Number(selectedMatchday));
+            await leagueApi.updateCurrentMatchday(settings.tenantId, selectedSeasonId, Number(selectedMatchday));
             
             // Refetch seasons to update the currentMatchday in the seasons list
-            const res = await leagueApi.getSeasons(settings!.tenantId);
+            const res = await leagueApi.getSeasons(settings.tenantId);
             setSeasons(res.data);
             
             showToast(`La Jornada ${selectedMatchday} ahora es pública en el inicio`, 'success');

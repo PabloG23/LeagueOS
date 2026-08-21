@@ -142,27 +142,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 const slug = matchLeague?.params.leagueSlug || matchLeagueExact?.params.leagueSlug;
                 const normalizedSlug = slug?.toLowerCase();
 
-                if (isNuestroDeporteHost || normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte') {
-                    tenantId = '11111111-1111-1111-1111-111111111111';
-                    name = "Liga Nuestro Deporte";
-                    logoUrl = "/nuestro_deporte_logo.png";
-                    themeClass = 'theme-nuestro-deporte';
-                    allowTransfers = true;
-                    footerAddress = "Liga Nuestro Deporte";
-                    footerPhone = "";
-                    footerBackgroundClass = "bg-[#040812]";
-                    slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
-                    facebookUrl = "#";
-                    instagramUrl = "#";
-                    twitterUrl = "#";
-
-                    matchTickerBackgroundClass = "bg-[#040812]";
-                    matchCardBackgroundClass = "bg-[#0A1224]";
-                    matchTickerTextClass = "text-blue-400";
-
-                    boardMembers = [];
-                    enableRoundRobinFixtures = true;
-                } else if (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas') {
+                if (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas') {
                     tenantId = '22222222-2222-2222-2222-222222222222';
                     name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
                     logoUrl = "/san_lucas_logo.png";
@@ -187,6 +167,26 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
                         { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
                     ];
+                } else if (isNuestroDeporteHost || normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte') {
+                    tenantId = '11111111-1111-1111-1111-111111111111';
+                    name = "Liga Nuestro Deporte";
+                    logoUrl = "/nuestro_deporte_logo.png";
+                    themeClass = 'theme-nuestro-deporte';
+                    allowTransfers = true;
+                    footerAddress = "Liga Nuestro Deporte";
+                    footerPhone = "";
+                    footerBackgroundClass = "bg-[#040812]";
+                    slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
+                    facebookUrl = "#";
+                    instagramUrl = "#";
+                    twitterUrl = "#";
+
+                    matchTickerBackgroundClass = "bg-[#040812]";
+                    matchCardBackgroundClass = "bg-[#0A1224]";
+                    matchTickerTextClass = "text-blue-400";
+
+                    boardMembers = [];
+                    enableRoundRobinFixtures = true;
                 } else {
                     console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
                 }
