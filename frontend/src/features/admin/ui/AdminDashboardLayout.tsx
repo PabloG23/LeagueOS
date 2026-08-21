@@ -82,8 +82,12 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
                     <button
                         onClick={() => {
                             localStorage.clear();
-                            const isCustomHost = window.location.hostname.toLowerCase().includes('nuestrodeporte');
-                            window.location.href = isCustomHost ? '/' : `/${leagueSlug}`;
+                            const isNuestroDeporte = leagueSlug?.toLowerCase().includes('nuestrodeporte') || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+                            if (isNuestroDeporte) {
+                                window.location.href = 'https://www.nuestrodeporte.com/';
+                            } else {
+                                window.location.href = `/${leagueSlug}`;
+                            }
                         }}
                         className="flex items-center justify-center gap-3 w-full px-4 py-3 text-red-400 hover:text-white hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all font-semibold text-sm group shadow-sm"
                     >

@@ -45,6 +45,20 @@ export const LoginPage = () => {
                 localStorage.setItem('teamId', data.teamId);
             }
 
+            const isCustomHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('nuestrodeporte');
+
+            // If user belongs to San Lucas but logged in on nuestrodeporte.com domain, redirect to platform
+            if (data.tenantId === '22222222-2222-2222-2222-222222222222' && isCustomHost) {
+                if (data.role === 'ROLE_TEAM_REP') {
+                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/team-dashboard';
+                } else if (data.role === 'ROLE_LEAGUE_ADMIN') {
+                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/admin/teams';
+                } else {
+                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas';
+                }
+                return;
+            }
+
             // Determine slug from Tenant ID (Trust backend over URL)
             let targetSlug = 'ligaNuestroDeporte';
             if (data.tenantId === '22222222-2222-2222-2222-222222222222') {
@@ -62,7 +76,11 @@ export const LoginPage = () => {
             } else if (data.role === 'ROLE_LEAGUE_ADMIN') {
                 navigate(`/${targetSlug}/admin/teams`);
             } else {
-                navigate(`/${targetSlug}`);
+                if (isCustomHost && targetSlug === 'ligaNuestroDeporte') {
+                    navigate('/');
+                } else {
+                    navigate(`/${targetSlug}`);
+                }
             }
 
         } catch (err: any) {

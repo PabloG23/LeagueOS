@@ -65,33 +65,18 @@ export const Navbar = () => {
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-4">
-                    {typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('nuestrodeporte') ? (
-                        <a
-                            href="https://league-os-weld.vercel.app/login"
-                            className={cn(
-                                "flex items-center gap-2 px-6 py-2.5 rounded-full text-xs md:text-sm font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5",
-                                isNuestroDeporte
-                                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-blue-900/40 border border-blue-400/30"
-                                    : "bg-blue-700 text-white hover:bg-blue-800"
-                            )}
-                        >
-                            <UserCircle className="w-4 h-4 md:w-5 md:h-5" />
-                            <span>INICIAR SESIÓN</span>
-                        </a>
-                    ) : (
-                        <Link
-                            to="/login"
-                            className={cn(
-                                "flex items-center gap-2 px-6 py-2.5 rounded-full text-xs md:text-sm font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5",
-                                isNuestroDeporte
-                                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-blue-900/40 border border-blue-400/30"
-                                    : "bg-blue-700 text-white hover:bg-blue-800"
-                            )}
-                        >
-                            <UserCircle className="w-4 h-4 md:w-5 md:h-5" />
-                            <span>INICIAR SESIÓN</span>
-                        </Link>
-                    )}
+                    <Link
+                        to="/login"
+                        className={cn(
+                            "flex items-center gap-2 px-6 py-2.5 rounded-full text-xs md:text-sm font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5",
+                            isNuestroDeporte
+                                ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-blue-900/40 border border-blue-400/30"
+                                : "bg-blue-700 text-white hover:bg-blue-800"
+                        )}
+                    >
+                        <UserCircle className="w-4 h-4 md:w-5 md:h-5" />
+                        <span>INICIAR SESIÓN</span>
+                    </Link>
                 </div>
             </div>
         </nav>
