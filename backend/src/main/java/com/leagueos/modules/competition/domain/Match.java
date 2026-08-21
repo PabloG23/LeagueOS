@@ -39,6 +39,10 @@ public class Match extends BaseEntity {
     @Column(name = "location")
     private String location;
 
+    @ManyToOne(fetch = jakarta.persistence.FetchType.EAGER)
+    @JoinColumn(name = "field_id")
+    private com.leagueos.modules.league.domain.SoccerField field;
+
     @Column(name = "matchday")
     private Integer matchday;
 

@@ -322,4 +322,57 @@ public class LeagueController {
             TenantContext.clear();
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Fields / Venues Management Endpoints
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/fields")
+    public ResponseEntity<List<com.leagueos.modules.league.domain.SoccerField>> getFields(
+            @RequestHeader("X-Tenant-ID") UUID tenantId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(leagueService.getFields());
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PostMapping("/fields")
+    public ResponseEntity<com.leagueos.modules.league.domain.SoccerField> createField(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestBody com.leagueos.modules.league.domain.SoccerField field) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(leagueService.createField(field));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PutMapping("/fields/{fieldId}")
+    public ResponseEntity<com.leagueos.modules.league.domain.SoccerField> updateField(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID fieldId,
+            @RequestBody com.leagueos.modules.league.domain.SoccerField field) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(leagueService.updateField(fieldId, field));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @DeleteMapping("/fields/{fieldId}")
+    public ResponseEntity<Void> deleteField(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID fieldId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            leagueService.deleteField(fieldId);
+            return ResponseEntity.ok().build();
+        } finally {
+            TenantContext.clear();
+        }
+    }
 }

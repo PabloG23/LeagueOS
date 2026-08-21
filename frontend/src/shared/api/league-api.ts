@@ -68,6 +68,26 @@ export interface Player {
     profilePhotoUrl?: string;
 }
 
+export interface PlayerScorerDTO {
+    id: string;
+    name: string;
+    team: string;
+    teamId: string;
+    goals: number;
+    rank: number;
+    profilePhotoUrl?: string;
+}
+
+export interface SoccerField {
+    id: string;
+    tenantId: string;
+    name: string;
+    locationUrl?: string;
+    address?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export interface Match {
     id: string;
     seasonId: string;
@@ -79,6 +99,8 @@ export interface Match {
     matchday?: number;
     matchDate?: string;
     location?: string;
+    fieldId?: string;
+    field?: SoccerField;
     homeScore?: number;
     awayScore?: number;
     status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
@@ -147,6 +169,16 @@ export const leagueApi = {
     unenrollTeam: (tenantId: string, seasonId: string, teamId: string) =>
         api.delete(`/leagues/seasons/${seasonId}/teams/${teamId}`, { headers: { 'X-Tenant-ID': tenantId } }),
 
+    // Soccer Fields / Canchas
+    getFields: (tenantId: string) =>
+        api.get<SoccerField[]>('/leagues/fields', { headers: { 'X-Tenant-ID': tenantId } }),
+    createField: (tenantId: string, field: Partial<SoccerField>) =>
+        api.post<SoccerField>('/leagues/fields', field, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateField: (tenantId: string, fieldId: string, field: Partial<SoccerField>) =>
+        api.put<SoccerField>(`/leagues/fields/${fieldId}`, field, { headers: { 'X-Tenant-ID': tenantId } }),
+    deleteField: (tenantId: string, fieldId: string) =>
+        api.delete(`/leagues/fields/${fieldId}`, { headers: { 'X-Tenant-ID': tenantId } }),
+
     // Registration
     registerPlayer: (tenantId: string, player: any) =>
         api.post<Player>('/registration/players', player, { headers: { 'X-Tenant-ID': tenantId } }),
@@ -168,8 +200,8 @@ export const leagueApi = {
     // Competition
     scheduleMatch: (tenantId: string, match: Partial<Match>) =>
         api.post<Match>('/competition/matches', match, { headers: { 'X-Tenant-ID': tenantId } }),
-    updateMatchSchedule: (tenantId: string, matchId: string, matchDate: string | null, location?: string) =>
-        api.put<Match>(`/matches/${matchId}/schedule`, { matchDate, location }, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateMatchSchedule: (tenantId: string, matchId: string, matchDate: string | null, location?: string, fieldId?: string) =>
+        api.put<Match>(`/matches/${matchId}/schedule`, { matchDate, location, fieldId }, { headers: { 'X-Tenant-ID': tenantId } }),
     getSeasonMatches: (tenantId: string, seasonId: string) =>
         api.get<Match[]>(`/competition/seasons/${seasonId}/matches`, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatches: (tenantId: string, matchday: number) => api.get<Match[]>(`/matches/${matchday}`, { headers: { 'X-Tenant-ID': tenantId } }),
@@ -196,6 +228,8 @@ export const leagueApi = {
     getAllMatches: (tenantId: string) => api.get<Match[]>('/public/matches/season', { headers: { 'X-Tenant-ID': tenantId } }),
 
     // Statistics
+    getTopScorers: (tenantId: string) =>
+        api.get<PlayerScorerDTO[]>('/public/stats/scorers/top', { headers: { 'X-Tenant-ID': tenantId } }),
     getGeneralRedCards: (tenantId: string) =>
         api.get<any[]>('/public/stats/discipline/general', { headers: { 'X-Tenant-ID': tenantId } }),
     getMatchdayRedCards: (tenantId: string) =>

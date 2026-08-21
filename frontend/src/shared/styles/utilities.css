@@ -11,3 +11,23 @@
     scrollbar-width: none;
     /* Firefox */
 }
+
+@keyframes sponsorMarquee {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(calc(-50% - 0.625rem));
+    }
+}
+
+.animate-sponsors-marquee {
+    display: flex;
+    width: max-content;
+    animation: sponsorMarquee 50s linear infinite;
+    will-change: transform;
+}
+
+.animate-sponsors-marquee:hover {
+    animation-play-state: paused;
+}

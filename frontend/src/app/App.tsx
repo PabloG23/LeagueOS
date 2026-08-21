@@ -9,6 +9,7 @@ import { TeamsView } from '@/features/admin/ui/TeamsView';
 import { MatchResultsView } from '@/features/admin/ui/MatchResultsView';
 import { PlayerTransferView } from '@/features/admin/ui/PlayerTransferView';
 import { SeasonsView } from '@/features/admin/ui/SeasonsView';
+import { FieldsManagementView } from '@/features/fields/ui/FieldsManagementView';
 import { SeasonDetailsPage } from '@/pages/dashboard/SeasonDetailsPage';
 import { TenantSettingsProvider } from '@/features/tenant/context/TenantSettingsContext';
 import { ToastProvider } from '@/shared/components/ui/ToastContext';
@@ -50,6 +51,11 @@ function App() {
                             <MatchResultsView />
                         </AdminDashboardLayout>
                     } />
+                    <Route path="/:leagueSlug/admin/fields" element={
+                        <AdminDashboardLayout>
+                            <FieldsManagementView />
+                        </AdminDashboardLayout>
+                    } />
                     <Route path="/:leagueSlug/admin/transfers" element={
                         <AdminDashboardLayout>
                             <PlayerTransferView />
@@ -69,6 +75,7 @@ function App() {
                     {/* Legacy Admin Routes (Backward compatibility redirects to ligaNuestroDeporte) */}
                     <Route path="/admin/teams" element={<Navigate to="/ligaNuestroDeporte/admin/teams" replace />} />
                     <Route path="/admin/matches" element={<Navigate to="/ligaNuestroDeporte/admin/matches" replace />} />
+                    <Route path="/admin/fields" element={<Navigate to="/ligaNuestroDeporte/admin/fields" replace />} />
                     <Route path="/admin/transfers" element={<Navigate to="/ligaNuestroDeporte/admin/transfers" replace />} />
 
                     {/* Team Rep Dashboard */}

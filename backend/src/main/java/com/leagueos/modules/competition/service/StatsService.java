@@ -4,6 +4,7 @@ import com.leagueos.core.sport.domain.SportRulesService;
 import com.leagueos.core.sport.domain.SportRulesStrategy;
 import com.leagueos.modules.competition.api.dto.MatchResultSummaryDTO;
 import com.leagueos.modules.competition.api.dto.PlayerProfileStatsDTO;
+import com.leagueos.modules.competition.api.dto.PlayerScorerDTO;
 import com.leagueos.modules.competition.api.dto.PlayerStatDTO;
 import com.leagueos.modules.competition.api.dto.TeamStandingDTO;
 import com.leagueos.modules.competition.api.dto.TeamStatDTO;
@@ -35,6 +36,7 @@ public class StatsService {
     private final TeamRegistrationRepository teamRegistrationRepository;
     private final TenantSettingsService tenantSettingsService;
     private final SportRulesService sportRulesService;
+    private final com.leagueos.modules.media.service.StorageService storageService;
 
     @Transactional(readOnly = true)
     public List<PlayerStatDTO> getTopRedCardsByPlayerForSeason(List<UUID> seasonIds) {
@@ -47,6 +49,26 @@ public class StatsService {
         if (matchday == null) return List.of();
         return assignRanks(matchEventRepository.countRedCardsByPlayerForMatchday(seasonIds, matchday),
                 PlayerStatDTO::getRedCards, (dto, rank) -> dto.setRank(rank));
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlayerScorerDTO> getTopScorersForSeason(List<UUID> seasonIds) {
+        List<PlayerScorerDTO> scorers = assignRanks(matchEventRepository.countGoalsByPlayerForSeason(seasonIds),
+                PlayerScorerDTO::getGoals, (dto, rank) -> dto.setRank(rank));
+
+        for (PlayerScorerDTO scorer : scorers) {
+            String rawPhoto = scorer.getProfilePhotoUrl();
+            if (rawPhoto != null && !rawPhoto.isBlank()) {
+                if (!rawPhoto.startsWith("http://") && !rawPhoto.startsWith("https://") && !rawPhoto.startsWith("data:")) {
+                    try {
+                        scorer.setProfilePhotoUrl(storageService.getSignedUrl(rawPhoto, 120));
+                    } catch (Exception e) {
+                        // ignore fallback to raw key
+                    }
+                }
+            }
+        }
+        return scorers;
     }
 
     @Transactional(readOnly = true)

@@ -1,6 +1,7 @@
 package com.leagueos.modules.competition.api;
 
 import com.leagueos.modules.competition.api.dto.PlayerStatDTO;
+import com.leagueos.modules.competition.api.dto.PlayerScorerDTO;
 import com.leagueos.modules.competition.api.dto.PlayerProfileStatsDTO;
 import com.leagueos.modules.competition.api.dto.TeamStatDTO;
 import com.leagueos.modules.competition.api.dto.TeamStandingDTO;
@@ -24,6 +25,26 @@ public class PublicStatsController {
 
     private final StatsService statsService;
     private final SeasonRepository seasonRepository;
+
+    @GetMapping("/scorers/top")
+    public ResponseEntity<List<PlayerScorerDTO>> getTopScorers(
+            @RequestParam(required = false) UUID seasonId,
+            @RequestHeader("X-Tenant-ID") UUID tenantId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            List<UUID> seasonIds;
+            if (seasonId != null) {
+                seasonIds = List.of(seasonId);
+            } else {
+                List<Season> seasons = seasonRepository.findByTenantId(tenantId);
+                if (seasons == null || seasons.isEmpty()) return ResponseEntity.ok(List.of());
+                seasonIds = seasons.stream().map(Season::getId).collect(Collectors.toList());
+            }
+            return ResponseEntity.ok(statsService.getTopScorersForSeason(seasonIds));
+        } finally {
+            TenantContext.clear();
+        }
+    }
 
     @GetMapping("/discipline/general")
     public ResponseEntity<List<PlayerStatDTO>> getGeneralDisciplineStats(

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu } from 'lucide-react';
+import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -25,6 +25,7 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
         { path: `/${leagueSlug}/admin/seasons`, icon: LayoutDashboard, label: 'Torneos' },
         { path: `/${leagueSlug}/admin/teams`, icon: Users, label: 'Equipos' },
         { path: `/${leagueSlug}/admin/matches`, icon: Database, label: 'Resultados' },
+        { path: `/${leagueSlug}/admin/fields`, icon: MapPin, label: 'Campos' },
         { path: `/${leagueSlug}/admin/transfers`, icon: Repeat, label: 'Transferencias', hidden: !settings.allowTransfers },
     ].filter(item => !item.hidden);
 
@@ -82,12 +83,7 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
                     <button
                         onClick={() => {
                             localStorage.clear();
-                            const isNuestroDeporte = leagueSlug?.toLowerCase().includes('nuestrodeporte') || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
-                            if (isNuestroDeporte) {
-                                window.location.href = 'https://www.nuestrodeporte.com/';
-                            } else {
-                                window.location.href = `/${leagueSlug}`;
-                            }
+                            window.location.href = `/${leagueSlug}`;
                         }}
                         className="flex items-center justify-center gap-3 w-full px-4 py-3 text-red-400 hover:text-white hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all font-semibold text-sm group shadow-sm"
                     >

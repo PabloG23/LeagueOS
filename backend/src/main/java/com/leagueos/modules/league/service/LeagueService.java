@@ -36,6 +36,7 @@ public class LeagueService {
     private final MatchRepository matchRepository;
     private final PlayoffTieRepository playoffTieRepository;
     private final EntityManager entityManager;
+    private final com.leagueos.modules.league.persistence.SoccerFieldRepository soccerFieldRepository;
     private final com.leagueos.modules.media.service.StorageService storageService;
     private final com.leagueos.modules.registration.persistence.SeasonRosterRepository seasonRosterRepository;
 
@@ -262,6 +263,60 @@ public class LeagueService {
         playoffTieRepository.deleteBySeasonId(seasonId);
         teamRegistrationRepository.deleteBySeasonId(seasonId);
         seasonRepository.delete(season);
+    }
+
+    // -------------------------------------------------------------------------
+    // Soccer Fields Management
+    // -------------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public List<com.leagueos.modules.league.domain.SoccerField> getFields() {
+        UUID tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            return soccerFieldRepository.findAll();
+        }
+        return soccerFieldRepository.findByTenantIdOrderByNameAsc(tenantId);
+    }
+
+    @Transactional
+    public com.leagueos.modules.league.domain.SoccerField createField(com.leagueos.modules.league.domain.SoccerField field) {
+        UUID tenantId = TenantContext.getCurrentTenant();
+        if (field.getName() == null || field.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del campo es obligatorio");
+        }
+        field.setName(field.getName().trim());
+        field.setTenantId(tenantId);
+        if (field.getLocationUrl() != null) {
+            field.setLocationUrl(field.getLocationUrl().trim());
+        }
+        return soccerFieldRepository.save(field);
+    }
+
+    @Transactional
+    public com.leagueos.modules.league.domain.SoccerField updateField(UUID fieldId, com.leagueos.modules.league.domain.SoccerField fieldDetails) {
+        UUID tenantId = TenantContext.getCurrentTenant();
+        com.leagueos.modules.league.domain.SoccerField field = soccerFieldRepository.findByIdAndTenantId(fieldId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Field not found: " + fieldId));
+
+        if (fieldDetails.getName() != null && !fieldDetails.getName().trim().isEmpty()) {
+            field.setName(fieldDetails.getName().trim());
+        }
+        if (fieldDetails.getLocationUrl() != null) {
+            field.setLocationUrl(fieldDetails.getLocationUrl().trim());
+        }
+        if (fieldDetails.getAddress() != null) {
+            field.setAddress(fieldDetails.getAddress().trim());
+        }
+
+        return soccerFieldRepository.save(field);
+    }
+
+    @Transactional
+    public void deleteField(UUID fieldId) {
+        UUID tenantId = TenantContext.getCurrentTenant();
+        com.leagueos.modules.league.domain.SoccerField field = soccerFieldRepository.findByIdAndTenantId(fieldId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Field not found: " + fieldId));
+        soccerFieldRepository.delete(field);
     }
 
     // -------------------------------------------------------------------------

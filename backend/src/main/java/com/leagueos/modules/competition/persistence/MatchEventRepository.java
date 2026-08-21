@@ -45,4 +45,11 @@ public interface MatchEventRepository extends JpaRepository<MatchEvent, UUID> {
            "GROUP BY p.id, per.firstName, per.lastName, t.name, t.id " +
            "ORDER BY COUNT(e) DESC")
     List<PlayerStatDTO> countRedCardsByPlayerForMatchday(@Param("seasonIds") List<UUID> seasonIds, @Param("matchday") Integer matchday);
+
+    @Query("SELECT new com.leagueos.modules.competition.api.dto.PlayerScorerDTO(p.id, CONCAT(per.firstName, ' ', per.lastName), t.name, t.id, COUNT(e), per.profilePhotoUrl) " +
+           "FROM MatchEvent e JOIN e.match m JOIN e.player p JOIN p.person per JOIN e.team t " +
+           "WHERE e.eventType = 'GOAL' AND m.season.id IN :seasonIds " +
+           "GROUP BY p.id, per.firstName, per.lastName, t.name, t.id, per.profilePhotoUrl " +
+           "ORDER BY COUNT(e) DESC")
+    List<com.leagueos.modules.competition.api.dto.PlayerScorerDTO> countGoalsByPlayerForSeason(@Param("seasonIds") List<UUID> seasonIds);
 }

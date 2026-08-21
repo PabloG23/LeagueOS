@@ -95,6 +95,8 @@ public class MatchService {
         return matchEventRepository.findByMatchId(matchId);
     }
 
+    private final com.leagueos.modules.league.persistence.SoccerFieldRepository soccerFieldRepository;
+
     @Transactional
     public Match updateMatchSchedule(UUID matchId, UpdateMatchScheduleRequest request) {
         Match match = matchRepository.findById(matchId)
@@ -105,7 +107,21 @@ public class MatchService {
         }
 
         match.setMatchDate(request.getMatchDate());
-        match.setLocation(request.getLocation());
+
+        if (request.getFieldId() != null) {
+            com.leagueos.modules.league.domain.SoccerField field = soccerFieldRepository
+                    .findByIdAndTenantId(request.getFieldId(), match.getTenantId())
+                    .orElse(null);
+            match.setField(field);
+            if (field != null) {
+                match.setLocation(field.getName());
+            } else {
+                match.setLocation(request.getLocation());
+            }
+        } else {
+            match.setField(null);
+            match.setLocation(request.getLocation());
+        }
 
         return matchRepository.save(match);
     }

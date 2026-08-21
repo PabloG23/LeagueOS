@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { leagueApi, Match } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { useToast } from '@/shared/components/ui/ToastContext';
 import { parseISO, format } from 'date-fns';
+import { FieldCombobox } from '@/features/fields/ui/FieldCombobox';
 
 interface EditMatchScheduleModalProps {
     match: Match;
@@ -14,14 +16,17 @@ interface EditMatchScheduleModalProps {
 export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ match, isOpen, onClose, onMatchUpdated }) => {
     const { settings } = useTenantSettings();
     const { showToast } = useToast();
+    const tenantId = settings?.tenantId || (match as any)?.tenantId || '';
     const [date, setDate] = useState<string>('');
     const [time, setTime] = useState<string>('');
     const [location, setLocation] = useState<string>('');
+    const [fieldId, setFieldId] = useState<string | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (isOpen && match) {
-            setLocation(match.location || '');
+            setLocation(match.location || match.field?.name || '');
+            setFieldId(match.fieldId || match.field?.id || undefined);
             if (match.matchDate) {
                 const parsedDate = parseISO(match.matchDate);
                 setDate(format(parsedDate, 'yyyy-MM-dd'));
@@ -35,8 +40,8 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const tenantId = settings?.tenantId;
-        if (!tenantId) return;
+        const effectiveTenantId = tenantId || settings?.tenantId;
+        if (!effectiveTenantId) return;
 
         setIsSubmitting(true);
         try {
@@ -49,10 +54,11 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
             }
 
             const updatedMatch = await leagueApi.updateMatchSchedule(
-                tenantId,
+                effectiveTenantId,
                 match.id,
                 dateTimeStr,
-                location
+                location || undefined,
+                fieldId
             );
             
             showToast('Se han guardado los cambios del partido.', 'success');
@@ -68,11 +74,11 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
 
     if (!isOpen) return null;
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="relative w-full max-w-md mx-auto my-6 animate-in zoom-in-95 duration-200">
-                <div className="relative flex flex-col w-full bg-white border border-slate-200 shadow-2xl rounded-3xl overflow-hidden">
-                    <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
+                <div className="relative flex flex-col w-full bg-white border border-slate-200 shadow-2xl rounded-3xl">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white rounded-t-3xl">
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">
                             Editar Horario
                         </h3>
@@ -123,17 +129,19 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
                                 <label className="block text-slate-800 text-xs font-black uppercase tracking-wider mb-2">
                                     Cancha / Ubicación
                                 </label>
-                                <input
-                                    type="text"
-                                    className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all shadow-xs"
-                                    placeholder="Ej. Cancha Principal"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
+                                <FieldCombobox
+                                    tenantId={tenantId}
+                                    value={fieldId}
+                                    customLocationName={location}
+                                    onChange={(selectedField, locName) => {
+                                        setFieldId(selectedField ? selectedField.id : undefined);
+                                        setLocation(locName);
+                                    }}
                                 />
                             </div>
                         </div>
                         
-                        <div className="flex items-center justify-end gap-3 p-5 border-t border-slate-100 bg-white">
+                        <div className="flex items-center justify-end gap-3 p-5 border-t border-slate-100 bg-white rounded-b-3xl">
                             <button
                                 className="px-5 py-2.5 rounded-xl font-bold border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition-colors"
                                 type="button"
@@ -153,6 +161,7 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
                     </form>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

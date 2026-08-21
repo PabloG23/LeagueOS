@@ -198,10 +198,24 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                                 </span>
                                                             </div>
                                                             {match.location && (
-                                                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
-                                                                    <MapPin className="w-3 h-3 text-slate-500" />
-                                                                    <span className="truncate max-w-[200px] sm:max-w-[250px] uppercase tracking-wider">{match.location}</span>
-                                                                </div>
+                                                                match.field?.locationUrl ? (
+                                                                    <a
+                                                                        href={match.field.locationUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="flex items-center gap-1.5 text-[11px] font-bold text-blue-400 hover:text-blue-300 transition-colors hover:underline cursor-pointer"
+                                                                        title="Ver ubicación en Google Maps"
+                                                                    >
+                                                                        <MapPin className="w-3 h-3 text-blue-400" />
+                                                                        <span className="truncate max-w-[200px] sm:max-w-[250px] uppercase tracking-wider">{match.location}</span>
+                                                                    </a>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                                                                        <MapPin className="w-3 h-3 text-slate-500" />
+                                                                        <span className="truncate max-w-[200px] sm:max-w-[250px] uppercase tracking-wider">{match.location}</span>
+                                                                    </div>
+                                                                )
                                                             )}
                                                         </div>
 

@@ -59,7 +59,20 @@ const MatchRow = ({
                                 {match.matchDate ? new Date(match.matchDate).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Horario por definir'}
                             </span>
                             {match.location && (
-                                <span className="text-[10px] text-slate-400 font-medium truncate w-full" title={match.location}>📍 {match.location}</span>
+                                match.field?.locationUrl ? (
+                                    <a
+                                        href={match.field.locationUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-[10px] text-blue-600 hover:text-blue-700 font-bold truncate w-full flex items-center justify-center gap-1 hover:underline cursor-pointer"
+                                        title={`Ver ubicación de ${match.location} en Google Maps`}
+                                    >
+                                        <span>📍 {match.location}</span>
+                                    </a>
+                                ) : (
+                                    <span className="text-[10px] text-slate-400 font-medium truncate w-full" title={match.location}>📍 {match.location}</span>
+                                )
                             )}
                         </div>
                     </div>

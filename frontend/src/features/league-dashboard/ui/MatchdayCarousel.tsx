@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { Calendar, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronRight, MapPin } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Season } from '@/shared/api/league-api';
@@ -141,9 +141,24 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                             : 'Horario por definir'}
                                     </span>
                                     {match.location && (
-                                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate" title={match.location}>
-                                            📍 {match.location}
-                                        </span>
+                                        match.field?.locationUrl ? (
+                                            <a
+                                                href={match.field.locationUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="text-[10px] uppercase font-bold text-blue-400 hover:text-blue-300 transition-colors tracking-wider truncate flex items-center gap-1 hover:underline cursor-pointer w-max max-w-full"
+                                                title={`Ver ubicación de ${match.location} en Google Maps`}
+                                            >
+                                                <MapPin className="w-2.5 h-2.5 shrink-0 text-blue-400" />
+                                                <span className="truncate">{match.location}</span>
+                                            </a>
+                                        ) : (
+                                            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate flex items-center gap-1" title={match.location}>
+                                                <MapPin className="w-2.5 h-2.5 shrink-0 text-slate-500" />
+                                                <span className="truncate">{match.location}</span>
+                                            </span>
+                                        )
                                     )}
                                 </div>
                                 <div className="space-y-2">
