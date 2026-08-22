@@ -32,3 +32,8 @@ Thumbs.db
 
 # Spring Boot Local Run
 boot-run.pid
+
+# Environment files
+.env
+.env.*
+*.env
