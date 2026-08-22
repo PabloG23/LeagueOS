@@ -21,29 +21,37 @@ export const invalidateSecureImageCache = (key?: string) => {
     }
 };
 
+const isValidSignedUrl = (url?: string): boolean => {
+    if (!url) return false;
+    if (url.includes('dummy-account-id') || url.includes('dummy-access-key')) return false;
+    return true;
+};
+
 const getResolvedUrl = (srcKey: string | undefined, fallbackSrc?: string): string | undefined => {
     if (!srcKey) return fallbackSrc;
     if (srcKey.startsWith('http://') || srcKey.startsWith('https://') || srcKey.startsWith('data:')) {
-        return srcKey;
+        return isValidSignedUrl(srcKey) ? srcKey : fallbackSrc;
     }
     const cached = signedUrlCache.get(srcKey);
-    if (cached && Date.now() < cached.expiresAt) {
+    if (cached && Date.now() < cached.expiresAt && isValidSignedUrl(cached.url)) {
         return cached.url;
     }
     try {
         const stored = sessionStorage.getItem(`r2_signed_${srcKey}`);
         if (stored) {
             const parsed = JSON.parse(stored);
-            if (parsed && parsed.expiresAt && Date.now() < parsed.expiresAt) {
+            if (parsed && parsed.expiresAt && Date.now() < parsed.expiresAt && isValidSignedUrl(parsed.url)) {
                 signedUrlCache.set(srcKey, parsed);
                 return parsed.url;
+            } else {
+                sessionStorage.removeItem(`r2_signed_${srcKey}`);
             }
         }
     } catch (_) {}
     return undefined;
 };
 
-export const SecureImage: React.FC<SecureImageProps> = ({ srcKey, fallbackSrc, className, alt, ...props }) => {
+export const SecureImage: React.FC<SecureImageProps> = ({ srcKey, fallbackSrc, className, alt, onError, ...props }) => {
     const [url, setUrl] = useState<string | undefined>(() => getResolvedUrl(srcKey, fallbackSrc));
     const [error, setError] = useState(false);
 
@@ -57,8 +65,13 @@ export const SecureImage: React.FC<SecureImageProps> = ({ srcKey, fallbackSrc, c
         }
 
         if (srcKey.startsWith('http://') || srcKey.startsWith('https://') || srcKey.startsWith('data:')) {
-            setUrl(srcKey);
-            setError(false);
+            if (isValidSignedUrl(srcKey)) {
+                setUrl(srcKey);
+                setError(false);
+            } else {
+                setUrl(fallbackSrc);
+                setError(true);
+            }
             return;
         }
 
@@ -76,14 +89,16 @@ export const SecureImage: React.FC<SecureImageProps> = ({ srcKey, fallbackSrc, c
             requestPromise = leagueApi.getSignedUrl(srcKey)
                 .then(response => {
                     const signedUrl = response.data.url;
-                    const cacheEntry = {
-                        url: signedUrl,
-                        expiresAt: Date.now() + 50 * 60 * 1000 // Cache for 50 mins
-                    };
-                    signedUrlCache.set(srcKey, cacheEntry);
-                    try {
-                        sessionStorage.setItem(`r2_signed_${srcKey}`, JSON.stringify(cacheEntry));
-                    } catch (_) {}
+                    if (isValidSignedUrl(signedUrl)) {
+                        const cacheEntry = {
+                            url: signedUrl,
+                            expiresAt: Date.now() + 50 * 60 * 1000 // Cache for 50 mins
+                        };
+                        signedUrlCache.set(srcKey, cacheEntry);
+                        try {
+                            sessionStorage.setItem(`r2_signed_${srcKey}`, JSON.stringify(cacheEntry));
+                        } catch (_) {}
+                    }
                     pendingRequests.delete(srcKey);
                     return signedUrl;
                 })
@@ -97,8 +112,13 @@ export const SecureImage: React.FC<SecureImageProps> = ({ srcKey, fallbackSrc, c
         requestPromise
             .then(signedUrl => {
                 if (isMounted) {
-                    setUrl(signedUrl);
-                    setError(false);
+                    if (isValidSignedUrl(signedUrl)) {
+                        setUrl(signedUrl);
+                        setError(false);
+                    } else {
+                        setError(true);
+                        setUrl(fallbackSrc);
+                    }
                 }
             })
             .catch(e => {
@@ -119,12 +139,17 @@ export const SecureImage: React.FC<SecureImageProps> = ({ srcKey, fallbackSrc, c
             src={error ? fallbackSrc : (url || fallbackSrc)} 
             alt={alt || "Image"} 
             className={className} 
-            onError={() => {
+            onError={(e) => {
+                if (srcKey) {
+                    signedUrlCache.delete(srcKey);
+                    try { sessionStorage.removeItem(`r2_signed_${srcKey}`); } catch (_) {}
+                }
                 if (!error) {
                     setError(true);
                     setUrl(fallbackSrc);
                 }
-            }}
+                onError?.(e);
+            }} 
             {...props} 
         />
     );

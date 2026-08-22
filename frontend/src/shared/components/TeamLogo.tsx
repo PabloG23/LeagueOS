@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SecureImage } from '../../features/team-management/ui/SecureImage';
 
 interface TeamLogoProps {
@@ -9,6 +9,10 @@ interface TeamLogoProps {
 
 export const TeamLogo = ({ teamName, logoUrl, fallbackClass = "text-[10px] font-bold text-white" }: TeamLogoProps) => {
     const [error, setError] = useState(false);
+
+    useEffect(() => {
+        setError(false);
+    }, [logoUrl]);
 
     if (!logoUrl || error) {
         return (

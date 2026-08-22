@@ -5,6 +5,7 @@ import com.leagueos.modules.competition.domain.MatchStage;
 import com.leagueos.modules.competition.persistence.MatchRepository;
 import com.leagueos.modules.league.domain.Season;
 import com.leagueos.modules.league.persistence.SeasonRepository;
+import com.leagueos.modules.media.service.StorageService;
 import com.leagueos.shared.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ public class PublicMatchController {
 
     private final SeasonRepository seasonRepository;
     private final MatchRepository matchRepository;
+    private final StorageService storageService;
 
     @GetMapping("/upcoming")
     public ResponseEntity<List<Match>> getUpcomingMatches(
@@ -59,6 +61,8 @@ public class PublicMatchController {
                 return m1.getMatchDate().compareTo(m2.getMatchDate());
             });
 
+            signMatchTeamLogos(upcomingMatches);
+
             return ResponseEntity.ok(upcomingMatches);
         } finally {
             TenantContext.clear();
@@ -92,9 +96,33 @@ public class PublicMatchController {
                 return m1.getMatchDate().compareTo(m2.getMatchDate());
             });
 
+            signMatchTeamLogos(allSeasonMatches);
+
             return ResponseEntity.ok(allSeasonMatches);
         } finally {
             TenantContext.clear();
+        }
+    }
+
+    private void signMatchTeamLogos(List<Match> matches) {
+        if (matches == null || storageService == null) return;
+        for (Match m : matches) {
+            if (m.getHomeTeam() != null && m.getHomeTeam().getLogoUrl() != null && !m.getHomeTeam().getLogoUrl().isBlank()) {
+                String logo = m.getHomeTeam().getLogoUrl();
+                try {
+                    m.getHomeTeam().setSignedLogoUrl(logo.startsWith("http") ? logo : storageService.getSignedUrl(logo, 120));
+                } catch (Exception ignored) {
+                    m.getHomeTeam().setSignedLogoUrl(logo);
+                }
+            }
+            if (m.getAwayTeam() != null && m.getAwayTeam().getLogoUrl() != null && !m.getAwayTeam().getLogoUrl().isBlank()) {
+                String logo = m.getAwayTeam().getLogoUrl();
+                try {
+                    m.getAwayTeam().setSignedLogoUrl(logo.startsWith("http") ? logo : storageService.getSignedUrl(logo, 120));
+                } catch (Exception ignored) {
+                    m.getAwayTeam().setSignedLogoUrl(logo);
+                }
+            }
         }
     }
 }

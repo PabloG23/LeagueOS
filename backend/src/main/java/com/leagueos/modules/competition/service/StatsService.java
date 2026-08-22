@@ -108,11 +108,21 @@ public class StatsService {
 
         Map<UUID, TeamStandingDTO> standingsMap = new HashMap<>();
         for (TeamRegistration reg : registrations) {
+            String logoKey = reg.getTeam().getLogoUrl();
+            String signedLogo = null;
+            if (logoKey != null && !logoKey.isBlank()) {
+                try {
+                    signedLogo = logoKey.startsWith("http") ? logoKey : storageService.getSignedUrl(logoKey, 120);
+                } catch (Exception ignored) {
+                    signedLogo = logoKey;
+                }
+            }
+
             standingsMap.put(reg.getTeam().getId(), TeamStandingDTO.builder()
                     .id(reg.getTeam().getId())
                     .team(reg.getTeam().getName())
-                    .logoUrl(reg.getTeam().getLogoUrl())
-                    .signedLogoUrl(reg.getTeam().getSignedLogoUrl())
+                    .logoUrl(logoKey)
+                    .signedLogoUrl(signedLogo)
                     .played(0).won(0).drawn(0).lost(0)
                     .goalsFor(0).goalsAgainst(0).goalDifference(0)
                     .points(0)
