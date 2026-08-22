@@ -14,7 +14,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/public/teams")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class TeamRegistrationController {
 
     private final TeamRegistrationService teamRegistrationService;

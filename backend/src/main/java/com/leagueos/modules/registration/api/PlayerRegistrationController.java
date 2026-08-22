@@ -5,6 +5,7 @@ import com.leagueos.modules.registration.service.PlayerRegistrationService;
 import com.leagueos.shared.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,12 +51,14 @@ public class PlayerRegistrationController {
     }
 
     @PatchMapping("/players/{id}/activate")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> activatePlayer(@PathVariable UUID id) {
         playerRegistrationService.activatePlayer(id);
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/players/{id}/deactivate")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> deactivatePlayer(@PathVariable UUID id) {
         playerRegistrationService.deactivatePlayer(id);
         return ResponseEntity.ok().build();

@@ -12,7 +12,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/competition")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class CompetitionController {
 
     private final MatchSchedulerService schedulerService;

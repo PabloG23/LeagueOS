@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/system")
 @RequiredArgsConstructor
-// Keep it loosely protected or available only on specific profiles/deployments for safety
+@Profile("dev")
 public class AdminSeedController {
 
     private final DataInitializer dataInitializer;

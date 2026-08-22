@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -21,6 +22,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -36,23 +38,32 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/**", "/api/public/**", "/public/**",
-                    "/api/tenants/settings/**", "/api/admin/system/seed",
-                    "/api/v1/bomberazo/**", "/error",
-                    "/api/players/**", "/api/media/**",
-                    "/api/teams/**", "/api/leagues/**", "/api/matches/**",
-                    "/api/templates/**", "/api/competition/**", "/api/registration/**"
-                ).permitAll()
+                // 1. Auth and errors
+                .requestMatchers("/api/auth/**", "/error").permitAll()
+                
+                // 2. Public read-only endpoints (Public portal, statistics, schedules, brackets)
                 .requestMatchers(HttpMethod.GET,
+                    "/api/public/**",
+                    "/public/**",
+                    "/api/tenants/settings/**",
                     "/api/leagues/tenants",
                     "/api/leagues/teams",
                     "/api/leagues/seasons",
                     "/api/leagues/seasons/*/teams",
+                    "/api/leagues/seasons/*/playoffs/bracket",
+                    "/api/leagues/seasons/*/preview-fixtures/round-robin",
+                    "/api/leagues/fields",
                     "/api/registration/teams/*/players",
                     "/api/competition/seasons/*/matches",
-                    "/api/leagues/seasons/*/playoffs/bracket"
+                    "/api/matches/**",
+                    "/api/templates/**",
+                    "/api/media/proxy"
                 ).permitAll()
+
+                // 3. Public registration of teams if allowed
+                .requestMatchers(HttpMethod.POST, "/api/public/teams/register").permitAll()
+
+                // 4. Everything else (state-changing endpoints, admin panels, player management) requires authentication
                 .anyRequest().authenticated()
             )
             // JWT filter runs first so authentication is established before tenant resolution

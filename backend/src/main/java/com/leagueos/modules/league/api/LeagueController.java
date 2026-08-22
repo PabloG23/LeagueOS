@@ -15,7 +15,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/leagues")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // For development
 public class LeagueController {
 
     private final LeagueService leagueService;
@@ -279,7 +278,7 @@ public class LeagueController {
     }
 
     @PostMapping("/seasons/{id}/playoffs/generate")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_' + #tenantId.toString().replace('-', '_').toUpperCase())")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<?> generatePlayoffs(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -308,7 +307,7 @@ public class LeagueController {
     }
 
     @DeleteMapping("/seasons/{id}/playoffs")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_' + #tenantId.toString().replace('-', '_').toUpperCase())")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<?> deletePlayoffs(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {

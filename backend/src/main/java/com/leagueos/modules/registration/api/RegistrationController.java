@@ -13,7 +13,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/registration")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class RegistrationController {
 
     private final PlayerRegistrationService registrationService;
