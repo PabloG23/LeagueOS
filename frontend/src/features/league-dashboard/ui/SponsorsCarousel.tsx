@@ -9,7 +9,15 @@ interface SponsorsCarouselProps {
 
 export const SponsorsCarousel: React.FC<SponsorsCarouselProps> = ({ sponsors = OFFICIAL_SPONSORS }) => {
     const { settings } = useTenantSettings();
-    const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+    const isNuestroDeporte = 
+        settings?.themeClass === 'theme-nuestro-deporte' || 
+        settings?.tenantId === '11111111-1111-1111-1111-111111111111' ||
+        settings?.name?.toLowerCase().includes('nuestro deporte');
+
+    // Only display sponsors carousel for Liga Nuestro Deporte
+    if (!isNuestroDeporte) {
+        return null;
+    }
 
     // Duplicate list for infinite smooth continuous movement (like MatchdayCarousel)
     const displaySponsors = [...sponsors, ...sponsors, ...sponsors, ...sponsors];
@@ -17,9 +25,7 @@ export const SponsorsCarousel: React.FC<SponsorsCarouselProps> = ({ sponsors = O
     return (
         <section className={cn(
             "w-full rounded-3xl p-6 sm:p-8 border relative overflow-hidden transition-all duration-500",
-            isNuestroDeporte
-                ? "bg-[#060C1B] border-blue-900/30 text-white shadow-2xl shadow-blue-950/30"
-                : "bg-slate-900 border-slate-800 text-white shadow-2xl"
+            "bg-[#060C1B] border-blue-900/30 text-white shadow-2xl shadow-blue-950/30"
         )}>
             {/* Background Ambient Glows */}
             <div className="absolute top-0 right-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />

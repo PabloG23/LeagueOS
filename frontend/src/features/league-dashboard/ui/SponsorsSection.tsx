@@ -10,14 +10,20 @@ interface SponsorsSectionProps {
 
 export const SponsorsSection: React.FC<SponsorsSectionProps> = ({ sponsors = OFFICIAL_SPONSORS }) => {
     const { settings } = useTenantSettings();
-    const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+    const isNuestroDeporte = 
+        settings?.themeClass === 'theme-nuestro-deporte' || 
+        settings?.tenantId === '11111111-1111-1111-1111-111111111111' ||
+        settings?.name?.toLowerCase().includes('nuestro deporte');
+
+    // Only render for Liga Nuestro Deporte
+    if (!isNuestroDeporte) {
+        return null;
+    }
 
     return (
         <section className={cn(
             "w-full rounded-3xl p-6 sm:p-10 border relative overflow-hidden transition-all duration-300",
-            isNuestroDeporte
-                ? "bg-[#060C1B] border-blue-900/30 text-white shadow-2xl shadow-blue-950/40"
-                : "bg-slate-900 border-slate-800 text-white shadow-2xl"
+            "bg-[#060C1B] border-blue-900/30 text-white shadow-2xl shadow-blue-950/40"
         )}>
             {/* Ambient Background Glows */}
             <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />

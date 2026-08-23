@@ -26,7 +26,15 @@ export const OFFICIAL_SPONSORS: Sponsor[] = [
 
 export const SponsorsTicker: React.FC<{ sponsors?: Sponsor[] }> = ({ sponsors = OFFICIAL_SPONSORS }) => {
     const { settings } = useTenantSettings();
-    const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+    const isNuestroDeporte = 
+        settings?.themeClass === 'theme-nuestro-deporte' || 
+        settings?.tenantId === '11111111-1111-1111-1111-111111111111' ||
+        settings?.name?.toLowerCase().includes('nuestro deporte');
+
+    // Only render for Liga Nuestro Deporte
+    if (!isNuestroDeporte) {
+        return null;
+    }
 
     // Duplicate list for infinite smooth loop
     const tickerItems = [...sponsors, ...sponsors, ...sponsors];
@@ -34,9 +42,7 @@ export const SponsorsTicker: React.FC<{ sponsors?: Sponsor[] }> = ({ sponsors = 
     return (
         <div className={cn(
             "w-full border-y relative overflow-hidden py-3 transition-colors duration-300 select-none",
-            isNuestroDeporte
-                ? "bg-[#040814] border-blue-900/30 text-white"
-                : "bg-slate-900 border-slate-800 text-white"
+            "bg-[#040814] border-blue-900/30 text-white"
         )}>
             {/* Ambient edge shadows for seamless fade */}
             <div className="absolute left-0 top-0 bottom-0 w-16 md:w-28 bg-gradient-to-r from-[#040814] to-transparent z-10 pointer-events-none" />
