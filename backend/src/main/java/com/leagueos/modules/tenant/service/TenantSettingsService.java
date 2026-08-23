@@ -26,4 +26,22 @@ public class TenantSettingsService {
             return defaultSettings;
         });
     }
+
+    @org.springframework.transaction.annotation.Transactional
+    public TenantSettings updateMinMatchesForPlayoffs(int minMatches, UUID explicitTenantId) {
+        UUID tenantId = explicitTenantId != null ? explicitTenantId : TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new IllegalStateException("Tenant context not found");
+        }
+
+        TenantSettings settings = repository.findByTenantId(tenantId)
+                .orElseGet(() -> {
+                    TenantSettings s = new TenantSettings();
+                    s.setTenantId(tenantId);
+                    return s;
+                });
+
+        settings.setMinMatchesForPlayoffs(Math.max(0, minMatches));
+        return repository.save(settings);
+    }
 }

@@ -19,4 +19,19 @@ public class TenantSettingsController {
     public ResponseEntity<TenantSettings> getCurrentSettings() {
         return ResponseEntity.ok(service.getCurrentSettings());
     }
+
+    @org.springframework.web.bind.annotation.PutMapping("/min-matches")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    public ResponseEntity<TenantSettings> updateMinMatches(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-Tenant-ID", required = false) java.util.UUID tenantId,
+            @org.springframework.web.bind.annotation.RequestParam("minMatches") int minMatches) {
+        if (tenantId != null) {
+            com.leagueos.shared.context.TenantContext.setCurrentTenant(tenantId);
+        }
+        try {
+            return ResponseEntity.ok(service.updateMinMatchesForPlayoffs(minMatches, tenantId));
+        } finally {
+            com.leagueos.shared.context.TenantContext.clear();
+        }
+    }
 }

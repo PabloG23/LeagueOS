@@ -41,6 +41,9 @@ export const LoginPage = () => {
             // Store Auth Data
             localStorage.setItem('token', data.accessToken);
             localStorage.setItem('role', data.role);
+            if (data.tenantId) {
+                localStorage.setItem('tenantId', data.tenantId);
+            }
             if (data.teamId) {
                 localStorage.setItem('teamId', data.teamId);
             }

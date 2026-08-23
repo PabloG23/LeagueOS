@@ -38,7 +38,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
                     // If client also supplied an X-Tenant-ID header, ensure it matches their authenticated tenant
                     if (StringUtils.hasText(tenantIdHeader)) {
                         UUID headerTenantId = UUID.fromString(tenantIdHeader);
-                        if (!tokenTenantId.equals(headerTenantId)) {
+                        boolean isNilUuid = headerTenantId.getMostSignificantBits() == 0 && headerTenantId.getLeastSignificantBits() == 0;
+                        if (!isNilUuid && !tokenTenantId.equals(headerTenantId)) {
                             log.warn("TenantContextFilter: Tenant mismatch! Authenticated tenant: {}, Requested header tenant: {}",
                                     tokenTenantId, headerTenantId);
                             response.sendError(HttpServletResponse.SC_FORBIDDEN,

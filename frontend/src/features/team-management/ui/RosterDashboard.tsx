@@ -90,60 +90,60 @@ export const RosterDashboard = () => {
     const [isLoading, setIsLoading] = useState(false);
     const { settings } = useTenantSettings();
 
-    // Fetch real data
-    useEffect(() => {
-        const fetchRoster = async () => {
-            if (!settings?.tenantId) return;
-            setIsLoading(true);
-            try {
-                // Fetch all teams to find the team name
-                const { data: allTeams } = await leagueApi.getTeams(settings.tenantId);
+    const fetchRoster = async (showLoading = true) => {
+        if (!settings?.tenantId) return;
+        if (showLoading) setIsLoading(true);
+        try {
+            // Fetch all teams to find the team name
+            const { data: allTeams } = await leagueApi.getTeams(settings.tenantId);
 
-                let targetTeamId = teamId;
-                if (!targetTeamId && isTeamRepMode) {
-                    // For demo, if teamRepMode without ID, pick the first team or a specific one from DB
-                    const myTeam = allTeams.find(t => t.name.includes("Halcones")) || allTeams[0];
-                    if (myTeam) targetTeamId = myTeam.id;
-                }
-
-                if (targetTeamId) {
-                    const team = allTeams.find(t => t.id === targetTeamId);
-                    setTeamName(team?.name || 'Equipo Desconocido');
-                    setTeamLogo(team?.logoUrl);
-                    if (team && team.representative) {
-                        const { firstName, lastName, phone, profilePhotoUrl } = team.representative;
-                        const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'Sin Asignar';
-                        setTeamRep({
-                            name: fullName,
-                            phone: phone || null,
-                            photoUrl: profilePhotoUrl || null
-                        });
-                    } else if (team) {
-                        setTeamRep({ name: 'Sin Asignar', phone: null });
-                    }
-
-                    // Fetch actual players
-                    const { data: fetchedPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, targetTeamId);
-                    setPlayers(fetchedPlayers.map((p: any) => ({
-                        id: p.id,
-                        name: `${p.firstName} ${p.lastName}`,
-                        photoUrl: p.profilePhotoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${p.firstName} ${p.lastName}`,
-                        isActive: p.status === 'ACTIVE',
-                        status: p.status,
-                        jerseyNumber: p.jerseyNumber,
-                        curp: p.curp,
-                        birthDate: p.birthDate
-                    })));
-                }
-            } catch (error) {
-                console.error("Error fetching roster data:", error);
-                showToast("Error al cargar la plantilla", "error");
-            } finally {
-                setIsLoading(false);
+            let targetTeamId = teamId;
+            if (!targetTeamId && isTeamRepMode) {
+                // For demo, if teamRepMode without ID, pick the first team or a specific one from DB
+                const myTeam = allTeams.find(t => t.name.includes("Halcones")) || allTeams[0];
+                if (myTeam) targetTeamId = myTeam.id;
             }
-        };
 
-        fetchRoster();
+            if (targetTeamId) {
+                const team = allTeams.find(t => t.id === targetTeamId);
+                setTeamName(team?.name || 'Equipo Desconocido');
+                setTeamLogo(team?.signedLogoUrl || team?.logoUrl);
+                if (team && team.representative) {
+                    const { firstName, lastName, phone, profilePhotoUrl } = team.representative;
+                    const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'Sin Asignar';
+                    setTeamRep({
+                        name: fullName,
+                        phone: phone || null,
+                        photoUrl: profilePhotoUrl || null
+                    });
+                } else if (team) {
+                    setTeamRep({ name: 'Sin Asignar', phone: null });
+                }
+
+                // Fetch actual players
+                const { data: fetchedPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, targetTeamId);
+                setPlayers(fetchedPlayers.map((p: any) => ({
+                    id: p.id,
+                    name: `${p.firstName} ${p.lastName}`,
+                    photoUrl: p.profilePhotoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${p.firstName} ${p.lastName}`,
+                    isActive: p.status === 'ACTIVE',
+                    status: p.status,
+                    jerseyNumber: p.jerseyNumber,
+                    curp: p.curp,
+                    birthDate: p.birthDate
+                })));
+            }
+        } catch (error) {
+            console.error("Error fetching roster data:", error);
+            showToast("Error al cargar la plantilla", "error");
+        } finally {
+            if (showLoading) setIsLoading(false);
+        }
+    };
+
+    // Fetch real data on mount / param changes
+    useEffect(() => {
+        fetchRoster(true);
     }, [teamId, isTeamRepMode, settings?.tenantId]);
 
 
@@ -198,7 +198,9 @@ export const RosterDashboard = () => {
                 profilePhotoUrl: newPlayer.photoUrl,
                 jerseyNumber: newPlayer.jerseyNumber
             });
-            window.location.reload();
+            showToast('Jugador agregado exitosamente.', 'success');
+            setIsAddModalOpen(false);
+            await fetchRoster(false);
         } catch (e: any) {
             showToast(e.response?.data?.message || 'Error al agregar jugador', 'error');
         }
@@ -208,9 +210,14 @@ export const RosterDashboard = () => {
         if (!settings?.tenantId || !teamId) return;
         try {
             await leagueApi.batchCreatePlayers(settings.tenantId, teamId, parsedPlayers);
-            window.location.reload();
+            const count = parsedPlayers.length;
+            showToast(`${count} ${count === 1 ? 'jugador importado' : 'jugadores importados'} exitosamente.`, 'success');
+            setIsMassUploadModalOpen(false);
+            await fetchRoster(false);
         } catch (e: any) {
-            throw new Error(e.response?.data?.message || 'Error al guardar lote de jugadores');
+            const errorMsg = e.response?.data?.message || 'Error al guardar lote de jugadores';
+            showToast(errorMsg, 'error');
+            throw new Error(errorMsg);
         }
     };
 
@@ -348,7 +355,7 @@ export const RosterDashboard = () => {
                                 setIsAddModalOpen(false);
                                 setVerifyingPlayer(null);
                             }}
-                            onSuccess={() => window.location.reload()}
+                            onSuccess={() => fetchRoster(false)}
                             teamId={teamId}
                             tenantId={settings?.tenantId}
                             requireJerseyNumbers={settings?.requireJerseyNumbers}

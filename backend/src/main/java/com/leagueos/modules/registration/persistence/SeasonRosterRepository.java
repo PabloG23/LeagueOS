@@ -10,6 +10,8 @@ import java.util.UUID;
 
 @Repository
 public interface SeasonRosterRepository extends JpaRepository<SeasonRoster, UUID> {
+    List<SeasonRoster> findByTenantId(UUID tenantId);
+    List<SeasonRoster> findByTenantIdAndSeasonId(UUID tenantId, UUID seasonId);
     List<SeasonRoster> findByTeamIdAndSeasonId(UUID teamId, UUID seasonId);
     List<SeasonRoster> findBySeasonId(UUID seasonId);
     List<SeasonRoster> findByPlayerId(UUID playerId);

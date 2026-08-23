@@ -31,11 +31,26 @@ public class RegistrationController {
 
     @GetMapping("/teams/{teamId}/players")
     public List<PlayerResponse> getTeamPlayers(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId) {
-        TenantContext.setCurrentTenant(tenantId);
+        if (tenantId != null) {
+            TenantContext.setCurrentTenant(tenantId);
+        }
         try {
             return registrationService.getPlayersByTeam(teamId);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @GetMapping("/players/directory")
+    public List<com.leagueos.modules.registration.api.dto.AdminPlayerDirectoryDTO> getPlayersDirectory(
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId) {
+        if (tenantId != null) {
+            TenantContext.setCurrentTenant(tenantId);
+        }
+        try {
+            return registrationService.getPlayersDirectory(tenantId);
         } finally {
             TenantContext.clear();
         }

@@ -43,6 +43,7 @@ public class PlayerRegistrationService {
     private final PersonRepository personRepository;
     private final TenantSettingsService tenantSettingsService;
     private final SeasonRosterRepository seasonRosterRepository;
+    private final com.leagueos.modules.competition.persistence.MatchEventRepository matchEventRepository;
     private final com.leagueos.modules.media.service.StorageService storageService;
 
     @Transactional
@@ -554,7 +555,18 @@ public class PlayerRegistrationService {
             response.setLastName(player.getPerson().getLastName());
             response.setBirthDate(player.getPerson().getBirthDate());
             response.setCurp(player.getPerson().getCurp());
-            response.setProfilePhotoUrl(player.getPerson().getProfilePhotoUrl());
+            String rawPhoto = player.getPerson().getProfilePhotoUrl();
+            if (rawPhoto != null && !rawPhoto.isBlank()) {
+                if (rawPhoto.startsWith("http://") || rawPhoto.startsWith("https://") || rawPhoto.startsWith("data:")) {
+                    response.setProfilePhotoUrl(rawPhoto);
+                } else {
+                    try {
+                        response.setProfilePhotoUrl(storageService.getSignedUrl(rawPhoto, 120));
+                    } catch (Exception ignored) {
+                        response.setProfilePhotoUrl(rawPhoto);
+                    }
+                }
+            }
         }
         if (roster != null) {
             response.setStatus(roster.getStatus());
@@ -562,5 +574,108 @@ public class PlayerRegistrationService {
             response.setTeamId(roster.getTeam().getId());
         }
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.leagueos.modules.registration.api.dto.AdminPlayerDirectoryDTO> getPlayersDirectory(UUID explicitTenantId) {
+        UUID tenantId = explicitTenantId != null ? explicitTenantId : com.leagueos.shared.context.TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            return List.of();
+        }
+
+        List<SeasonRoster> rosters = seasonRosterRepository.findByTenantId(tenantId);
+        List<Object[]> eventCounts = matchEventRepository.countEventsGroupedByPlayerAndType(tenantId);
+        List<Object[]> matchCounts = matchEventRepository.countMatchesGroupedByPlayer(tenantId);
+
+        java.util.Map<UUID, java.util.Map<com.leagueos.modules.competition.domain.MatchEvent.MatchEventType, Integer>> playerEventsMap = new java.util.HashMap<>();
+        for (Object[] row : eventCounts) {
+            UUID pId = (UUID) row[0];
+            com.leagueos.modules.competition.domain.MatchEvent.MatchEventType type = (com.leagueos.modules.competition.domain.MatchEvent.MatchEventType) row[1];
+            Number cnt = (Number) row[2];
+            playerEventsMap.computeIfAbsent(pId, k -> new java.util.HashMap<>()).put(type, cnt != null ? cnt.intValue() : 0);
+        }
+
+        java.util.Map<UUID, Integer> playerMatchesMap = new java.util.HashMap<>();
+        for (Object[] row : matchCounts) {
+            UUID pId = (UUID) row[0];
+            Number cnt = (Number) row[1];
+            playerMatchesMap.put(pId, cnt != null ? cnt.intValue() : 0);
+        }
+
+        List<com.leagueos.modules.registration.api.dto.AdminPlayerDirectoryDTO> result = new ArrayList<>();
+
+        for (SeasonRoster r : rosters) {
+            Player p = r.getPlayer();
+            if (p == null || p.getPerson() == null) continue;
+
+            UUID playerId = p.getId();
+            var eventMap = playerEventsMap.getOrDefault(playerId, java.util.Collections.emptyMap());
+
+            int goals = eventMap.getOrDefault(com.leagueos.modules.competition.domain.MatchEvent.MatchEventType.GOAL, 0);
+            int yellowCards = eventMap.getOrDefault(com.leagueos.modules.competition.domain.MatchEvent.MatchEventType.YELLOW_CARD, 0);
+            int redCards = eventMap.getOrDefault(com.leagueos.modules.competition.domain.MatchEvent.MatchEventType.RED_CARD, 0);
+            int appearances = eventMap.getOrDefault(com.leagueos.modules.competition.domain.MatchEvent.MatchEventType.APPEARANCE, 0);
+
+            int matchesPlayed = appearances > 0 ? appearances : playerMatchesMap.getOrDefault(playerId, 0);
+
+            String rawPhoto = p.getProfilePhotoUrl();
+            String signedPhoto = null;
+            if (rawPhoto != null && !rawPhoto.isBlank()) {
+                if (rawPhoto.startsWith("http://") || rawPhoto.startsWith("https://") || rawPhoto.startsWith("data:")) {
+                    signedPhoto = rawPhoto;
+                } else {
+                    try {
+                        signedPhoto = storageService.getSignedUrl(rawPhoto, 120);
+                    } catch (Exception ignored) {
+                        signedPhoto = rawPhoto;
+                    }
+                }
+            }
+
+            String teamLogo = r.getTeam() != null ? r.getTeam().getLogoUrl() : null;
+            String signedTeamLogo = null;
+            if (teamLogo != null && !teamLogo.isBlank()) {
+                if (teamLogo.startsWith("http://") || teamLogo.startsWith("https://") || teamLogo.startsWith("data:")) {
+                    signedTeamLogo = teamLogo;
+                } else {
+                    try {
+                        signedTeamLogo = storageService.getSignedUrl(teamLogo, 120);
+                    } catch (Exception ignored) {
+                        signedTeamLogo = teamLogo;
+                    }
+                }
+            }
+
+            String firstName = p.getFirstName() != null ? p.getFirstName() : "";
+            String lastName = p.getLastName() != null ? p.getLastName() : "";
+            String fullName = (firstName + " " + lastName).trim();
+
+            result.add(com.leagueos.modules.registration.api.dto.AdminPlayerDirectoryDTO.builder()
+                    .id(p.getId())
+                    .personId(p.getPerson().getId())
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .fullName(fullName)
+                    .curp(p.getPerson().getCurp())
+                    .birthDate(p.getBirthDate())
+                    .jerseyNumber(r.getJerseyNumber())
+                    .profilePhotoUrl(rawPhoto)
+                    .signedPhotoUrl(signedPhoto)
+                    .status(r.getStatus() != null ? r.getStatus().name() : "ACTIVE")
+                    .isActive(r.getStatus() == PlayerStatus.ACTIVE)
+                    .teamId(r.getTeam() != null ? r.getTeam().getId() : null)
+                    .teamName(r.getTeam() != null ? r.getTeam().getName() : "Sin equipo")
+                    .teamLogoUrl(teamLogo)
+                    .signedTeamLogoUrl(signedTeamLogo)
+                    .matchesPlayed(matchesPlayed)
+                    .goals(goals)
+                    .yellowCards(yellowCards)
+                    .redCards(redCards)
+                    .suspendedUntilMatchday(p.getSuspendedUntilMatchday())
+                    .build());
+        }
+
+        result.sort(java.util.Comparator.comparing(com.leagueos.modules.registration.api.dto.AdminPlayerDirectoryDTO::getFullName, String.CASE_INSENSITIVE_ORDER));
+        return result;
     }
 }

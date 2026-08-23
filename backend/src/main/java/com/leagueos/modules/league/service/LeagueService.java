@@ -144,11 +144,12 @@ public class LeagueService {
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + teamId));
 
         if (teamDetails.getName() != null && !teamDetails.getName().trim().isEmpty()) {
-            if (!team.getName().equalsIgnoreCase(teamDetails.getName()) &&
-                    teamRepository.existsByNameIgnoreCaseAndTenantId(teamDetails.getName(), team.getTenantId())) {
+            String trimmedName = teamDetails.getName().trim();
+            if (!team.getName().equalsIgnoreCase(trimmedName) &&
+                    teamRepository.existsByNameIgnoreCaseAndTenantId(trimmedName, team.getTenantId())) {
                 throw new IllegalArgumentException("Ya existe otro equipo activo con ese nombre en esta liga.");
             }
-            team.setName(teamDetails.getName());
+            team.setName(trimmedName);
         }
 
         if (teamDetails.getLogoUrl() != null) {
@@ -156,9 +157,13 @@ public class LeagueService {
         }
 
         if (teamDetails.getRepresentative() != null) {
+            var rep = teamDetails.getRepresentative();
+            if (rep.getFirstName() == null) rep.setFirstName("");
+            if (rep.getLastName() == null) rep.setLastName("");
+
             if (team.getRepresentative() == null) {
-                team.setRepresentative(teamDetails.getRepresentative());
-                team.getRepresentative().setTenantId(team.getTenantId());
+                rep.setTenantId(team.getTenantId());
+                team.setRepresentative(rep);
             } else {
                 updateRepresentativeFields(team, teamDetails);
             }

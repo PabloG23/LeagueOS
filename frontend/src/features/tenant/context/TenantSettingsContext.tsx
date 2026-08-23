@@ -65,11 +65,13 @@ const DEFAULT_SETTINGS: TenantSettings = {
 interface TenantSettingsContextType {
     settings: TenantSettings;
     isLoading: boolean;
+    updateSettings: (newSettings: Partial<TenantSettings>) => void;
 }
 
 const TenantSettingsContext = createContext<TenantSettingsContextType>({
     settings: DEFAULT_SETTINGS,
     isLoading: true,
+    updateSettings: () => {},
 });
 
 export const TenantSettingsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -141,8 +143,9 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
 
                 const slug = matchLeague?.params.leagueSlug || matchLeagueExact?.params.leagueSlug;
                 const normalizedSlug = slug?.toLowerCase();
+                const isSystemRoute = normalizedSlug === 'admin' || normalizedSlug === 'login' || normalizedSlug === 'team-dashboard';
 
-                if (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas') {
+                if (!isSystemRoute && (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas')) {
                     tenantId = '22222222-2222-2222-2222-222222222222';
                     name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
                     logoUrl = "/san_lucas_logo.png";
@@ -167,7 +170,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
                         { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
                     ];
-                } else if (isNuestroDeporteHost || normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte') {
+                } else if (isNuestroDeporteHost || (!isSystemRoute && (normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte'))) {
                     tenantId = '11111111-1111-1111-1111-111111111111';
                     name = "Liga Nuestro Deporte";
                     logoUrl = "/nuestro_deporte_logo.png";
@@ -188,7 +191,46 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     boardMembers = [];
                     enableRoundRobinFixtures = true;
                 } else {
-                    console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
+                    // Check if authenticated user has a stored tenant in localStorage
+                    const storedTenantId = localStorage.getItem('tenantId');
+                    if (storedTenantId === '22222222-2222-2222-2222-222222222222') {
+                        tenantId = '22222222-2222-2222-2222-222222222222';
+                        name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
+                        logoUrl = "/san_lucas_logo.png";
+                        themeClass = 'theme-san-lucas';
+                        allowTransfers = false;
+                        footerAddress = "Zaragoza S/N, San Sebastián, Metepec C.P. 52146";
+                        footerPhone = "722 634 4082";
+                        footerBackgroundClass = "bg-emerald-800";
+                        slogan = "Uniendo tradición y pasión en cada encuentro deportivo.";
+                        facebookUrl = "https://www.facebook.com/share/1DrWt7euqW/?mibextid=wwXIfr";
+                        matchTickerBackgroundClass = "bg-emerald-800";
+                        matchCardBackgroundClass = "bg-sidebar";
+                        matchTickerTextClass = "text-black";
+                        boardMembers = [
+                            { role: "Presidente", name: "Alejo Reyes Mejía" },
+                            { role: "Secretario", name: "Eduardo García Díaz" },
+                            { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
+                            { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
+                        ];
+                    } else if (storedTenantId === '11111111-1111-1111-1111-111111111111') {
+                        tenantId = '11111111-1111-1111-1111-111111111111';
+                        name = "Liga Nuestro Deporte";
+                        logoUrl = "/nuestro_deporte_logo.png";
+                        themeClass = 'theme-nuestro-deporte';
+                        allowTransfers = true;
+                        footerAddress = "Liga Nuestro Deporte";
+                        footerPhone = "";
+                        footerBackgroundClass = "bg-[#040812]";
+                        slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
+                        matchTickerBackgroundClass = "bg-[#040812]";
+                        matchCardBackgroundClass = "bg-[#0A1224]";
+                        matchTickerTextClass = "text-blue-400";
+                        boardMembers = [];
+                        enableRoundRobinFixtures = true;
+                    } else {
+                        console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
+                    }
                 }
 
                 // Set Header via Interceptor (More reliable than defaults)
@@ -248,8 +290,12 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
         };
     }, [location.pathname]);
 
+    const updateSettings = (newSettings: Partial<TenantSettings>) => {
+        setSettings(prev => ({ ...prev, ...newSettings }));
+    };
+
     return (
-        <TenantSettingsContext.Provider value={{ settings, isLoading }}>
+        <TenantSettingsContext.Provider value={{ settings, isLoading, updateSettings }}>
             {isLoading ? null : children}
         </TenantSettingsContext.Provider>
     );

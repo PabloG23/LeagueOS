@@ -6,6 +6,7 @@ import './App.css';
 
 import { AdminDashboardLayout } from '@/features/admin/ui/AdminDashboardLayout';
 import { TeamsView } from '@/features/admin/ui/TeamsView';
+import { PlayersDirectoryView } from '@/features/admin/ui/PlayersDirectoryView';
 import { MatchResultsView } from '@/features/admin/ui/MatchResultsView';
 import { PlayerTransferView } from '@/features/admin/ui/PlayerTransferView';
 import { SeasonsView } from '@/features/admin/ui/SeasonsView';
@@ -46,6 +47,11 @@ function App() {
                         </AdminDashboardLayout>
                     } />
                     <Route path="/:leagueSlug/admin/teams/:teamId" element={<RosterDashboard />} />
+                    <Route path="/:leagueSlug/admin/players" element={
+                        <AdminDashboardLayout>
+                            <PlayersDirectoryView />
+                        </AdminDashboardLayout>
+                    } />
                     <Route path="/:leagueSlug/admin/matches" element={
                         <AdminDashboardLayout>
                             <MatchResultsView />
@@ -74,6 +80,7 @@ function App() {
 
                     {/* Legacy Admin Routes (Backward compatibility redirects to ligaNuestroDeporte) */}
                     <Route path="/admin/teams" element={<Navigate to="/ligaNuestroDeporte/admin/teams" replace />} />
+                    <Route path="/admin/players" element={<Navigate to="/ligaNuestroDeporte/admin/players" replace />} />
                     <Route path="/admin/matches" element={<Navigate to="/ligaNuestroDeporte/admin/matches" replace />} />
                     <Route path="/admin/fields" element={<Navigate to="/ligaNuestroDeporte/admin/fields" replace />} />
                     <Route path="/admin/transfers" element={<Navigate to="/ligaNuestroDeporte/admin/transfers" replace />} />

@@ -30,8 +30,11 @@ public class LeagueController {
     }
 
     @GetMapping("/teams")
-    public List<Team> getTeams(@RequestHeader(value = "X-Tenant-ID") UUID tenantId) {
-        TenantContext.setCurrentTenant(tenantId);
+    public List<Team> getTeams(@RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId) {
+        UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenantId != null) {
+            TenantContext.setCurrentTenant(effectiveTenantId);
+        }
         try {
             return leagueService.getAllTeams();
         } finally {
@@ -41,13 +44,16 @@ public class LeagueController {
 
     @PostMapping("/teams")
     public Team createTeam(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @RequestBody Team team) {
-        TenantContext.setCurrentTenant(tenantId);
+        UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenantId != null) {
+            TenantContext.setCurrentTenant(effectiveTenantId);
+        }
         try {
-            team.setTenantId(tenantId);
+            team.setTenantId(effectiveTenantId);
             if (team.getRepresentative() != null) {
-                team.getRepresentative().setTenantId(tenantId);
+                team.getRepresentative().setTenantId(effectiveTenantId);
             }
             return leagueService.createTeam(team);
         } finally {
@@ -57,9 +63,12 @@ public class LeagueController {
 
     @DeleteMapping("/teams/{teamId}")
     public void deleteTeam(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId) {
-        TenantContext.setCurrentTenant(tenantId);
+        UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenantId != null) {
+            TenantContext.setCurrentTenant(effectiveTenantId);
+        }
         try {
             leagueService.softDeleteTeam(teamId);
         } finally {
@@ -69,9 +78,12 @@ public class LeagueController {
 
     @PutMapping("/teams/{teamId}/activate")
     public ResponseEntity<Void> activateTeam(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId) {
-        TenantContext.setCurrentTenant(tenantId);
+        UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenantId != null) {
+            TenantContext.setCurrentTenant(effectiveTenantId);
+        }
         try {
             leagueService.activateTeam(teamId);
             return ResponseEntity.ok().build();
@@ -82,10 +94,13 @@ public class LeagueController {
 
     @PutMapping("/teams/{teamId}")
     public Team updateTeam(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId,
             @RequestBody Team team) {
-        TenantContext.setCurrentTenant(tenantId);
+        UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenantId != null) {
+            TenantContext.setCurrentTenant(effectiveTenantId);
+        }
         try {
             return leagueService.updateTeam(teamId, team);
         } finally {
@@ -95,12 +110,15 @@ public class LeagueController {
 
     @PostMapping(value = "/teams/{teamId}/logo", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Team> uploadTeamLogo(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws Exception {
-        TenantContext.setCurrentTenant(tenantId);
+        UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenantId != null) {
+            TenantContext.setCurrentTenant(effectiveTenantId);
+        }
         try {
-            Team updated = leagueService.uploadTeamLogo(teamId, file.getBytes(), file.getContentType(), tenantId);
+            Team updated = leagueService.uploadTeamLogo(teamId, file.getBytes(), file.getContentType(), effectiveTenantId);
             return ResponseEntity.ok(updated);
         } finally {
             TenantContext.clear();

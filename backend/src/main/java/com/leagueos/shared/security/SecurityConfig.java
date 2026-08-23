@@ -57,7 +57,8 @@ public class SecurityConfig {
                     "/api/competition/seasons/*/matches",
                     "/api/matches/**",
                     "/api/templates/**",
-                    "/api/media/proxy"
+                    "/api/media/proxy",
+                    "/api/media/signed-url"
                 ).permitAll()
 
                 // 3. Public registration of teams if allowed

@@ -68,6 +68,30 @@ export interface Player {
     profilePhotoUrl?: string;
 }
 
+export interface AdminPlayerDirectoryDTO {
+    id: string;
+    personId: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    curp?: string;
+    birthDate?: string;
+    jerseyNumber?: number;
+    profilePhotoUrl?: string;
+    signedPhotoUrl?: string;
+    status: string;
+    isActive: boolean;
+    teamId?: string;
+    teamName: string;
+    teamLogoUrl?: string;
+    signedTeamLogoUrl?: string;
+    matchesPlayed: number;
+    goals: number;
+    yellowCards: number;
+    redCards: number;
+    suspendedUntilMatchday?: number;
+}
+
 export interface PlayerScorerDTO {
     id: string;
     name: string;
@@ -248,6 +272,12 @@ export const leagueApi = {
     // Leagues & Seasons
     updateCurrentMatchday: (tenantId: string, seasonId: string, matchday: number) =>
         api.put<Season>(`/leagues/seasons/${seasonId}/current-matchday?matchday=${matchday}`, null, { headers: { 'X-Tenant-ID': tenantId } }),
+
+    // Players Directory & Playoff Settings
+    getPlayersDirectory: (tenantId: string) =>
+        api.get<AdminPlayerDirectoryDTO[]>('/registration/players/directory', { headers: { 'X-Tenant-ID': tenantId } }),
+    updateMinMatchesForPlayoffs: (tenantId: string, minMatches: number) =>
+        api.put(`/tenants/settings/min-matches?minMatches=${minMatches}`, null, { headers: { 'X-Tenant-ID': tenantId } }),
 };
 
 export default api;

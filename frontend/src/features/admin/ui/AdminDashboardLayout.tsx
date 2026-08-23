@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin } from 'lucide-react';
+import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin, UserCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -24,6 +24,7 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
     const menuItems = [
         { path: `/${leagueSlug}/admin/seasons`, icon: LayoutDashboard, label: 'Torneos' },
         { path: `/${leagueSlug}/admin/teams`, icon: Users, label: 'Equipos' },
+        { path: `/${leagueSlug}/admin/players`, icon: UserCheck, label: 'Jugadores' },
         { path: `/${leagueSlug}/admin/matches`, icon: Database, label: 'Resultados' },
         { path: `/${leagueSlug}/admin/fields`, icon: MapPin, label: 'Campos' },
         { path: `/${leagueSlug}/admin/transfers`, icon: Repeat, label: 'Transferencias', hidden: !settings.allowTransfers },
