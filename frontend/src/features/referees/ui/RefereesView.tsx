@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, Plus, Search, Edit2, Trash2, AlertCircle, Loader2, Phone, MessageCircle, KeyRound, Copy, Check, User, Camera, Eye, EyeOff, Lock } from 'lucide-react';
+import { ShieldCheck, Plus, Search, Edit2, Trash2, AlertCircle, Loader2, Phone, MessageCircle, KeyRound, Copy, Check, User, Camera, Eye, EyeOff, Lock, X } from 'lucide-react';
 import { leagueApi, Referee } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { useToast } from '@/shared/components/ui/ToastContext';
@@ -184,15 +184,25 @@ export const RefereesView = () => {
 
             {/* Filter Bar */}
             <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="relative flex-1 max-w-md">
+                <div className="relative flex-1">
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
                         placeholder="Buscar por nombre, usuario o teléfono..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all placeholder:text-slate-400 font-medium"
+                        className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all placeholder:text-slate-400 font-medium"
                     />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200/60 transition-colors"
+                            title="Limpiar búsqueda"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                 </div>
 
                 <span className="text-xs font-bold text-slate-500 shrink-0">
