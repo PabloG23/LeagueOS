@@ -35,13 +35,13 @@ public class DataInitializer implements CommandLineRunner {
         createTenantSettingsAndAdmin(tenantNuestroDeporte, "admin_liga", "Administrador Nuestro Deporte", true, null);
         createTenantSettingsAndAdmin(tenantSanLucas, "admin_sanlucas", "Administrador San Lucas", false, "theme-san-lucas");
 
-        seedSeasonIfEmpty(tenantNuestroDeporte, "Temporada Regular 2026");
-        seedSeasonIfEmpty(tenantSanLucas, "Torneo Clausura 2026");
+        seedSeasonIfEmpty(tenantNuestroDeporte, "Temporada Regular 2026", 30);
+        seedSeasonIfEmpty(tenantSanLucas, "Torneo Clausura 2026", 25);
 
         log.info("====== DONE SEEDING DEV DATA ======");
     }
 
-    private void seedSeasonIfEmpty(UUID tenantId, String seasonName) {
+    private void seedSeasonIfEmpty(UUID tenantId, String seasonName, int maxPlayers) {
         if (seasonRepository.findByTenantId(tenantId).isEmpty()) {
             com.leagueos.modules.league.domain.Season season = new com.leagueos.modules.league.domain.Season();
             season.setName(seasonName);
@@ -50,9 +50,9 @@ public class DataInitializer implements CommandLineRunner {
             season.setStartDate(java.time.LocalDate.now());
             season.setEndDate(java.time.LocalDate.now().plusMonths(6));
             season.setCurrentMatchday(1);
-            season.setMaxActivePlayersPerTeam(25);
+            season.setMaxActivePlayersPerTeam(maxPlayers);
             seasonRepository.save(season);
-            log.info("Seeded active season '{}' for tenant {}", seasonName, tenantId);
+            log.info("Seeded active season '{}' (max players: {}) for tenant {}", seasonName, maxPlayers, tenantId);
         }
     }
 
