@@ -47,6 +47,10 @@ const resolveImageUrl = async (srcKey?: string): Promise<string | undefined> => 
 export const generateCredentialsPdf = async (options: GenerateCredentialsOptions) => {
     const { team, players, leagueLogoUrl } = options;
 
+    if (!players || players.length === 0) {
+        throw new Error('No hay jugadores registrados en este equipo.');
+    }
+
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();

@@ -65,9 +65,12 @@ export const RosterDashboard = () => {
         try {
             setIsGeneratingPdf(true);
             const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, teamId);
+
+            if (!rawPlayers || rawPlayers.length === 0) {
+                showToast('El equipo no tiene jugadores registrados para generar credenciales', 'warning');
+                return;
+            }
             
-            // Re-import dynamically to avoid circular dependencies or heavy initial loads if needed
-            // But we can just use the regular import
             const { generateCredentialsPdf } = await import('../lib/generateCredentialsPdf');
             
             await generateCredentialsPdf({
@@ -76,9 +79,9 @@ export const RosterDashboard = () => {
                 leagueLogoUrl: settings.logoUrl
             });
             showToast('Credenciales generadas con éxito', 'success');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error generating PDF:', error);
-            showToast('Ocurrió un error al generar las credenciales', 'error');
+            showToast(error.message || 'Ocurrió un error al generar las credenciales', 'error');
         } finally {
             setIsGeneratingPdf(false);
         }
