@@ -11,6 +11,7 @@ import com.leagueos.modules.league.persistence.SeasonRepository;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.shared.domain.exception.BusinessRuleException;
 import com.leagueos.shared.domain.exception.ResourceNotFoundException;
+import com.leagueos.modules.media.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,18 @@ public class FixtureGeneratorService {
     private final SeasonRepository seasonRepository;
     private final TeamRegistrationRepository teamRegistrationRepository;
     private final MatchRepository matchRepository;
+    private final StorageService storageService;
+
+    private String resolveSignedLogo(Team team) {
+        if (team == null || team.getLogoUrl() == null || team.getLogoUrl().isBlank()) return null;
+        String logo = team.getLogoUrl();
+        if (logo.startsWith("http")) return logo;
+        try {
+            return storageService.getSignedUrl(logo, 120);
+        } catch (Exception e) {
+            return logo;
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Preview — computes fixtures in memory, NO persistence
@@ -93,7 +106,9 @@ public class FixtureGeneratorService {
                     result.add(new MatchPreviewDTO(
                             matchday,
                             home.getId(), home.getName(),
+                            home.getLogoUrl(), resolveSignedLogo(home),
                             away.getId(), away.getName(),
+                            away.getLogoUrl(), resolveSignedLogo(away),
                             null // matchDate intentionally null → "Por definir"
                     ));
                 }

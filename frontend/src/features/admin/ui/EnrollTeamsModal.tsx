@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Search, Shield, Check, CheckSquare, Square, UserPlus, Sparkles, Filter } from 'lucide-react';
+import { X, Search, Check, CheckSquare, Square, UserPlus, Sparkles, Filter } from 'lucide-react';
 import { leagueApi, Team } from '@/shared/api/league-api';
 import { useToast } from '@/shared/components/ui/ToastContext';
+import { SecureImage } from '@/features/team-management/ui/SecureImage';
 
 interface EnrollTeamsModalProps {
     isOpen: boolean;
@@ -214,15 +215,20 @@ export const EnrollTeamsModal = ({
                                             {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                         </div>
 
-                                        {/* Generic Team Shield Icon */}
+                                        {/* Team Shield / Logo */}
                                         <div
-                                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-xs ${
+                                            className={`w-11 h-11 rounded-xl p-1 bg-white border flex items-center justify-center shrink-0 transition-all overflow-hidden shadow-xs ${
                                                 isSelected
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-100 border border-slate-200/80 text-slate-500 group-hover:bg-blue-100/60 group-hover:text-blue-600'
+                                                    ? 'border-blue-400 ring-2 ring-blue-500/20'
+                                                    : 'border-slate-200 group-hover:border-blue-300'
                                             }`}
                                         >
-                                            <Shield className="w-5 h-5" />
+                                            <SecureImage
+                                                srcKey={team.signedLogoUrl || team.logoUrl}
+                                                fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(team.name)}`}
+                                                alt={team.name}
+                                                className="w-full h-full object-contain"
+                                            />
                                         </div>
 
                                         {/* Team Info */}

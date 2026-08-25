@@ -37,7 +37,7 @@ export const MassUploadTeamModal = ({ isOpen, onClose, onSave, existingTeamNames
         XLSX.writeFile(wb, "plantilla_equipos.xlsx");
     };
 
-    const validateRow = (name: string, repPhone: string | undefined, allRows: { name: string; repPhone?: string }[], currentIndex: number): string | undefined => {
+    const validateRow = (name: string, repName: string | undefined, repPhone: string | undefined, allRows: { name: string; representativeName?: string; repPhone?: string }[], currentIndex: number): string | undefined => {
         const trimmedName = name.trim();
         if (!trimmedName) {
             return "El nombre del equipo es requerido";
@@ -57,15 +57,21 @@ export const MassUploadTeamModal = ({ isOpen, onClose, onSave, existingTeamNames
             return `Nombre duplicado en el archivo ("${trimmedName}")`;
         }
 
-        if (repPhone && repPhone.trim()) {
-            const rawPhone = repPhone.trim();
-            const cleanDigits = rawPhone.replace(/[\s\-\(\)\+]/g, '');
-            if (!/^\d+$/.test(cleanDigits)) {
-                return `El teléfono ("${rawPhone}") contiene caracteres no válidos. Solo debe incluir números.`;
-            }
-            if (cleanDigits.length < 10 || cleanDigits.length > 13) {
-                return `El teléfono ("${rawPhone}") debe tener 10 dígitos numéricos (ej. 5512345678).`;
-            }
+        if (!repName || !repName.trim()) {
+            return "El nombre del representante es obligatorio para generar su usuario";
+        }
+
+        if (!repPhone || !repPhone.trim()) {
+            return "El teléfono del representante es obligatorio";
+        }
+
+        const rawPhone = repPhone.trim();
+        const cleanDigits = rawPhone.replace(/[\s\-\(\)\+]/g, '');
+        if (!/^\d+$/.test(cleanDigits)) {
+            return `El teléfono ("${rawPhone}") contiene caracteres no válidos. Solo debe incluir números.`;
+        }
+        if (cleanDigits.length !== 10) {
+            return `El teléfono ("${rawPhone}") debe tener exactamente 10 dígitos numéricos.`;
         }
 
         return undefined;
@@ -117,7 +123,7 @@ export const MassUploadTeamModal = ({ isOpen, onClose, onSave, existingTeamNames
                 });
 
                 const validatedTeams: ParsedTeam[] = rawTeams.map((team, idx) => {
-                    const error = validateRow(team.name, team.repPhone, rawTeams, idx);
+                    const error = validateRow(team.name, team.representativeName, team.repPhone, rawTeams, idx);
                     return {
                         ...team,
                         _error: error,
@@ -205,7 +211,7 @@ export const MassUploadTeamModal = ({ isOpen, onClose, onSave, existingTeamNames
         // Re-validate all rows to ensure uniqueness in file and DB
         const revalidated = newData.map((row, idx) => ({
             ...row,
-            _error: validateRow(row.name, row.repPhone, newData, idx),
+            _error: validateRow(row.name, row.representativeName, row.repPhone, newData, idx),
         }));
 
         setParsedData(revalidated);

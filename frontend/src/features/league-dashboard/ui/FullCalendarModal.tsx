@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { X, Calendar as CalendarIcon, Loader2, MapPin, Clock } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Loader2, MapPin, Clock, FileText } from 'lucide-react';
 import { leagueApi, Match } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { TeamLogo } from '@/shared/components/TeamLogo';
+import { MatchReportPhotoModal } from '@/shared/components/MatchReportPhotoModal';
 import { Link, useParams } from 'react-router-dom';
 
 interface FullCalendarModalProps {
@@ -16,6 +17,7 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
     const [matches, setMatches] = useState<Match[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeMatchday, setActiveMatchday] = useState<number>(1);
+    const [selectedMatchForReport, setSelectedMatchForReport] = useState<Match | null>(null);
 
     useEffect(() => {
         if (!isOpen || !settings?.tenantId) return;
@@ -76,11 +78,11 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
         return Array.from(uniqueMatchdays).sort((a, b) => a - b);
     }, [seasonMatches]);
 
-    // Update active matchday when season changes
+    // Update active matchday when season changes (default to first matchday)
     useEffect(() => {
         if (seasonMatches.length > 0) {
-            const latest = Math.max(...seasonMatches.map(m => m.matchday || 1));
-            setActiveMatchday(latest);
+            const earliest = Math.min(...seasonMatches.map(m => m.matchday || 1));
+            setActiveMatchday(earliest || 1);
         }
     }, [activeSeasonId, seasonMatches.length]);
 
@@ -219,8 +221,25 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                             )}
                                                         </div>
 
-                                                        {/* Status Badge */}
-                                                        <div className="self-start sm:self-auto">
+                                                        {/* Status and Action Buttons */}
+                                                        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                                                            {/* Foto Cédula Button if available */}
+                                                            {(match.hasReportPhoto || match.reportPhotoUrl) && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        setSelectedMatchForReport(match);
+                                                                    }}
+                                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                                                    title="Ver foto de la cédula arbitral oficial del partido"
+                                                                >
+                                                                    <FileText className="w-3.5 h-3.5" />
+                                                                    <span>Foto Cédula</span>
+                                                                </button>
+                                                            )}
+
+                                                            {/* Status Badge */}
                                                             <span className={`px-2.5 py-1 rounded-md uppercase tracking-wider text-[10px] font-bold shadow-sm ${
                                                                 isFinished ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20' 
                                                                 : match.status === 'CANCELLED' ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
@@ -283,6 +302,14 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                     )}
                 </div>
             </div>
+
+            {/* Singleton Match Report Photo Modal */}
+            <MatchReportPhotoModal
+                isOpen={!!selectedMatchForReport}
+                onClose={() => setSelectedMatchForReport(null)}
+                tenantId={settings?.tenantId}
+                match={selectedMatchForReport}
+            />
         </div>
     );
 };

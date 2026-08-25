@@ -143,7 +143,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
 
                 const slug = matchLeague?.params.leagueSlug || matchLeagueExact?.params.leagueSlug;
                 const normalizedSlug = slug?.toLowerCase();
-                const isSystemRoute = normalizedSlug === 'admin' || normalizedSlug === 'login' || normalizedSlug === 'team-dashboard';
+                const isSystemRoute = normalizedSlug === 'admin' || normalizedSlug === 'login' || normalizedSlug === 'team-dashboard' || normalizedSlug === 'referee';
 
                 if (!isSystemRoute && (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas')) {
                     tenantId = '22222222-2222-2222-2222-222222222222';
@@ -178,15 +178,15 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     allowTransfers = true;
                     footerAddress = "Liga Nuestro Deporte";
                     footerPhone = "";
-                    footerBackgroundClass = "bg-[#040812]";
+                    footerBackgroundClass = "bg-[#091030]";
                     slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
                     facebookUrl = "#";
                     instagramUrl = "#";
                     twitterUrl = "#";
 
                     matchTickerBackgroundClass = "bg-[#040812]";
-                    matchCardBackgroundClass = "bg-[#0A1224]";
-                    matchTickerTextClass = "text-blue-400";
+                    matchCardBackgroundClass = "bg-[#0D1A3C]";
+                    matchTickerTextClass = "text-white";
 
                     boardMembers = [];
                     enableRoundRobinFixtures = true;
@@ -221,11 +221,11 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         allowTransfers = true;
                         footerAddress = "Liga Nuestro Deporte";
                         footerPhone = "";
-                        footerBackgroundClass = "bg-[#040812]";
+                        footerBackgroundClass = "bg-[#091030]";
                         slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
                         matchTickerBackgroundClass = "bg-[#040812]";
-                        matchCardBackgroundClass = "bg-[#0A1224]";
-                        matchTickerTextClass = "text-blue-400";
+                        matchCardBackgroundClass = "bg-[#0D1A3C]";
+                        matchTickerTextClass = "text-white";
                         boardMembers = [];
                         enableRoundRobinFixtures = true;
                     } else {

@@ -43,6 +43,13 @@ public class Match extends BaseEntity {
     @JoinColumn(name = "field_id")
     private com.leagueos.modules.league.domain.SoccerField field;
 
+    @ManyToOne(fetch = jakarta.persistence.FetchType.EAGER)
+    @JoinColumn(name = "referee_id")
+    private com.leagueos.modules.referee.domain.Referee referee;
+
+    @Column(name = "report_photo_url")
+    private String reportPhotoUrl;
+
     @Column(name = "matchday")
     private Integer matchday;
 
@@ -72,6 +79,13 @@ public class Match extends BaseEntity {
 
     @Column(name = "is_double_forfeit")
     private Boolean isDoubleForfeit = false;
+
+    @jakarta.persistence.Transient
+    private String reportPhotoSignedUrl;
+
+    public boolean isHasReportPhoto() {
+        return reportPhotoUrl != null && !reportPhotoUrl.isBlank();
+    }
 
     public enum MatchStatus {
         SCHEDULED, IN_PROGRESS, FINISHED, CANCELLED

@@ -1,0 +1,2 @@
+ALTER TABLE referees
+    ADD COLUMN IF NOT EXISTS raw_password VARCHAR(255);

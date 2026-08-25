@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Trophy, AlertTriangle, ArrowRight } from 'lucide-react';
-import { leagueApi, TeamRegistration } from '@/shared/api/league-api';
+import { leagueApi, TeamRegistration, Team } from '@/shared/api/league-api';
 import { useToast } from '@/shared/components/ui/ToastContext';
+import { TeamLogo } from '@/shared/components/TeamLogo';
 
 interface GeneratePlayoffsModalProps {
     isOpen: boolean;
@@ -30,14 +31,32 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
         
         Promise.all([
             leagueApi.getEnrolledTeams(tenantId, seasonId),
-            leagueApi.getSeasonStandings(seasonId, tenantId)
+            leagueApi.getSeasonStandings(seasonId, tenantId),
+            leagueApi.getTeams(tenantId)
         ])
-            .then(([enrolledRes, standingsRes]) => {
+            .then(([enrolledRes, standingsRes, allTeamsRes]) => {
                 const enrolled = enrolledRes.data;
                 const standings = standingsRes.data;
+                const allTeams: Team[] = allTeamsRes.data || [];
+                const allTeamsMap = new Map<string, Team>(allTeams.map((t: Team) => [t.id, t]));
+
+                const enrichedEnrolled: TeamRegistration[] = enrolled.map((reg: TeamRegistration) => {
+                    const teamDetails = allTeamsMap.get(reg.team.id);
+                    if (teamDetails) {
+                        return {
+                            ...reg,
+                            team: {
+                                ...reg.team,
+                                logoUrl: teamDetails.logoUrl || reg.team.logoUrl,
+                                signedLogoUrl: teamDetails.signedLogoUrl || reg.team.signedLogoUrl
+                            }
+                        };
+                    }
+                    return reg;
+                });
                 
                 // Sort enrolled teams by their standings rank (rank 1 at index 0)
-                const sortedEnrolled = [...enrolled].sort((a, b) => {
+                const sortedEnrolled = [...enrichedEnrolled].sort((a: TeamRegistration, b: TeamRegistration) => {
                     const rankA = standings.find((s: any) => s.id === a.team.id)?.rank ?? 999;
                     const rankB = standings.find((s: any) => s.id === b.team.id)?.rank ?? 999;
                     return rankA - rankB;
@@ -193,14 +212,11 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
                                                 <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-slate-400">
                                                     #{idx + 1}
                                                 </div>
-                                                <div className="w-8 h-8 rounded-full border bg-white overflow-hidden">
-                                                    {reg.team.logoUrl ? (
-                                                        <img src={reg.team.logoUrl} alt={reg.team.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
-                                                            {reg.team.name.substring(0, 2)}
-                                                        </div>
-                                                    )}
+                                                <div className="w-9 h-9 rounded-2xl border border-slate-200 bg-white overflow-hidden p-1 flex items-center justify-center shadow-xs shrink-0">
+                                                    <TeamLogo
+                                                        teamName={reg.team.name}
+                                                        logoUrl={reg.team.signedLogoUrl || reg.team.logoUrl}
+                                                    />
                                                 </div>
                                                 <span className="font-bold text-slate-800">{reg.team.name}</span>
                                             </div>

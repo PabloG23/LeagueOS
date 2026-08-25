@@ -47,6 +47,9 @@ export const LoginPage = () => {
             if (data.teamId) {
                 localStorage.setItem('teamId', data.teamId);
             }
+            if (data.refereeId) {
+                localStorage.setItem('refereeId', data.refereeId);
+            }
 
             const isCustomHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('nuestrodeporte');
 
@@ -56,6 +59,8 @@ export const LoginPage = () => {
                     window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/team-dashboard';
                 } else if (data.role === 'ROLE_LEAGUE_ADMIN') {
                     window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/admin/teams';
+                } else if (data.role === 'ROLE_REFEREE') {
+                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/referee/dashboard';
                 } else {
                     window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas';
                 }
@@ -78,6 +83,8 @@ export const LoginPage = () => {
                 navigate(`/${targetSlug}/team-dashboard`);
             } else if (data.role === 'ROLE_LEAGUE_ADMIN') {
                 navigate(`/${targetSlug}/admin/teams`);
+            } else if (data.role === 'ROLE_REFEREE') {
+                navigate(`/${targetSlug}/referee/dashboard`);
             } else {
                 if (isCustomHost && targetSlug === 'ligaNuestroDeporte') {
                     navigate('/');

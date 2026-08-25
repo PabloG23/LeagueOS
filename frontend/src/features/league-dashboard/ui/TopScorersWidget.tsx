@@ -69,19 +69,19 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
         <div className={cn(
             "rounded-2xl border shadow-xl overflow-hidden flex flex-col transition-all duration-300",
             isNuestroDeporte
-                ? "border-blue-900/30 bg-[#0A1224] text-white shadow-blue-950/40"
+                ? "border-blue-900/30 bg-[#0D1A3C] text-white shadow-blue-950/40"
                 : "border-slate-200 bg-white text-slate-900 shadow-slate-200/40"
         )}>
             {/* Widget Header */}
             <div className={cn(
                 "flex items-center justify-between p-4 border-b",
-                isNuestroDeporte ? "bg-[#060B1A]/90 border-blue-900/40" : "bg-slate-50/70 border-slate-100"
+                isNuestroDeporte ? "bg-[#091030]/90 border-red-900/30" : "bg-slate-50/70 border-slate-100"
             )}>
                 <h3 className={cn(
                     "tracking-tight text-lg font-bold flex items-center gap-2",
                     isNuestroDeporte ? "font-['Bebas_Neue'] tracking-wider text-xl text-white" : ""
                 )}>
-                    <Trophy className={cn("w-5 h-5", isNuestroDeporte ? "text-blue-400" : "text-amber-500")} />
+                    <Trophy className={cn("w-5 h-5", isNuestroDeporte ? "text-red-400" : "text-amber-500")} />
                     Goleo Individual
                 </h3>
 
@@ -121,7 +121,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                         <div className={cn(
                             "relative px-5 py-5 text-center overflow-hidden transition-all",
                             isNuestroDeporte
-                                ? "bg-gradient-to-br from-blue-900/90 via-blue-950 to-[#040812] text-white border-b border-blue-500/20"
+                                ? "bg-gradient-to-br from-red-900/80 via-[#0D1A3C] to-[#091030] text-white border-b border-red-600/30"
                                 : "bg-gradient-to-br from-sidebar via-sidebar/90 to-sidebar text-sidebar-foreground"
                         )}>
                             <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
@@ -153,7 +153,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                 <div className={cn(
                                     "w-20 h-20 rounded-full flex items-center justify-center mb-2.5 shadow-xl backdrop-blur overflow-hidden transition-all duration-300",
                                     isNuestroDeporte
-                                        ? "bg-blue-500/20 border-2 border-blue-400/50 shadow-blue-500/20"
+                                        ? "bg-red-600/20 border-2 border-red-400/50 shadow-red-900/20"
                                         : "bg-white/10 border-4 border-white/20"
                                 )}>
                                     {leaderPhoto && !hasImgError ? (
@@ -178,7 +178,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                     hasMultipleLeaders
                                         ? "bg-amber-400/20 border border-amber-400/40 text-amber-300"
                                         : isNuestroDeporte
-                                            ? "bg-blue-500/20 border border-blue-400/40 text-blue-300"
+                                            ? "bg-red-500/20 border border-red-400/40 text-red-300"
                                             : "bg-yellow-400/20 border border-yellow-400/30 text-yellow-300"
                                 )}>
                                     {hasMultipleLeaders 
@@ -193,7 +193,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
 
                                 <div className={cn(
                                     "text-3xl font-black drop-shadow-sm flex items-baseline justify-center gap-1",
-                                    isNuestroDeporte ? "text-blue-400" : "text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70"
+                                    isNuestroDeporte ? "text-red-400" : "text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70"
                                 )}>
                                     <span>{currentLeader.goals}</span>
                                     <span className="text-xs font-bold text-white/50">{currentLeader.goals === 1 ? 'Gol' : 'Goles'}</span>
@@ -224,7 +224,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                         {otherScorers.length > 0 && (
                             <div className={cn(
                                 "p-3 space-y-1.5 max-h-[440px] overflow-y-auto scrollbar-thin",
-                                isNuestroDeporte ? "bg-[#0A1224]" : "bg-white"
+                                isNuestroDeporte ? "bg-[#0D1A3C]" : "bg-white"
                             )}>
                                 {otherScorers.map((scorer, idx) => (
                                     <div key={scorer.id || idx} className={cn(
@@ -239,7 +239,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                 scorer.goals === maxGoals
                                                     ? "text-amber-400 font-black"
                                                     : isNuestroDeporte 
-                                                        ? "text-slate-500 group-hover:text-blue-400" 
+                                                        ? "text-slate-500 group-hover:text-red-400" 
                                                         : "text-slate-400 group-hover:text-primary"
                                             )}>
                                                 {scorer.rank || (scorer.goals === maxGoals ? 1 : idx + 2)}
@@ -265,7 +265,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                             scorer.goals === maxGoals
                                                 ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                                                 : isNuestroDeporte
-                                                    ? "bg-blue-950/90 text-blue-300 border border-blue-800/40 group-hover:bg-blue-600 group-hover:text-white"
+                                                    ? "bg-red-950/90 text-red-300 border border-red-800/40 group-hover:bg-red-700 group-hover:text-white"
                                                     : "bg-slate-100 text-slate-900 group-hover:bg-primary/10 group-hover:text-primary"
                                         )}>
                                             {scorer.goals}

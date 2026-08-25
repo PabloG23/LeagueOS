@@ -13,34 +13,132 @@ interface FetchedImage {
     height: number;
 }
 
-const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Network response was not ok');
-    const blob = await response.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve({ dataUrl, width: img.width, height: img.height });
-        img.onerror = () => resolve({ dataUrl, width: 1, height: 1 }); // fallback
-        img.src = dataUrl;
-    });
+const extractR2Key = (urlOrKey: string): string | null => {
+    if (!urlOrKey) return null;
+    const clean = urlOrKey.trim();
+    if (clean.startsWith('dev/tenants/') || clean.startsWith('prod/tenants/') || clean.startsWith('tenants/')) {
+        return clean;
+    }
+    if (clean.includes('r2.cloudflarestorage.com/')) {
+        try {
+            const parsed = new URL(clean);
+            // pathname is e.g. /leagueos-media/dev/tenants/...
+            const parts = parsed.pathname.split('/').filter(Boolean);
+            if (parts.length > 1) {
+                return parts.slice(1).join('/');
+            }
+            return parts.join('/');
+        } catch (_) {
+            return null;
+        }
+    }
+    return null;
 };
 
-const resolveImageUrl = async (srcKey?: string): Promise<string | undefined> => {
-    if (!srcKey) return undefined;
-    if (srcKey.startsWith('http://') || srcKey.startsWith('https://') || srcKey.startsWith('data:')) {
-        return srcKey;
+const resolveImageUrl = (srcKey?: string): string | undefined => {
+    if (!srcKey || !srcKey.trim()) return undefined;
+    const clean = srcKey.trim();
+
+    // 1. Static frontend asset in /public (e.g. /nuestro_deporte_logo.png or /san_lucas_logo.png)
+    if (clean.startsWith('/')) {
+        return clean;
     }
+
+    // 2. If it's an R2 key or an R2 signed URL, route it through backend proxy to avoid CORS issues
+    const r2Key = extractR2Key(clean);
+    if (r2Key) {
+        return leagueApi.getProxyUrl(r2Key);
+    }
+
+    if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
+        return clean;
+    }
+
     try {
-        return leagueApi.getProxyUrl(srcKey);
+        return leagueApi.getProxyUrl(clean);
     } catch (e) {
         console.error('Error resolving proxy url for', srcKey, e);
         return undefined;
+    }
+};
+
+const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
+    if (url.startsWith('data:')) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                if (url.includes('image/svg')) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width || 200;
+                    canvas.height = img.height || 200;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
+                        return;
+                    }
+                }
+                resolve({ dataUrl: url, width: img.width, height: img.height });
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const rawDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                if (rawDataUrl.includes('image/svg')) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width || 200;
+                    canvas.height = img.naturalHeight || img.height || 200;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
+                        return;
+                    }
+                }
+                resolve({ dataUrl: rawDataUrl, width: img.width, height: img.height });
+            };
+            img.onerror = () => resolve({ dataUrl: rawDataUrl, width: 1, height: 1 });
+            img.src = rawDataUrl;
+        });
+    } catch (err) {
+        // Fallback using crossOrigin Image and Canvas
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width || 200;
+                canvas.height = img.naturalHeight || img.height || 200;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve({
+                        dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+                        width: canvas.width,
+                        height: canvas.height
+                    });
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
     }
 };
 
@@ -70,31 +168,34 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
     // 1. Pre-load common images (League Logo & Team Logo)
     let leagueLogoImg: FetchedImage | undefined;
-    if (leagueLogoUrl) {
+    const targetLeagueLogo = leagueLogoUrl || '/nuestro_deporte_logo.png';
+    const resolvedLeagueLogo = resolveImageUrl(targetLeagueLogo);
+    if (resolvedLeagueLogo) {
         try {
-            leagueLogoImg = await fetchImageAsBase64(leagueLogoUrl);
+            leagueLogoImg = await fetchImageAsBase64(resolvedLeagueLogo);
         } catch (e) {
-            console.error('Failed to load league logo');
+            console.error('Failed to load league logo', e);
         }
     }
 
-    const teamLogoUrl = await resolveImageUrl(team.signedLogoUrl || team.logoUrl);
+    const teamLogoUrl = resolveImageUrl(team.signedLogoUrl || team.logoUrl);
     let teamLogoImg: FetchedImage | undefined;
     if (teamLogoUrl) {
         try {
             teamLogoImg = await fetchImageAsBase64(teamLogoUrl);
         } catch (e) {
-            console.error('Failed to load team logo');
+            console.error('Failed to load team logo', e);
         }
     }
 
     // 2. Pre-fetch player photos in parallel to speed up generation
     const playerPhotoPromises = players.map(async (player) => {
-        const photoUrl = await resolveImageUrl(player.profilePhotoUrl);
+        const photoUrl = resolveImageUrl(player.profilePhotoUrl);
         if (photoUrl) {
             try {
                 return await fetchImageAsBase64(photoUrl);
             } catch (e) {
+                console.warn(`Failed to fetch photo for player ${player.firstName} ${player.lastName}`, e);
                 return undefined;
             }
         }
@@ -138,14 +239,23 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
         // -- Draw League Logo (Center Top) --
         if (leagueLogoImg) {
-            const logoW = 14;
-            const logoH = 14 * (leagueLogoImg.height / leagueLogoImg.width);
-            doc.addImage(leagueLogoImg.dataUrl, x + (cardWidth - logoW) / 2, y + 5, logoW, logoH);
+            const maxW = 26;
+            const maxH = 14;
+            const aspect = leagueLogoImg.width / leagueLogoImg.height;
+            let logoW = maxW;
+            let logoH = maxW / aspect;
+            if (logoH > maxH) {
+                logoH = maxH;
+                logoW = maxH * aspect;
+            }
+            const logoX = x + (cardWidth - logoW) / 2;
+            const logoY = y + 4.5 + (maxH - logoH) / 2;
+            doc.addImage(leagueLogoImg.dataUrl, logoX, logoY, logoW, logoH);
         } else {
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
+            doc.setFontSize(9);
             doc.setFont("helvetica", "bolditalic");
-            doc.text("LIGA", x + cardWidth / 2, y + 10, { align: 'center' });
+            doc.text("LIGA NUESTRO DEPORTE", x + cardWidth / 2, y + 12, { align: 'center' });
         }
 
         // -- Draw Player Photo (Center) --
@@ -176,22 +286,47 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
         // -- Draw Player Name --
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
         doc.setFont("helvetica", "bolditalic");
-        const fullName = `${player.firstName} ${player.lastName}`.toUpperCase();
+        const fullName = [player.firstName, player.lastName].filter(Boolean).join(' ').trim().toUpperCase();
+        
+        let nameFontSize = 10.5;
+        doc.setFontSize(nameFontSize);
+        
+        // Auto-scale font size down to 7.5 if single line can fit
+        while (doc.getTextWidth(fullName) > cardWidth - 4 && nameFontSize > 7.5) {
+            nameFontSize -= 0.5;
+            doc.setFontSize(nameFontSize);
+        }
+
         const splitName = doc.splitTextToSize(fullName, cardWidth - 4);
-        doc.text(splitName[0], x + cardWidth / 2, photoY + photoSize + 7, { align: 'center' });
+        if (splitName.length === 1) {
+            doc.text(splitName[0], x + cardWidth / 2, photoY + photoSize + 6.5, { align: 'center' });
+        } else {
+            // If name wraps across 2 lines, adjust font size and line height
+            doc.setFontSize(Math.min(nameFontSize, 8.5));
+            doc.text(splitName.slice(0, 2), x + cardWidth / 2, photoY + photoSize + 4.5, { align: 'center', lineHeightFactor: 1.15 });
+        }
 
         // -- Draw Team Name Banner --
         const bannerY = photoY + photoSize + 11;
         doc.setFillColor(250, 204, 21); // gold
         doc.rect(x, bannerY, cardWidth, 8, 'F');
         
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bolditalic");
         doc.setTextColor(15, 23, 42); // slate-900 (dark)
-        const teamNameSplit = doc.splitTextToSize(team.name.toUpperCase(), cardWidth - 4);
-        doc.text(teamNameSplit[0], x + cardWidth / 2, bannerY + 5.5, { align: 'center' });
+        doc.setFont("helvetica", "bolditalic");
+        const teamName = (team.name || '').trim().toUpperCase();
+        let teamFontSize = 10.5;
+        doc.setFontSize(teamFontSize);
+        while (doc.getTextWidth(teamName) > cardWidth - 4 && teamFontSize > 7) {
+            teamFontSize -= 0.5;
+            doc.setFontSize(teamFontSize);
+        }
+        const teamNameSplit = doc.splitTextToSize(teamName, cardWidth - 4);
+        if (teamNameSplit.length === 1) {
+            doc.text(teamNameSplit[0], x + cardWidth / 2, bannerY + 5.5, { align: 'center' });
+        } else {
+            doc.text(teamNameSplit.slice(0, 2), x + cardWidth / 2, bannerY + 3.5, { align: 'center', lineHeightFactor: 1.1 });
+        }
 
         // -- Draw Team Logo (Bottom Left) --
         if (teamLogoImg) {

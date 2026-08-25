@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '../../../shared/components/ui/ToastContext';
-import { X, Save, ScanFace, Globe, ShieldCheck, ImageIcon } from 'lucide-react';
+import { X, Save, ScanFace, Globe, ShieldCheck, ImageIcon, Lock } from 'lucide-react';
 import { leagueApi } from '@/shared/api/league-api';
 
 export interface ExistingPlayerData {
     id: string;
     name?: string;
     jerseyNumber?: number;
+    curp?: string;
+    birthDate?: string;
 }
 
 interface AddPlayerModalProps {
@@ -32,6 +34,7 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
     const [surname, setSurname] = useState('');
     const [jerseyNumber, setJerseyNumber] = useState('');
     const [birthDate, setBirthDate] = useState('');
+    const [curp, setCurp] = useState('');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { showToast } = useToast();
@@ -47,6 +50,12 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                 const parts = existingPlayer.name.trim().split(' ');
                 setName(parts[0] || '');
                 setSurname(parts.slice(1).join(' ') || '');
+            }
+            if (existingPlayer.curp) {
+                setCurp(existingPlayer.curp);
+            }
+            if (existingPlayer.birthDate) {
+                setBirthDate(existingPlayer.birthDate);
             }
         }
     }, [isOpen, existingPlayer]);
@@ -66,6 +75,7 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
         setSurname('');
         setJerseyNumber('');
         setBirthDate('');
+        setCurp('');
         setIsSubmitting(false);
     };
 
@@ -127,9 +137,10 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                 if (!name.trim()) throw new Error("El nombre es obligatorio");
 
                 formData.append('face_crop', faceCrop);
-                formData.append('first_name', name);
-                formData.append('last_name', surname);
+                formData.append('first_name', name.trim());
+                if (surname.trim()) formData.append('last_name', surname.trim());
                 if (birthDate) formData.append('birth_date', birthDate);
+                if (curp.trim()) formData.append('curp', curp.trim().toUpperCase());
                 if (jerseyNumber) formData.append('jersey_number', jerseyNumber);
                 if (teamId) formData.append('team_id', teamId);
 
@@ -206,18 +217,32 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                                     </div>
 
                                     {playerType === 'mexican' && (
-                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex flex-col gap-2">
-                                            <div className="font-bold flex items-center gap-1.5 text-amber-700">
-                                                <ScanFace className="w-5 h-5" />
-                                                Instrucciones importantes
+                                        <>
+                                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex flex-col gap-2">
+                                                <div className="font-bold flex items-center gap-1.5 text-amber-700">
+                                                    <ScanFace className="w-5 h-5" />
+                                                    Instrucciones importantes
+                                                </div>
+                                                <ul className="list-disc list-inside ml-1 opacity-90 text-xs space-y-1.5 mt-1">
+                                                    <li>Sube <strong>solo la parte frontal</strong> (donde está la foto). No es necesario el reverso.</li>
+                                                    <li>Toma la foto en <strong>orientación horizontal</strong> (acostada).</li>
+                                                    <li>Asegúrate de que la foto sea <strong>lo más nítida posible</strong>.</li>
+                                                    <li>Evita reflejos de luz o flash sobre el rostro y el texto.</li>
+                                                </ul>
                                             </div>
-                                            <ul className="list-disc list-inside ml-1 opacity-90 text-xs space-y-1.5 mt-1">
-                                                <li>Sube <strong>solo la parte frontal</strong> (donde está la foto). No es necesario el reverso.</li>
-                                                <li>Toma la foto en <strong>orientación horizontal</strong> (acostada).</li>
-                                                <li>Asegúrate de que la foto sea <strong>lo más nítida posible</strong>.</li>
-                                                <li>Evita reflejos de luz o flash sobre el rostro y el texto.</li>
-                                            </ul>
-                                        </div>
+
+                                            <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 text-xs text-emerald-900 flex items-start gap-2.5 shadow-sm">
+                                                <div className="p-1 bg-emerald-100 text-emerald-700 rounded-lg shrink-0 mt-0.5">
+                                                    <Lock className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="space-y-0.5 leading-relaxed">
+                                                    <p className="font-bold text-emerald-800">Tu privacidad está protegida</p>
+                                                    <p className="text-emerald-700/90 text-xs">
+                                                        La foto de tu INE <strong>no se guardará ni almacenará</strong> en los servidores de la liga. Solo se procesa en tiempo real para extraer tu foto de perfil y los datos necesarios para tu credencial deportiva.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
 
                                     <div
@@ -229,7 +254,7 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                                         <ImageIcon className="w-10 h-10 text-slate-400 mb-3" />
                                         <p className="text-sm font-bold text-slate-700">Toca para seleccionar foto</p>
                                         <p className="text-xs text-slate-500 mt-1">
-                                            {playerType === 'mexican'
+                                             {playerType === 'mexican'
                                                 ? 'El sistema extraerá el rostro automáticamente usando IA'
                                                 : 'Sube una foto clara del rostro'}
                                         </p>
@@ -254,12 +279,12 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                                             alt="INE cargada"
                                             className="max-h-40 rounded-lg object-contain border border-slate-200 shadow-sm mb-3"
                                         />
-                                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 w-full text-center">
+                                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 w-full text-center space-y-1">
                                             <p className="text-xs font-bold text-blue-700 flex items-center justify-center gap-1.5">
                                                 <ShieldCheck className="w-4 h-4" />
                                                 IA lista para extraer datos y rostro
                                             </p>
-                                            <p className="text-xs text-blue-600 mt-1">Nombre, CURP y foto de perfil se obtendrán al guardar.</p>
+                                            <p className="text-xs text-blue-600">Nombre, CURP y foto de perfil se obtendrán al guardar. La credencial INE no se almacenará.</p>
                                         </div>
                                         <button
                                             type="button"
@@ -315,14 +340,27 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-semibold text-slate-500 uppercase">Fecha Nacimiento</label>
-                                        <input
-                                            type="date"
-                                            value={birthDate}
-                                            onChange={e => setBirthDate(e.target.value)}
-                                            className="w-full px-3 py-2 bg-slate-50 text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase">Fecha Nacimiento</label>
+                                            <input
+                                                type="date"
+                                                value={birthDate}
+                                                onChange={e => setBirthDate(e.target.value)}
+                                                className="w-full px-3 py-2 bg-slate-50 text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase">CURP (Opcional)</label>
+                                            <input
+                                                type="text"
+                                                value={curp}
+                                                maxLength={18}
+                                                onChange={e => setCurp(e.target.value.toUpperCase())}
+                                                className="w-full px-3 py-2 bg-slate-50 text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono uppercase text-sm"
+                                                placeholder="18 caracteres"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}

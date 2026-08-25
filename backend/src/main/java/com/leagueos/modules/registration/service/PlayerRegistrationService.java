@@ -93,16 +93,15 @@ public class PlayerRegistrationService {
 
         boolean isForeign = Boolean.TRUE.equals(request.getIsForeign());
 
-        // Step 1: Early CURP validation and requirement check (foreign players do not require or use CURP)
-        if (!isForeign) {
-            if (request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
-                String curpUpper = request.getCurp().trim().toUpperCase();
-                if (!CurpUtils.isValid(curpUpper)) {
-                    throw new BusinessRuleException("El CURP ingresado ('" + curpUpper + "') no tiene un formato válido o su dígito verificador es incorrecto.");
-                }
-            } else if (settings.isRequireCurp()) {
-                throw new BusinessRuleException("El CURP es obligatorio para registrar jugadores en esta liga.");
+        // Step 1: Early CURP validation and requirement check (foreign players do not require CURP, but can optionally provide it)
+        if (request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+            String curpUpper = request.getCurp().trim().toUpperCase();
+            if (!CurpUtils.isValid(curpUpper)) {
+                throw new BusinessRuleException("El CURP ingresado ('" + curpUpper + "') no tiene un formato válido o su dígito verificador es incorrecto.");
             }
+            request.setCurp(curpUpper);
+        } else if (!isForeign && settings.isRequireCurp()) {
+            throw new BusinessRuleException("El CURP es obligatorio para registrar jugadores en esta liga.");
         }
 
         if (teamId != null) {
@@ -173,9 +172,8 @@ public class PlayerRegistrationService {
 
         String firstName = normalizeUpperCase(request.getFirstName());
         String lastName = normalizeUpperCase(request.getLastName());
-        boolean isForeign = Boolean.TRUE.equals(request.getIsForeign());
 
-        if (!isForeign && request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+        if (request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
             request.setCurp(request.getCurp().trim().toUpperCase());
         } else {
             request.setCurp(null);
@@ -259,12 +257,14 @@ public class PlayerRegistrationService {
             }
 
             boolean isForeign = Boolean.TRUE.equals(request.getIsForeign());
-            if (!isForeign && request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
+            if (request.getCurp() != null && !request.getCurp().trim().isEmpty()) {
                 String curpUpper = request.getCurp().trim().toUpperCase();
                 if (!CurpUtils.isValid(curpUpper)) {
                     throw new BusinessRuleException("El CURP ingresado ('" + curpUpper + "') para '" + firstName + " " + lastName + "' no es válido o su dígito verificador es incorrecto.");
                 }
                 request.setCurp(curpUpper);
+            } else if (!isForeign && settings.isRequireCurp()) {
+                throw new BusinessRuleException("El CURP es obligatorio para el jugador '" + firstName + " " + lastName + "'.");
             } else {
                 request.setCurp(null);
             }
@@ -466,18 +466,9 @@ public class PlayerRegistrationService {
             }
         }
         return seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE)
-                .orElseGet(() -> {
-                    UUID effectiveTenant = tenantId != null ? tenantId : UUID.fromString("11111111-1111-1111-1111-111111111111");
-                    Season newSeason = new Season();
-                    newSeason.setName("Temporada Regular 2026");
-                    newSeason.setStatus(SeasonStatus.ACTIVE);
-                    newSeason.setTenantId(effectiveTenant);
-                    newSeason.setStartDate(java.time.LocalDate.now());
-                    newSeason.setEndDate(java.time.LocalDate.now().plusMonths(6));
-                    newSeason.setCurrentMatchday(1);
-                    newSeason.setMaxActivePlayersPerTeam(30);
-                    return seasonRepository.save(newSeason);
-                });
+                .orElseThrow(() -> new com.leagueos.shared.domain.exception.ResourceNotFoundException(
+                        "No se encontró ningún torneo activo para la liga. Debes crear e iniciar un torneo antes de registrar jugadores."
+                ));
     }
 
     private static String normalizeUpperCase(String value) {

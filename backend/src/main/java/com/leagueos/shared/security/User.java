@@ -33,4 +33,20 @@ public class User {
     // Optional: Link to a Person profile
     @Column(name = "person_id")
     private java.util.UUID personId;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "raw_password")
+    private String rawPassword;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private java.time.LocalDateTime createdAt;
 }

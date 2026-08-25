@@ -15,10 +15,15 @@ public class CustomUserDetails extends User {
     private final UUID teamId;
 
     public CustomUserDetails(String username, String password, Collection<? extends GrantedAuthority> authorities,
-                             UUID id, String tenantId, UUID teamId) {
-        super(username, password, authorities);
+                             UUID id, String tenantId, UUID teamId, boolean enabled) {
+        super(username, password, enabled, true, true, true, authorities);
         this.id = id;
         this.tenantId = tenantId;
         this.teamId = teamId;
+    }
+
+    public CustomUserDetails(String username, String password, Collection<? extends GrantedAuthority> authorities,
+                             UUID id, String tenantId, UUID teamId) {
+        this(username, password, authorities, id, tenantId, teamId, true);
     }
 }

@@ -18,8 +18,21 @@ public class MatchPreviewDTO {
     private int matchday;
     private UUID homeTeamId;
     private String homeTeamName;
+    private String homeTeamLogoUrl;
+    private String homeTeamSignedLogoUrl;
     private UUID awayTeamId;
     private String awayTeamName;
+    private String awayTeamLogoUrl;
+    private String awayTeamSignedLogoUrl;
     /** Always null in preview — dates are assigned manually by the admin after generation. */
     private String matchDate;
+
+    public MatchPreviewDTO(int matchday, UUID homeTeamId, String homeTeamName, UUID awayTeamId, String awayTeamName, String matchDate) {
+        this.matchday = matchday;
+        this.homeTeamId = homeTeamId;
+        this.homeTeamName = homeTeamName;
+        this.awayTeamId = awayTeamId;
+        this.awayTeamName = awayTeamName;
+        this.matchDate = matchDate;
+    }
 }

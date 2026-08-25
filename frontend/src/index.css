@@ -89,38 +89,40 @@
     --sidebar-foreground: 210 40% 98%;
   }
 
-  /* Theme: Liga Nuestro Deporte (Dark Sport Premium — Royal Blue & Dark Navy) */
+  /* Theme: Liga Nuestro Deporte / Torneo Víctor Ruiz
+     Paleta extraída del logo: Azul Royal + Rojo Copa + Azul Marino
+     Feedback cliente: "No tan oscuro" → fondo azul royal vivo, no navy-negro */
   .theme-nuestro-deporte {
-    --background: 226 73% 6%;         /* #060B1A dark navy-black */
-    --foreground: 220 30% 98%;        /* #F8FAFF white */
+    --background: 218 62% 18%;        /* #102048 — Azul Royal oscuro (visible como azul) */
+    --foreground: 0 0% 100%;          /* Blanco puro */
 
-    --card: 222 58% 10%;             /* #0A1224 dark navy card */
-    --card-foreground: 220 30% 98%;
+    --card: 220 66% 14%;             /* #0D1A3C — Card un poco más oscuro */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222 58% 10%;
-    --popover-foreground: 220 30% 98%;
+    --popover: 220 66% 14%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 222 100% 50%;          /* #0057FF Royal Blue (Matching official logo) */
+    --primary: 2 81% 50%;             /* #E8231A — Rojo Copa (acento principal) */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 50% 15%;         /* #121F3D */
-    --secondary-foreground: 220 30% 90%;
+    --secondary: 228 70% 12%;         /* #091233 — Azul Marino profundo */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 222 40% 14%;
-    --muted-foreground: 217 25% 65%;
+    --muted: 218 55% 22%;             /* Azul medio para fondos alternos */
+    --muted-foreground: 215 30% 70%;  /* Texto secundario — blanco suave */
 
-    --accent: 217 91% 60%;            /* #3B82F6 Electric Blue highlight */
+    --accent: 2 81% 50%;             /* #E8231A — Rojo también como accent */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 45% 18%;            /* #19284D */
-    --input: 222 45% 18%;
-    --ring: 222 100% 50%;
+    --border: 218 55% 28%;            /* Azul claro translúcido */
+    --input: 218 55% 28%;
+    --ring: 2 81% 50%;               /* Ring rojo */
 
-    --sidebar: 226 73% 4%;            /* #040812 Deep Navy */
-    --sidebar-foreground: 220 30% 98%;
+    --sidebar: 228 72% 10%;           /* #091030 — Navy para sidebar */
+    --sidebar-foreground: 0 0% 100%;
   }
 }
 

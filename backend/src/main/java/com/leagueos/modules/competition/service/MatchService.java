@@ -96,6 +96,7 @@ public class MatchService {
     }
 
     private final com.leagueos.modules.league.persistence.SoccerFieldRepository soccerFieldRepository;
+    private final com.leagueos.modules.referee.persistence.RefereeRepository refereeRepository;
 
     @Transactional
     public Match updateMatchSchedule(UUID matchId, UpdateMatchScheduleRequest request) {
@@ -121,6 +122,15 @@ public class MatchService {
         } else {
             match.setField(null);
             match.setLocation(request.getLocation());
+        }
+
+        if (request.getRefereeId() != null) {
+            com.leagueos.modules.referee.domain.Referee referee = refereeRepository
+                    .findByIdAndTenantId(request.getRefereeId(), match.getTenantId())
+                    .orElse(null);
+            match.setReferee(referee);
+        } else {
+            match.setReferee(null);
         }
 
         return matchRepository.save(match);

@@ -47,7 +47,7 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
 
             if (teamToEdit.representative) {
                 repFullName = `${teamToEdit.representative.firstName || ''} ${teamToEdit.representative.lastName || ''}`.trim();
-                repPhone = teamToEdit.representative.phone || '';
+                repPhone = (teamToEdit.representative.phone || '').replace(/\D/g, '').slice(0, 10);
             }
 
             if (!repFullName && teamToEdit.representativeName) {
@@ -55,7 +55,7 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
             }
 
             if (!repPhone && teamToEdit.representativePhone) {
-                repPhone = teamToEdit.representativePhone.trim();
+                repPhone = teamToEdit.representativePhone.replace(/\D/g, '').slice(0, 10);
             }
 
             setRepresentativeName(repFullName);
@@ -99,20 +99,19 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
         const newErrors: { [key: string]: string } = {};
         if (!name.trim()) newErrors.name = 'El nombre del equipo es obligatorio';
         
-        if (!isSanLucas) {
-            if (!representativeName.trim()) {
-                newErrors.representativeName = 'El nombre del representante es obligatorio';
-            } else if (/\d/.test(representativeName)) {
-                newErrors.representativeName = 'El nombre solo debe contener letras, sin números';
-            } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.'-]+$/.test(representativeName.trim())) {
-                newErrors.representativeName = 'Solo se permiten letras y espacios';
-            }
+        if (!representativeName.trim()) {
+            newErrors.representativeName = 'El nombre del representante es obligatorio';
+        } else if (/\d/.test(representativeName)) {
+            newErrors.representativeName = 'El nombre solo debe contener letras, sin números';
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.'-]+$/.test(representativeName.trim())) {
+            newErrors.representativeName = 'Solo se permiten letras y espacios';
+        }
 
-            if (!representativePhone.trim()) {
-                newErrors.representativePhone = 'El teléfono es obligatorio';
-            } else if (representativePhone.replace(/\D/g, '').length < 10) {
-                newErrors.representativePhone = 'Ingresa un teléfono válido de 10 dígitos';
-            }
+        const cleanPhone = representativePhone.replace(/\D/g, '');
+        if (!cleanPhone) {
+            newErrors.representativePhone = 'El teléfono es obligatorio para enviar sus credenciales';
+        } else if (cleanPhone.length !== 10) {
+            newErrors.representativePhone = 'El teléfono debe tener exactamente 10 dígitos';
         }
 
         setErrors(newErrors);
@@ -131,7 +130,7 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
                 name,
                 logoUrl: photo,
                 logoFile: logoFile || undefined,
-                representative: isSanLucas ? undefined : {
+                representative: {
                     firstName: representativeName.split(' ')[0],
                     lastName: representativeName.split(' ').slice(1).join(' '),
                     phone: representativePhone
@@ -299,41 +298,47 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
                         )}
                     </div>
 
-                    {!isSanLucas && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Representante *</label>
-                                <input
-                                    type="text"
-                                    value={representativeName}
-                                    onChange={(e) => {
-                                        const cleanVal = e.target.value.replace(/[0-9]/g, '');
-                                        setRepresentativeName(cleanVal);
-                                        if (errors.representativeName) setErrors({ ...errors, representativeName: '' });
-                                    }}
-                                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 bg-white font-medium ${errors.representativeName ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
-                                        }`}
-                                    placeholder="Nombre completo"
-                                />
-                                {errors.representativeName && <p className="text-xs text-red-500 mt-1">{errors.representativeName}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Teléfono / WhatsApp *</label>
-                                <input
-                                    type="tel"
-                                    value={representativePhone}
-                                    onChange={(e) => {
-                                        setRepresentativePhone(e.target.value);
-                                        if (errors.representativePhone) setErrors({ ...errors, representativePhone: '' });
-                                    }}
-                                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 bg-white font-medium ${errors.representativePhone ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
-                                        }`}
-                                    placeholder="10 dígitos"
-                                />
-                                {errors.representativePhone && <p className="text-xs text-red-500 mt-1">{errors.representativePhone}</p>}
-                            </div>
+                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-2xl">
+                        <p className="text-xs font-semibold text-blue-900 leading-relaxed">
+                            💡 Al registrar el equipo se generará automáticamente el usuario y contraseña del representante para acceder al sistema.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Representante *</label>
+                            <input
+                                type="text"
+                                value={representativeName}
+                                onChange={(e) => {
+                                    const cleanVal = e.target.value.replace(/[0-9]/g, '');
+                                    setRepresentativeName(cleanVal);
+                                    if (errors.representativeName) setErrors({ ...errors, representativeName: '' });
+                                }}
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 bg-white font-medium ${errors.representativeName ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
+                                    }`}
+                                placeholder="Nombre completo"
+                            />
+                            {errors.representativeName && <p className="text-xs text-red-500 mt-1">{errors.representativeName}</p>}
                         </div>
-                    )}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Teléfono / WhatsApp *</label>
+                            <input
+                                type="tel"
+                                maxLength={10}
+                                value={representativePhone}
+                                onChange={(e) => {
+                                    const cleanVal = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                    setRepresentativePhone(cleanVal);
+                                    if (errors.representativePhone) setErrors({ ...errors, representativePhone: '' });
+                                }}
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 bg-white font-medium font-mono ${errors.representativePhone ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'
+                                    }`}
+                                placeholder="10 dígitos"
+                            />
+                            {errors.representativePhone && <p className="text-xs text-red-500 mt-1">{errors.representativePhone}</p>}
+                        </div>
+                    </div>
 
                     <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-2">
                         <button

@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import java.time.Duration;
+
 @Service
 public class IneExtractionService {
 
@@ -32,9 +35,10 @@ public class IneExtractionService {
     private final ObjectMapper objectMapper;
 
     private static final List<String> MODELS = List.of(
-            "gemini-3-flash-preview",       // Prioridad 1: Máxima precisión en INE y recorte de rostro
-            "gemini-3.6-flash",             // Respaldo 1: Versión estable recomendada por Google
-            "gemini-3.1-flash-lite-preview" // Respaldo 2: Ultrarrápido
+            "gemini-3.6-flash",             // Prioridad 1: Versión más estable, rápida y precisa
+            "gemini-3.7-flash",             // Respaldo 1: Última generación
+            "gemini-3.1-flash-lite",        // Respaldo 2: Ultrarrápido y ligero
+            "gemini-3-flash-preview"        // Respaldo 3: Preview
     );
 
     /**
@@ -80,9 +84,12 @@ public class IneExtractionService {
 
     public IneExtractionService(
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model:gemini-3-flash-preview}") String model,
+            @Value("${gemini.model:gemini-3.6-flash}") String model,
             ObjectMapper objectMapper) {
-        this.restClient = RestClient.create();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(12));
+        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
         this.apiKey = apiKey;
         this.objectMapper = objectMapper;
     }

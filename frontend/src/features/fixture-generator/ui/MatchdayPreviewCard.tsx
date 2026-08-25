@@ -1,5 +1,6 @@
-import { Shield, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import type { MatchPreviewDTO } from '../api/fixture-generator.api';
+import { SecureImage } from '@/features/team-management/ui/SecureImage';
 
 interface MatchdayPreviewCardProps {
     matchday: number;
@@ -34,8 +35,13 @@ export const MatchdayPreviewCard = ({ matchday, matches }: MatchdayPreviewCardPr
                             <span className="text-sm font-semibold text-slate-700 text-right leading-tight">
                                 {match.homeTeamName}
                             </span>
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                                <Shield className="w-4 h-4 text-indigo-400" />
+                            <div className="w-8 h-8 rounded-full p-0.5 bg-white border border-slate-200 shadow-xs flex items-center justify-center shrink-0 overflow-hidden">
+                                <SecureImage
+                                    srcKey={match.homeTeamSignedLogoUrl || match.homeTeamLogoUrl}
+                                    fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(match.homeTeamName)}`}
+                                    alt={match.homeTeamName}
+                                    className="w-full h-full object-contain"
+                                />
                             </div>
                         </div>
 
@@ -52,8 +58,13 @@ export const MatchdayPreviewCard = ({ matchday, matches }: MatchdayPreviewCardPr
 
                         {/* Away team */}
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                                <Shield className="w-4 h-4 text-purple-400" />
+                            <div className="w-8 h-8 rounded-full p-0.5 bg-white border border-slate-200 shadow-xs flex items-center justify-center shrink-0 overflow-hidden">
+                                <SecureImage
+                                    srcKey={match.awayTeamSignedLogoUrl || match.awayTeamLogoUrl}
+                                    fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(match.awayTeamName)}`}
+                                    alt={match.awayTeamName}
+                                    className="w-full h-full object-contain"
+                                />
                             </div>
                             <span className="text-sm font-semibold text-slate-700 leading-tight">
                                 {match.awayTeamName}

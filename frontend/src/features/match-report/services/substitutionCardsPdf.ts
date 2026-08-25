@@ -37,16 +37,44 @@ interface FetchedImage {
     height: number;
 }
 
+const extractR2Key = (urlOrKey: string): string | null => {
+    if (!urlOrKey) return null;
+    const clean = urlOrKey.trim();
+    if (clean.startsWith('dev/tenants/') || clean.startsWith('prod/tenants/') || clean.startsWith('tenants/')) {
+        return clean;
+    }
+    if (clean.includes('r2.cloudflarestorage.com/')) {
+        try {
+            const parsed = new URL(clean);
+            const parts = parsed.pathname.split('/').filter(Boolean);
+            if (parts.length > 1) {
+                return parts.slice(1).join('/');
+            }
+            return parts.join('/');
+        } catch (_) {
+            return null;
+        }
+    }
+    return null;
+};
+
 /**
  * Resolves full or proxy image URL
  */
 const resolveImageUrl = (srcKey?: string): string | undefined => {
-    if (!srcKey) return undefined;
-    if (srcKey.startsWith('http://') || srcKey.startsWith('https://') || srcKey.startsWith('data:')) {
-        return srcKey;
+    if (!srcKey || !srcKey.trim()) return undefined;
+    const clean = srcKey.trim();
+
+    const r2Key = extractR2Key(clean);
+    if (r2Key) {
+        return leagueApi.getProxyUrl(r2Key);
+    }
+
+    if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
+        return clean;
     }
     try {
-        return leagueApi.getProxyUrl(srcKey);
+        return leagueApi.getProxyUrl(clean);
     } catch {
         return undefined;
     }
@@ -229,14 +257,6 @@ const renderTeamSheetOnPage = (
                     const lSize = 5.5;
                     doc.addImage(leagueLogoImg.dataUrl, 'PNG', cardX + 3.5, cardY + 2.2, lSize, lSize, undefined, 'FAST');
                 } catch {}
-            }
-
-            // Matchday (Top Right)
-            if (matchday != null) {
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
-                doc.setTextColor(71, 85, 105); // slate-600
-                doc.text(`J: ${matchday}`, cardX + cardWidth - 4, cardY + 5.8, { align: 'right' });
             }
 
             // Subtle top divider

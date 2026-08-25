@@ -85,6 +85,11 @@ export const LeagueDashboard = () => {
         <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
             <Navbar />
             
+            {/* Premier League Style Sponsors Carousel (Top of Page) */}
+            <div className="w-full relative z-20 overflow-hidden">
+                <SponsorsCarousel />
+            </div>
+
             {/* Dynamic Matchday Carousels */}
             <div className="w-full relative z-10 overflow-hidden">
                 {loadingUpcoming ? (
@@ -119,13 +124,8 @@ export const LeagueDashboard = () => {
                     </div>
                 </div>
 
-                {/* Premier League Style Sponsors Carousel */}
-                <div className="pt-2">
-                    <SponsorsCarousel />
-                </div>
-
                 {/* Leadership Section */}
-                <div className="grid grid-cols-1 gap-8 pt-8 border-t border-slate-200">
+                <div className="grid grid-cols-1 gap-8 pt-4 border-t border-white/20">
                     <div className="col-span-full">
                         <LeadershipSection />
                     </div>

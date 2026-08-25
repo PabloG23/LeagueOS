@@ -28,14 +28,14 @@ export const GlobalFooter = () => {
                         <h4 className="text-white font-semibold uppercase tracking-wider text-sm">Contacto</h4>
                         <div className="space-y-3">
                             <div className="flex items-start gap-3 group">
-                                <MapPin className="w-5 h-5 text-blue-500 shrink-0 mt-0.5 group-hover:text-white transition-colors" />
+                                <MapPin className="w-5 h-5 text-red-500 shrink-0 mt-0.5 group-hover:text-white transition-colors" />
                                 <span
                                     className="text-sm leading-relaxed group-hover:text-white transition-colors"
                                     dangerouslySetInnerHTML={{ __html: settings.footerAddress }}
                                 />
                             </div>
                             <div className="flex items-center gap-3 group">
-                                <Phone className="w-5 h-5 text-blue-500 shrink-0 group-hover:text-white transition-colors" />
+                                <Phone className="w-5 h-5 text-red-500 shrink-0 group-hover:text-white transition-colors" />
                                 <span className="text-sm group-hover:text-white transition-colors">
                                     {settings.footerPhone}
                                 </span>
@@ -48,17 +48,17 @@ export const GlobalFooter = () => {
                         <h4 className="text-white font-semibold uppercase tracking-wider text-sm">Síguenos</h4>
                         <div className="flex gap-4">
                             {settings.facebookUrl && (
-                                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 group">
+                                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-red-700 hover:text-white transition-all duration-300 group">
                                     <Facebook className="w-5 h-5" />
                                 </a>
                             )}
                             {settings.instagramUrl && (
-                                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all duration-300 group">
+                                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all duration-300 group">
                                     <Instagram className="w-5 h-5" />
                                 </a>
                             )}
                             {settings.twitterUrl && (
-                                <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-sky-500 hover:text-white transition-all duration-300 group">
+                                <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all duration-300 group">
                                     <Twitter className="w-5 h-5" />
                                 </a>
                             )}

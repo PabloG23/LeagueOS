@@ -8,6 +8,7 @@ import { PlayoffsBracketView } from '@/features/league-management/ui/PlayoffsBra
 import { CalendarMethodSelectorModal } from '@/features/fixture-generator/ui/CalendarMethodSelectorModal';
 import { RoundRobinPreviewModal } from '@/features/fixture-generator/ui/RoundRobinPreviewModal';
 import { useToast } from '@/shared/components/ui/ToastContext';
+import { SecureImage } from '@/features/team-management/ui/SecureImage';
 import { UserPlus, Trash2, Lock, CheckCircle2, ArrowRight, UploadCloud, FileSpreadsheet, Download, AlertCircle, AlertTriangle, X, Trophy, Shield, CalendarDays, Shuffle, Sparkles, Loader2, ArrowUpRight, CalendarCheck } from 'lucide-react';
 
 export const SeasonDetailsPage = () => {
@@ -537,9 +538,14 @@ export const SeasonDetailsPage = () => {
                                         className="p-4 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between hover:border-blue-300 hover:shadow-md transition-all group"
                                     >
                                         <div className="flex items-center gap-3.5 min-w-0">
-                                            {/* Generic Team Shield Icon */}
-                                            <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-200">
-                                                <Shield className="w-5 h-5" />
+                                            {/* Team Shield / Logo */}
+                                            <div className="w-11 h-11 rounded-2xl p-1 bg-white border border-slate-200/90 flex items-center justify-center shadow-xs shrink-0 group-hover:border-blue-300 group-hover:shadow-md transition-all duration-200 overflow-hidden">
+                                                <SecureImage
+                                                    srcKey={reg.team.signedLogoUrl || reg.team.logoUrl}
+                                                    fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(reg.team.name)}`}
+                                                    alt={reg.team.name}
+                                                    className="w-full h-full object-contain"
+                                                />
                                             </div>
 
                                             <div className="min-w-0">

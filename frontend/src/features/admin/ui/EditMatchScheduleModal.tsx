@@ -15,6 +15,7 @@ import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { useToast } from '@/shared/components/ui/ToastContext';
 import { parseISO, format, addDays, isWeekend, startOfWeek, nextSaturday, nextSunday, isSameDay, isToday } from 'date-fns';
 import { FieldCombobox } from '@/features/fields/ui/FieldCombobox';
+import { RefereeCombobox } from '@/features/referees/ui/RefereeCombobox';
 
 interface EditMatchScheduleModalProps {
     match: Match;
@@ -48,6 +49,7 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
     const [time, setTime] = useState<string>(''); // Format: HH:mm (24h)
     const [location, setLocation] = useState<string>('');
     const [fieldId, setFieldId] = useState<string | undefined>(undefined);
+    const [refereeId, setRefereeId] = useState<string | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Popover states
@@ -65,6 +67,7 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
         if (isOpen && match) {
             setLocation(match.location || match.field?.name || '');
             setFieldId(match.fieldId || match.field?.id || undefined);
+            setRefereeId(match.refereeId || match.referee?.id || undefined);
             if (match.matchDate) {
                 const parsedDate = parseISO(match.matchDate);
                 setDate(format(parsedDate, 'yyyy-MM-dd'));
@@ -216,10 +219,11 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
                 match.id,
                 dateTimeStr,
                 location || undefined,
-                fieldId
+                fieldId,
+                refereeId
             );
             
-            showToast('Horario y cancha actualizados con éxito ✓', 'success');
+            showToast('Horario, cancha y árbitro actualizados con éxito ✓', 'success');
             onMatchUpdated(updatedMatch.data);
             onClose();
         } catch (error) {
@@ -569,6 +573,20 @@ export const EditMatchScheduleModal: React.FC<EditMatchScheduleModalProps> = ({ 
                                     onChange={(selectedField, locName) => {
                                         setFieldId(selectedField ? selectedField.id : undefined);
                                         setLocation(locName);
+                                    }}
+                                />
+                            </div>
+
+                            {/* 4. Referee Combobox */}
+                            <div>
+                                <label className="block text-slate-800 text-xs font-black uppercase tracking-wider mb-2">
+                                    Árbitro Asignado
+                                </label>
+                                <RefereeCombobox
+                                    tenantId={tenantId}
+                                    value={refereeId}
+                                    onChange={(selectedRef) => {
+                                        setRefereeId(selectedRef ? selectedRef.id : undefined);
                                     }}
                                 />
                             </div>

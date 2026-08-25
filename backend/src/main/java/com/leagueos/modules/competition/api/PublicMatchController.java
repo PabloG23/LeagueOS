@@ -11,8 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.leagueos.modules.referee.service.MatchReportPhotoService;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -24,6 +27,7 @@ public class PublicMatchController {
     private final SeasonRepository seasonRepository;
     private final MatchRepository matchRepository;
     private final StorageService storageService;
+    private final MatchReportPhotoService matchReportPhotoService;
 
     @GetMapping("/upcoming")
     public ResponseEntity<List<Match>> getUpcomingMatches(
@@ -99,6 +103,19 @@ public class PublicMatchController {
             signMatchTeamLogos(allSeasonMatches);
 
             return ResponseEntity.ok(allSeasonMatches);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @GetMapping("/{matchId}/report-photo-url")
+    public ResponseEntity<Map<String, String>> getMatchReportPhotoUrl(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID matchId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            String signedUrl = matchReportPhotoService.getMatchReportSignedUrl(matchId, tenantId);
+            return ResponseEntity.ok(Collections.singletonMap("signedUrl", signedUrl));
         } finally {
             TenantContext.clear();
         }

@@ -11,6 +11,9 @@ import { MatchResultsView } from '@/features/admin/ui/MatchResultsView';
 import { PlayerTransferView } from '@/features/admin/ui/PlayerTransferView';
 import { SeasonsView } from '@/features/admin/ui/SeasonsView';
 import { FieldsManagementView } from '@/features/fields/ui/FieldsManagementView';
+import { RefereesView } from '@/features/referees/ui/RefereesView';
+import { UsersView } from '@/features/admin/ui/UsersView';
+import { RefereeMatchDashboard } from '@/features/referees/ui/RefereeMatchDashboard';
 import { SeasonDetailsPage } from '@/pages/dashboard/SeasonDetailsPage';
 import { TenantSettingsProvider } from '@/features/tenant/context/TenantSettingsContext';
 import { ToastProvider } from '@/shared/components/ui/ToastContext';
@@ -29,18 +32,19 @@ function App() {
             <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
-                    {/* Root path: If on custom domain, render LeagueDashboard directly; else redirect */}
+                    {/* Dynamic League Public Dashboard */}
                     <Route path="/" element={<RootRoute />} />
+                    <Route path="/:leagueSlug" element={<LeagueDashboard />} />
+                    <Route path="/:leagueSlug/team/:teamId" element={<RosterDashboard />} />
+                    
+                    {/* Standalone Player Registration Route */}
+                    <Route path="/:leagueSlug/register" element={<LoginPage />} />
 
-                    {/* Public Routes */}
+                    {/* Authentication Route */}
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/:leagueSlug/login" element={<LoginPage />} />
 
-                    {/* Dynamic League Routes */}
-                    <Route path="/:leagueSlug" element={<LeagueDashboard />} />
-                    <Route path="/:leagueSlug/team/:teamId" element={<RosterDashboard />} />
-
-                    {/* Admin Routes (Still Authenticated) */}
+                    {/* Admin Routes with Dashboard Layout */}
                     <Route path="/:leagueSlug/admin/teams" element={
                         <AdminDashboardLayout>
                             <TeamsView />
@@ -62,6 +66,12 @@ function App() {
                             <FieldsManagementView />
                         </AdminDashboardLayout>
                     } />
+                    <Route path="/:leagueSlug/admin/users" element={
+                        <AdminDashboardLayout>
+                            <UsersView />
+                        </AdminDashboardLayout>
+                    } />
+                    <Route path="/:leagueSlug/admin/referees" element={<Navigate to="../users" replace />} />
                     <Route path="/:leagueSlug/admin/transfers" element={
                         <AdminDashboardLayout>
                             <PlayerTransferView />
@@ -83,11 +93,17 @@ function App() {
                     <Route path="/admin/players" element={<Navigate to="/ligaNuestroDeporte/admin/players" replace />} />
                     <Route path="/admin/matches" element={<Navigate to="/ligaNuestroDeporte/admin/matches" replace />} />
                     <Route path="/admin/fields" element={<Navigate to="/ligaNuestroDeporte/admin/fields" replace />} />
+                    <Route path="/admin/users" element={<Navigate to="/ligaNuestroDeporte/admin/users" replace />} />
+                    <Route path="/admin/referees" element={<Navigate to="/ligaNuestroDeporte/admin/users" replace />} />
                     <Route path="/admin/transfers" element={<Navigate to="/ligaNuestroDeporte/admin/transfers" replace />} />
 
                     {/* Team Rep Dashboard */}
                     <Route path="/team-dashboard" element={<Navigate to="/ligaNuestroDeporte/team-dashboard" replace />} />
                     <Route path="/:leagueSlug/team-dashboard" element={<RosterDashboard />} />
+
+                    {/* Referee Dashboard Legacy / Fallback */}
+                    <Route path="/referee/dashboard" element={<Navigate to="/ligaNuestroDeporte/referee/dashboard" replace />} />
+                    <Route path="/:leagueSlug/referee/dashboard" element={<RefereeMatchDashboard />} />
 
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>

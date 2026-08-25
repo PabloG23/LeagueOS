@@ -102,7 +102,8 @@ export const TeamsView = () => {
     const handleBulkSaveTeams = async (teamsToSave: { name: string; logoUrl: string; representative?: { firstName: string; lastName: string; phone?: string } }[]) => {
         if (!settings?.tenantId) return;
         let createdCount = 0;
-        const failedTeams: string[] = [];
+        const failedTeams: { name: string; reason: string }[] = [];
+        let lastErrorMsg = '';
 
         for (const team of teamsToSave) {
             try {
@@ -113,7 +114,18 @@ export const TeamsView = () => {
                 createdCount++;
             } catch (err: any) {
                 console.error(`Error saving team ${team.name}:`, err);
-                failedTeams.push(team.name);
+                const status = err.response?.status;
+                let reason = 'Error desconocido';
+                if (status === 401 || status === 403) {
+                    reason = 'Sesión expirada o sin permisos en esta liga (inicia sesión nuevamente).';
+                } else if (err.response?.data) {
+                    const data = err.response.data;
+                    reason = typeof data === 'string' ? data : (data.message || data.error || JSON.stringify(data));
+                } else if (err.message) {
+                    reason = err.message;
+                }
+                lastErrorMsg = reason;
+                failedTeams.push({ name: team.name, reason });
             }
         }
 
@@ -122,9 +134,9 @@ export const TeamsView = () => {
         if (failedTeams.length === 0) {
             showToast(`${createdCount} equipos registrados exitosamente.`, 'success');
         } else if (createdCount > 0) {
-            showToast(`${createdCount} equipos registrados. No se pudieron registrar: ${failedTeams.join(', ')}`, 'info');
+            showToast(`${createdCount} equipos registrados. No se pudieron registrar: ${failedTeams.map(f => f.name).join(', ')}`, 'info');
         } else {
-            throw new Error(`No se pudo registrar ningún equipo. Revisa que los nombres no existan previamente.`);
+            throw new Error(`No se pudo registrar ningún equipo. Causa: ${lastErrorMsg}`);
         }
     };
 

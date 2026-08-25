@@ -39,6 +39,7 @@ public class LeagueService {
     private final com.leagueos.modules.league.persistence.SoccerFieldRepository soccerFieldRepository;
     private final com.leagueos.modules.media.service.StorageService storageService;
     private final com.leagueos.modules.registration.persistence.SeasonRosterRepository seasonRosterRepository;
+    private final com.leagueos.modules.user.service.UserService userService;
 
     @Transactional
     public Team uploadTeamLogo(UUID teamId, byte[] imageBytes, String contentType, UUID tenantId) {
@@ -130,6 +131,10 @@ public class LeagueService {
         }
 
         Team saved = teamRepository.save(team);
+        if (saved.getRepresentative() != null) {
+            userService.createOrUpdateTeamRepUser(saved, saved.getRepresentative(), tenantId);
+        }
+
         if (saved.getLogoUrl() != null && !saved.getLogoUrl().startsWith("http")) {
             saved.setSignedLogoUrl(storageService.getSignedUrl(saved.getLogoUrl(), 120));
         } else {
@@ -170,6 +175,10 @@ public class LeagueService {
         }
 
         Team saved = teamRepository.save(team);
+        if (saved.getRepresentative() != null) {
+            userService.createOrUpdateTeamRepUser(saved, saved.getRepresentative(), team.getTenantId());
+        }
+
         if (saved.getLogoUrl() != null && !saved.getLogoUrl().startsWith("http")) {
             saved.setSignedLogoUrl(storageService.getSignedUrl(saved.getLogoUrl(), 120));
         } else {

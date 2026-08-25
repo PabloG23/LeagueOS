@@ -7,6 +7,7 @@ import com.leagueos.modules.league.dto.TeamRegistrationRequest;
 import com.leagueos.modules.league.persistence.SeasonRepository;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.modules.league.persistence.TeamRepository;
+import com.leagueos.modules.media.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class TeamRegistrationService {
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
     private final com.leagueos.modules.league.persistence.PersonRepository personRepository;
+    private final StorageService storageService;
 
     @Transactional
     public TeamRegistration registerTeam(TeamRegistrationRequest request, UUID tenantId) {
@@ -82,7 +84,22 @@ public class TeamRegistrationService {
 
     @Transactional(readOnly = true)
     public java.util.List<TeamRegistration> getEnrolledTeams(UUID seasonId) {
-        return teamRegistrationRepository.findBySeasonId(seasonId);
+        java.util.List<TeamRegistration> list = teamRegistrationRepository.findBySeasonId(seasonId);
+        list.forEach(reg -> {
+            if (reg.getTeam() != null && reg.getTeam().getLogoUrl() != null && !reg.getTeam().getLogoUrl().isBlank()) {
+                String logo = reg.getTeam().getLogoUrl();
+                if (!logo.startsWith("http")) {
+                    try {
+                        reg.getTeam().setSignedLogoUrl(storageService.getSignedUrl(logo, 120));
+                    } catch (Exception ignored) {
+                        reg.getTeam().setSignedLogoUrl(logo);
+                    }
+                } else {
+                    reg.getTeam().setSignedLogoUrl(logo);
+                }
+            }
+        });
+        return list;
     }
 
     @Transactional

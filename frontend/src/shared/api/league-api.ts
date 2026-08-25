@@ -112,6 +112,67 @@ export interface SoccerField {
     updatedAt?: string;
 }
 
+export interface Referee {
+    id: string;
+    name: string;
+    phone?: string;
+    photoUrl?: string;
+    signedPhotoUrl?: string;
+    userId?: string;
+    username?: string;
+    rawPassword?: string;
+}
+
+export interface RefereeCreated extends Referee {
+    tempPassword?: string;
+}
+
+export interface LeagueUser {
+    id: string;
+    username: string;
+    name?: string;
+    phone?: string;
+    role: 'ROLE_LEAGUE_ADMIN' | 'ROLE_REFEREE' | 'ROLE_TEAM_REP';
+    tenantId: string;
+    teamId?: string;
+    teamName?: string;
+    teamLogoUrl?: string;
+    signedTeamLogoUrl?: string;
+    refereeId?: string;
+    photoUrl?: string;
+    signedPhotoUrl?: string;
+    rawPassword?: string;
+    isActive: boolean;
+    createdAt?: string;
+}
+
+export interface CreateAdminRequest {
+    name: string;
+    phone?: string;
+    username?: string;
+    password?: string;
+}
+
+export interface RefereeMatch {
+    id: string;
+    seasonId?: string;
+    seasonName?: string;
+    matchday?: number;
+    matchDate?: string;
+    location?: string;
+    fieldName?: string;
+    homeTeamName: string;
+    homeTeamLogoUrl?: string;
+    awayTeamName: string;
+    awayTeamLogoUrl?: string;
+    homeScore?: number;
+    awayScore?: number;
+    status: string;
+    hasReportPhoto: boolean;
+    reportPhotoUrl?: string;
+    reportPhotoSignedUrl?: string;
+}
+
 export interface Match {
     id: string;
     seasonId: string;
@@ -125,6 +186,10 @@ export interface Match {
     location?: string;
     fieldId?: string;
     field?: SoccerField;
+    refereeId?: string;
+    referee?: Referee;
+    reportPhotoUrl?: string;
+    hasReportPhoto?: boolean;
     homeScore?: number;
     awayScore?: number;
     status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
@@ -138,8 +203,12 @@ export interface MatchPreviewDTO {
     matchday: number;
     homeTeamId: string;
     homeTeamName: string;
+    homeTeamLogoUrl?: string;
+    homeTeamSignedLogoUrl?: string;
     awayTeamId: string;
     awayTeamName: string;
+    awayTeamLogoUrl?: string;
+    awayTeamSignedLogoUrl?: string;
     matchDate: string | null;
 }
 
@@ -203,6 +272,46 @@ export const leagueApi = {
     deleteField: (tenantId: string, fieldId: string) =>
         api.delete(`/leagues/fields/${fieldId}`, { headers: { 'X-Tenant-ID': tenantId } }),
 
+    // Referees / Árbitros
+    getReferees: (tenantId: string) =>
+        api.get<Referee[]>('/referees', { headers: { 'X-Tenant-ID': tenantId } }),
+    getRefereeById: (tenantId: string, id: string) =>
+        api.get<Referee>(`/referees/${id}`, { headers: { 'X-Tenant-ID': tenantId } }),
+    createReferee: (tenantId: string, data: { name: string; phone?: string }) =>
+        api.post<RefereeCreated>('/referees', data, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateReferee: (tenantId: string, id: string, data: { name: string; phone?: string }) =>
+        api.put<Referee>(`/referees/${id}`, data, { headers: { 'X-Tenant-ID': tenantId } }),
+    deleteReferee: (tenantId: string, id: string) =>
+        api.delete(`/referees/${id}`, { headers: { 'X-Tenant-ID': tenantId } }),
+    uploadRefereePhoto: (tenantId: string, id: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<Referee>(`/referees/${id}/photo`, formData, {
+            headers: {
+                'X-Tenant-ID': tenantId,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+    resetRefereePassword: (tenantId: string, id: string) =>
+        api.post<{ tempPassword: string }>(`/referees/${id}/reset-password`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
+    getMatchReportDownloadUrl: (tenantId: string, matchId: string) =>
+        api.get<{ signedUrl: string }>(`/referees/match-report/${matchId}/download-url`, { headers: { 'X-Tenant-ID': tenantId } }),
+
+    // Referee Portal
+    getMyMatches: (tenantId: string) =>
+        api.get<RefereeMatch[]>('/referee/my-matches', { headers: { 'X-Tenant-ID': tenantId } }),
+    uploadMatchReportPhoto: (tenantId: string, matchId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<RefereeMatch>(`/referee/matches/${matchId}/report-photo`, formData, {
+            headers: {
+                'X-Tenant-ID': tenantId,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+
     // Registration
     registerPlayer: (tenantId: string, player: any) =>
         api.post<Player>('/registration/players', player, { headers: { 'X-Tenant-ID': tenantId } }),
@@ -224,8 +333,8 @@ export const leagueApi = {
     // Competition
     scheduleMatch: (tenantId: string, match: Partial<Match>) =>
         api.post<Match>('/competition/matches', match, { headers: { 'X-Tenant-ID': tenantId } }),
-    updateMatchSchedule: (tenantId: string, matchId: string, matchDate: string | null, location?: string, fieldId?: string) =>
-        api.put<Match>(`/matches/${matchId}/schedule`, { matchDate, location, fieldId }, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateMatchSchedule: (tenantId: string, matchId: string, matchDate: string | null, location?: string, fieldId?: string, refereeId?: string) =>
+        api.put<Match>(`/matches/${matchId}/schedule`, { matchDate, location, fieldId, refereeId }, { headers: { 'X-Tenant-ID': tenantId } }),
     getSeasonMatches: (tenantId: string, seasonId: string) =>
         api.get<Match[]>(`/competition/seasons/${seasonId}/matches`, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatches: (tenantId: string, matchday: number) => api.get<Match[]>(`/matches/${matchday}`, { headers: { 'X-Tenant-ID': tenantId } }),
@@ -250,6 +359,8 @@ export const leagueApi = {
     getUpcomingMatches: (tenantId: string) =>
         api.get<Match[]>('/public/matches/upcoming', { headers: { 'X-Tenant-ID': tenantId } }),
     getAllMatches: (tenantId: string) => api.get<Match[]>('/public/matches/season', { headers: { 'X-Tenant-ID': tenantId } }),
+    getPublicMatchReportPhotoUrl: (tenantId: string, matchId: string) =>
+        api.get<{ signedUrl: string }>(`/public/matches/${matchId}/report-photo-url`, { headers: { 'X-Tenant-ID': tenantId } }),
 
     // Statistics
     getTopScorers: (tenantId: string) =>
@@ -278,6 +389,18 @@ export const leagueApi = {
         api.get<AdminPlayerDirectoryDTO[]>('/registration/players/directory', { headers: { 'X-Tenant-ID': tenantId } }),
     updateMinMatchesForPlayoffs: (tenantId: string, minMatches: number) =>
         api.put(`/tenants/settings/min-matches?minMatches=${minMatches}`, null, { headers: { 'X-Tenant-ID': tenantId } }),
+
+    // User Management (Unified)
+    getUsers: (tenantId: string) =>
+        api.get<LeagueUser[]>('/users', { headers: { 'X-Tenant-ID': tenantId } }),
+    createAdminUser: (tenantId: string, data: CreateAdminRequest) =>
+        api.post<LeagueUser>('/users/admins', data, { headers: { 'X-Tenant-ID': tenantId } }),
+    toggleUserStatus: (tenantId: string, userId: string) =>
+        api.patch<{ userId: string; isActive: boolean }>(`/users/${userId}/toggle-status`, null, { headers: { 'X-Tenant-ID': tenantId } }),
+    resetUserPassword: (tenantId: string, userId: string) =>
+        api.post<{ tempPassword: string }>(`/users/${userId}/reset-password`, null, { headers: { 'X-Tenant-ID': tenantId } }),
+    deleteUser: (tenantId: string, userId: string) =>
+        api.delete(`/users/${userId}`, { headers: { 'X-Tenant-ID': tenantId } }),
 };
 
 export default api;

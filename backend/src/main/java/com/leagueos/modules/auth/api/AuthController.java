@@ -21,6 +21,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final com.leagueos.modules.referee.persistence.RefereeRepository refereeRepository;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
@@ -30,12 +31,23 @@ public class AuthController {
             return ResponseEntity.status(401).body("Credenciales Inválidas");
         }
 
+        if (!user.isActive()) {
+            return ResponseEntity.status(403).body("Tu cuenta de usuario ha sido desactivada por el administrador.");
+        }
+
         String token = tokenProvider.generateToken(
                 user.getUsername(),
                 user.getRole().name(),
                 user.getTenantId()
         );
 
-        return ResponseEntity.ok(new AuthResponse(token, user.getRole().name(), user.getTeamId(), user.getTenantId()));
+        java.util.UUID refereeId = null;
+        if (user.getRole() == com.leagueos.shared.security.Role.ROLE_REFEREE) {
+            refereeId = refereeRepository.findByUserId(user.getId())
+                    .map(com.leagueos.modules.referee.domain.Referee::getId)
+                    .orElse(null);
+        }
+
+        return ResponseEntity.ok(new AuthResponse(token, user.getRole().name(), user.getTeamId(), refereeId, user.getTenantId()));
     }
 }

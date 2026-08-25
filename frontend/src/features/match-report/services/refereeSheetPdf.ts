@@ -11,6 +11,7 @@ export interface GenerateRefereeSheetParams {
     seasonName?: string;
     leagueName?: string;
     leagueLogoUrl?: string;
+    refereeName?: string;
 }
 
 /**
@@ -43,6 +44,7 @@ export const generateRefereeMatchSheetPDF = async ({
     seasonName,
     leagueName = 'Liga Deportiva',
     leagueLogoUrl,
+    refereeName,
 }: GenerateRefereeSheetParams) => {
     // 1. Initialize jsPDF in Letter Landscape
     const doc = new jsPDF({
@@ -157,7 +159,12 @@ export const generateRefereeMatchSheetPDF = async ({
     doc.setFont('helvetica', 'bold');
     doc.text('ÁRBITRO:', metaCardX + 78, metaCardY + 10.5);
     doc.setFont('helvetica', 'normal');
-    doc.text('_______________________', metaCardX + 92, metaCardY + 10.5);
+    const effectiveRefereeName = refereeName || match.referee?.name;
+    if (effectiveRefereeName) {
+        doc.text(effectiveRefereeName.toUpperCase(), metaCardX + 92, metaCardY + 10.5);
+    } else {
+        doc.text('_______________________', metaCardX + 92, metaCardY + 10.5);
+    }
 
     // --- TEAMS ROSTER TABLES (SIDE BY SIDE) ---
     const tableGap = 15.4;

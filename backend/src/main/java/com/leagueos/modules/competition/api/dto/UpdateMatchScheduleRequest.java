@@ -9,4 +9,5 @@ public class UpdateMatchScheduleRequest {
     private LocalDateTime matchDate;
     private String location;
     private UUID fieldId;
+    private UUID refereeId;
 }

@@ -171,6 +171,7 @@ public class PlayerVerificationController {
             @RequestParam(value = "birth_date", required = false) String birthDateStr,
             @RequestParam(value = "team_id", required = false) UUID teamId,
             @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber,
+            @RequestParam(value = "curp", required = false) String curp,
             @RequestParam("face_crop") MultipartFile faceCrop) throws Exception {
 
         UUID tenantId = TenantContext.getCurrentTenant();
@@ -181,6 +182,9 @@ public class PlayerVerificationController {
         request.setLastName(lastName);
         if (birthDateStr != null && !birthDateStr.isEmpty()) {
             request.setBirthDate(LocalDate.parse(birthDateStr));
+        }
+        if (curp != null && !curp.trim().isEmpty()) {
+            request.setCurp(curp.trim().toUpperCase());
         }
         request.setTeamId(teamId);
         request.setJerseyNumber(jerseyNumber);
@@ -216,6 +220,7 @@ public class PlayerVerificationController {
             @RequestParam(value = "last_name", required = false) String lastName,
             @RequestParam(value = "birth_date", required = false) String birthDateStr,
             @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber,
+            @RequestParam(value = "curp", required = false) String curp,
             @RequestParam("face_crop") MultipartFile faceCrop) throws Exception {
 
         UUID tenantId = TenantContext.getCurrentTenant();
@@ -226,9 +231,11 @@ public class PlayerVerificationController {
         if (birthDateStr != null && !birthDateStr.isEmpty()) {
             request.setBirthDate(LocalDate.parse(birthDateStr));
         }
+        if (curp != null && !curp.trim().isEmpty()) {
+            request.setCurp(curp.trim().toUpperCase());
+        }
         request.setJerseyNumber(jerseyNumber);
         request.setIsForeign(true);
-        request.setCurp(null);
 
         // Pre-validate before uploading to R2
         playerRegistrationService.validateVerificationPreconditions(id, request, tenantId);

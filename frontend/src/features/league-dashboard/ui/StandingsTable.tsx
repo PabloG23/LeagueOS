@@ -90,7 +90,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                         <span className={cn(
                             "w-7 h-7 flex items-center justify-center rounded-lg font-black text-sm",
                             info.getValue<number>() === 1
-                                ? isNuestroDeporte ? "bg-blue-600 text-white shadow-md shadow-blue-500/30" : "bg-amber-100 text-amber-900 border border-amber-300"
+                                ? isNuestroDeporte ? "bg-red-600 text-white shadow-md shadow-red-500/30" : "bg-amber-100 text-amber-900 border border-amber-300"
                                 : info.getValue<number>() <= 8
                                     ? isNuestroDeporte ? "bg-blue-950/60 text-blue-300 border border-blue-800/50" : "bg-slate-100 text-slate-700"
                                     : isNuestroDeporte ? "text-slate-500" : "text-slate-400"
@@ -168,7 +168,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 header: ({ column }) => {
                     return (
                         <div
-                            className={cn("flex items-center justify-center font-black cursor-pointer select-none", isNuestroDeporte ? "text-blue-400" : "text-slate-900")}
+                            className={cn("flex items-center justify-center font-black cursor-pointer select-none", isNuestroDeporte ? "text-red-400" : "text-slate-900")}
                             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                         >
                             PTS
@@ -176,7 +176,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                         </div>
                     )
                 },
-                cell: (info) => <div className={cn("text-center font-black text-xl whitespace-nowrap", isNuestroDeporte ? "text-blue-400" : "text-slate-900")}>{info.getValue<number>()}</div>,
+                cell: (info) => <div className={cn("text-center font-black text-xl whitespace-nowrap", isNuestroDeporte ? "text-red-400" : "text-slate-900")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'form',
@@ -198,27 +198,27 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
         <div className={cn(
             "rounded-2xl border overflow-hidden flex flex-col transition-colors duration-300",
             isNuestroDeporte
-                ? "border-blue-900/30 bg-[#0A1224] text-white shadow-2xl shadow-blue-950/50"
+                ? "border-blue-900/30 bg-[#0D1A3C] text-white shadow-2xl shadow-blue-950/50"
                 : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-200/40"
         )}>
             {/* Top Toolbar: Title & Legends */}
             <div className={cn(
                 "p-5 border-b flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4",
-                isNuestroDeporte ? "bg-[#060B1A]/80 border-blue-900/30" : "bg-slate-50/50 border-slate-100"
+                isNuestroDeporte ? "bg-[#091030]/80 border-blue-900/30" : "bg-slate-50/50 border-slate-100"
             )}>
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full xl:w-auto">
                     <h3 className={cn(
                         "font-bold text-lg flex items-center gap-2 whitespace-nowrap",
                         isNuestroDeporte ? "text-white font-['Bebas_Neue'] tracking-wider text-xl" : "text-slate-800"
                     )}>
-                        <Trophy className={cn("w-5 h-5 drop-shadow-sm", isNuestroDeporte ? "text-blue-400" : "text-amber-500")} fill="currentColor" />
+                        <Trophy className={cn("w-5 h-5 drop-shadow-sm", isNuestroDeporte ? "text-red-400" : "text-amber-500")} fill="currentColor" />
                         Tabla General
                     </h3>
                 </div>
 
                 <div className={cn(
                     "flex items-center gap-3 text-xs font-medium px-3 py-1.5 rounded-lg border shadow-sm",
-                    isNuestroDeporte ? "bg-[#0A1224] border-blue-900/40 text-slate-400" : "bg-white border-slate-100 text-slate-500"
+                    isNuestroDeporte ? "bg-[#0D1A3C] border-blue-900/40 text-slate-400" : "bg-white border-slate-100 text-slate-500"
                 )}>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-emerald-500" /> Ganado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-slate-400" /> Empatado</span>
@@ -230,7 +230,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
             {isMultiDivision && divisions.length > 1 && (
                 <div className={cn(
                     "flex border-b px-4 scrollbar-hide overflow-x-auto w-full justify-center",
-                    isNuestroDeporte ? "bg-[#060B1A] border-blue-900/30" : "bg-white border-slate-200"
+                    isNuestroDeporte ? "bg-[#091030] border-blue-900/30" : "bg-white border-slate-200"
                 )}>
                     <div className="flex space-x-8 min-w-max">
                         {divisions.map(division => {
@@ -242,7 +242,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                     className={cn(
                                         "py-4 px-2 text-sm font-bold relative transition-colors duration-200 ease-out whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm",
                                         isActive
-                                            ? isNuestroDeporte ? "text-blue-400" : "text-slate-900"
+                                            ? isNuestroDeporte ? "text-red-400" : "text-slate-900"
                                             : isNuestroDeporte ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-700"
                                     )}
                                 >
@@ -250,7 +250,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                     {isActive && (
                                         <motion.div
                                             layoutId="headerTabUnderline"
-                                            className={cn("absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full", isNuestroDeporte ? "bg-blue-500" : primaryColorClass)}
+                                            className={cn("absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full", isNuestroDeporte ? "bg-red-500" : primaryColorClass)}
                                         />
                                     )}
                                 </button>
@@ -265,7 +265,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 <table className="w-full caption-bottom text-sm">
                     <thead className={cn(
                         "[&_tr]:border-b",
-                        isNuestroDeporte ? "bg-[#060B1A]/60" : "bg-slate-50/50"
+                        isNuestroDeporte ? "bg-[#091030]/60" : "bg-slate-50/50"
                     )}>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <tr key={headerGroup.id} className={cn("border-b", isNuestroDeporte ? "border-blue-900/20" : "border-slate-200")}>
@@ -285,7 +285,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                             </tr>
                         ))}
                     </thead>
-                    <tbody className={cn("[&_tr:last-child]:border-0 relative", isNuestroDeporte ? "bg-[#0A1224]" : "bg-white")}>
+                    <tbody className={cn("[&_tr:last-child]:border-0 relative", isNuestroDeporte ? "bg-[#0D1A3C]" : "bg-white")}>
                         <AnimatePresence mode="wait">
                             <Fragment key={activeTab}>
                                 {table.getRowModel().rows?.length ? (
