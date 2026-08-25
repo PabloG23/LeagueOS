@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, UserPlus, Shield, KeyRound, Copy, Check, MessageCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { leagueApi, LeagueUser, CreateAdminRequest } from '@/shared/api/league-api';
@@ -24,6 +24,30 @@ export const AdminUserModal = ({ isOpen, onClose, onSuccess }: AdminUserModalPro
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [createdAdmin, setCreatedAdmin] = useState<LeagueUser | null>(null);
     const [copiedField, setCopiedField] = useState<'username' | 'password' | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setName('');
+            setPhone('');
+            setUsername('');
+            setPassword('');
+            setErrors({});
+            setCreatedAdmin(null);
+            setCopiedField(null);
+            setIsSubmitting(false);
+        }
+    }, [isOpen]);
+
+    const handleClose = () => {
+        setCreatedAdmin(null);
+        setName('');
+        setPhone('');
+        setUsername('');
+        setPassword('');
+        setErrors({});
+        setCopiedField(null);
+        onClose();
+    };
 
     if (!isOpen) return null;
 
@@ -112,7 +136,7 @@ ${loginUrl}
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={handleClose} />
 
             <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
                 {/* Header */}
@@ -131,7 +155,7 @@ ${loginUrl}
                         </div>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 transition-colors"
                     >
                         <X className="w-4 h-4" />
@@ -208,7 +232,7 @@ ${loginUrl}
                         <div className="flex justify-end pt-2">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="w-full px-5 py-2.5 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800 text-sm shadow-sm transition-all"
                             >
                                 Listo y Cerrar
@@ -294,7 +318,7 @@ ${loginUrl}
                         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 disabled={isSubmitting}
                                 className="px-4 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 text-xs transition-colors"
                             >
