@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Save, ChevronDown, ChevronUp, AlertCircle, CheckCircle2, Search, FileText, Calendar, Shield, Printer, Loader2 } from 'lucide-react';
+import { Save, ChevronDown, ChevronUp, AlertCircle, CheckCircle2, Search, FileText, Calendar, Shield, Printer, Loader2, ArrowLeftRight } from 'lucide-react';
 import { MatchReportWizard } from './MatchReportWizard';
 import { EditMatchScheduleModal } from './EditMatchScheduleModal';
 import { Match, Player, Season, leagueApi, Team } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { useToast } from '@/shared/components/ui/ToastContext';
-import { generateRefereeMatchSheetPDF } from '@/features/match-report/services/refereeSheetPdf';
+import {
+    generateRefereeMatchSheetPDF,
+    generateMatchdaySubstitutionCardsPDF,
+    SubstitutionCardsModal,
+} from '@/features/match-report';
+import { TeamLogo } from '@/shared/components/TeamLogo';
 
 // UI Helper to match the design logic
 interface UIMatch extends Match {
@@ -18,12 +23,14 @@ const MatchRow = ({
     onOpenWizard,
     onOpenEditSchedule,
     onDownloadSheet,
+    onOpenCardsModal,
     isDownloadingSheet,
 }: {
     match: UIMatch;
     onOpenWizard: (m: UIMatch) => void;
     onOpenEditSchedule: (m: UIMatch) => void;
     onDownloadSheet: (m: UIMatch) => void;
+    onOpenCardsModal: (m: UIMatch) => void;
     isDownloadingSheet?: boolean;
 }) => {
     const isFinished = match.status === 'FINISHED';
@@ -36,8 +43,12 @@ const MatchRow = ({
                     {/* Home Team */}
                     <div className="flex-1 flex items-center justify-end gap-3.5 min-w-0">
                         <span className="font-bold text-slate-800 text-sm sm:text-base truncate text-right">{match.home}</span>
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs shrink-0">
-                            <Shield className="w-5 h-5" />
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden text-indigo-600 shadow-xs shrink-0">
+                            <TeamLogo
+                                teamName={match.home}
+                                logoUrl={match.homeTeam?.signedLogoUrl || match.homeTeam?.logoUrl}
+                                fallbackClass="text-xs font-bold text-indigo-600"
+                            />
                         </div>
                     </div>
 
@@ -79,8 +90,12 @@ const MatchRow = ({
 
                     {/* Away Team */}
                     <div className="flex-1 flex items-center justify-start gap-3.5 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shadow-xs shrink-0">
-                            <Shield className="w-5 h-5" />
+                        <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center overflow-hidden text-purple-600 shadow-xs shrink-0">
+                            <TeamLogo
+                                teamName={match.away}
+                                logoUrl={match.awayTeam?.signedLogoUrl || match.awayTeam?.logoUrl}
+                                fallbackClass="text-xs font-bold text-purple-600"
+                            />
                         </div>
                         <span className="font-bold text-slate-800 text-sm sm:text-base truncate text-left">{match.away}</span>
                     </div>
@@ -112,6 +127,15 @@ const MatchRow = ({
                     </button>
 
                     <button
+                        onClick={() => onOpenCardsModal(match)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm"
+                        title="Descargar Tarjetas de Cambio en PDF para este partido"
+                    >
+                        <ArrowLeftRight className="w-4 h-4 text-blue-600" />
+                        <span>Tarjetas PDF</span>
+                    </button>
+
+                    <button
                         onClick={() => onOpenWizard(match)}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                             isFinished
@@ -140,8 +164,10 @@ export const MatchResultsView = () => {
 
     const [selectedMatch, setSelectedMatch] = useState<UIMatch | null>(null);
     const [selectedEditMatch, setSelectedEditMatch] = useState<UIMatch | null>(null);
+    const [selectedCardsMatch, setSelectedCardsMatch] = useState<UIMatch | null>(null);
     const [downloadingMatchId, setDownloadingMatchId] = useState<string | null>(null);
     const [isPublishingMatchday, setIsPublishingMatchday] = useState(false);
+    const [isDownloadingMatchdayCards, setIsDownloadingMatchdayCards] = useState(false);
     const [homeRoster, setHomeRoster] = useState<Player[]>([]);
     const [awayRoster, setAwayRoster] = useState<Player[]>([]);
     const [loadingRosters, setLoadingRosters] = useState(false);
@@ -263,6 +289,27 @@ export const MatchResultsView = () => {
         }
     };
 
+    const handleDownloadMatchdayCards = async () => {
+        if (!selectedMatchday || displayedMatches.length === 0 || !settings?.tenantId) return;
+        setIsDownloadingMatchdayCards(true);
+        try {
+            const currentSeason = seasons.find(s => s.id === selectedSeasonId);
+            await generateMatchdaySubstitutionCardsPDF({
+                matches: displayedMatches,
+                matchday: Number(selectedMatchday),
+                seasonName: currentSeason?.name,
+                leagueName: settings.name,
+                leagueLogoUrl: settings.logoUrl,
+            });
+            showToast(`Tarjetas de cambio de la Jornada ${selectedMatchday} descargadas con éxito.`, "success");
+        } catch (err) {
+            console.error("Error generating matchday substitution cards:", err);
+            showToast("Error al generar las tarjetas de cambio de la jornada.", "error");
+        } finally {
+            setIsDownloadingMatchdayCards(false);
+        }
+    };
+
     const handlePublishMatchday = async () => {
         if (!selectedSeasonId || !selectedMatchday || !settings?.tenantId) return;
         setIsPublishingMatchday(true);
@@ -323,6 +370,21 @@ export const MatchResultsView = () => {
                         })}
                     </select>
 
+                    {/* Batch Download Matchday Cards Button */}
+                    <button
+                        onClick={handleDownloadMatchdayCards}
+                        disabled={displayedMatches.length === 0 || isDownloadingMatchdayCards}
+                        className="flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-lg font-medium text-sm transition-colors shadow-xs disabled:opacity-50"
+                        title="Descargar todas las tarjetas de cambio de los partidos de esta jornada en un solo PDF"
+                    >
+                        {isDownloadingMatchdayCards ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        ) : (
+                            <ArrowLeftRight className="w-4 h-4 text-blue-600" />
+                        )}
+                        <span className="hidden sm:inline">Tarjetas Jornada</span>
+                    </button>
+
                     <button
                         onClick={handlePublishMatchday}
                         disabled={!selectedMatchday || isPublishingMatchday || seasons.find(s => s.id === selectedSeasonId)?.currentMatchday === selectedMatchday}
@@ -356,6 +418,7 @@ export const MatchResultsView = () => {
                                 onOpenWizard={handleOpenWizard}
                                 onOpenEditSchedule={setSelectedEditMatch}
                                 onDownloadSheet={handleDownloadRefereeSheet}
+                                onOpenCardsModal={setSelectedCardsMatch}
                                 isDownloadingSheet={downloadingMatchId === match.id}
                             />
                         ))
@@ -372,6 +435,16 @@ export const MatchResultsView = () => {
                     awayTeamName={selectedMatch.away}
                     onClose={() => setSelectedMatch(null)}
                     onSuccess={handleWizardSuccess}
+                />
+            )}
+
+            {selectedCardsMatch && (
+                <SubstitutionCardsModal
+                    match={selectedCardsMatch}
+                    isOpen={!!selectedCardsMatch}
+                    onClose={() => setSelectedCardsMatch(null)}
+                    leagueLogoUrl={settings?.logoUrl}
+                    leagueName={settings?.name}
                 />
             )}
 

@@ -32,9 +32,9 @@ public class IneExtractionService {
     private final ObjectMapper objectMapper;
 
     private static final List<String> MODELS = List.of(
-            "gemini-3-flash-preview",
-            "gemini-flash-latest",
-            "gemini-3.1-flash-lite-preview"
+            "gemini-3-flash-preview",       // Prioridad 1: Máxima precisión en INE y recorte de rostro
+            "gemini-3.6-flash",             // Respaldo 1: Versión estable recomendada por Google
+            "gemini-3.1-flash-lite-preview" // Respaldo 2: Ultrarrápido
     );
 
     /**

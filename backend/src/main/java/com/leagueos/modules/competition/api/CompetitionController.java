@@ -15,6 +15,7 @@ import java.util.UUID;
 public class CompetitionController {
 
     private final MatchSchedulerService schedulerService;
+    private final com.leagueos.modules.media.service.StorageService storageService;
 
     @PostMapping("/matches")
     public Match scheduleMatch(
@@ -35,9 +36,33 @@ public class CompetitionController {
             @PathVariable UUID seasonId) {
         TenantContext.setCurrentTenant(tenantId);
         try {
-            return schedulerService.getMatchesBySeason(seasonId);
+            List<Match> matches = schedulerService.getMatchesBySeason(seasonId);
+            signMatchTeamLogos(matches);
+            return matches;
         } finally {
             TenantContext.clear();
+        }
+    }
+
+    private void signMatchTeamLogos(List<Match> matches) {
+        if (matches == null || storageService == null) return;
+        for (Match m : matches) {
+            if (m.getHomeTeam() != null && m.getHomeTeam().getLogoUrl() != null && !m.getHomeTeam().getLogoUrl().isBlank()) {
+                String logo = m.getHomeTeam().getLogoUrl();
+                try {
+                    m.getHomeTeam().setSignedLogoUrl(logo.startsWith("http") ? logo : storageService.getSignedUrl(logo, 120));
+                } catch (Exception ignored) {
+                    m.getHomeTeam().setSignedLogoUrl(logo);
+                }
+            }
+            if (m.getAwayTeam() != null && m.getAwayTeam().getLogoUrl() != null && !m.getAwayTeam().getLogoUrl().isBlank()) {
+                String logo = m.getAwayTeam().getLogoUrl();
+                try {
+                    m.getAwayTeam().setSignedLogoUrl(logo.startsWith("http") ? logo : storageService.getSignedUrl(logo, 120));
+                } catch (Exception ignored) {
+                    m.getAwayTeam().setSignedLogoUrl(logo);
+                }
+            }
         }
     }
 
