@@ -204,11 +204,11 @@ export const SeasonDetailsPage = () => {
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <h1 className="text-3xl font-bold">{baseName}</h1>
-                        {season.status === 'DRAFT' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">EN BORRADOR</span>}
-                        {season.status === 'REGISTRATION_CLOSED' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">REGISTROS CERRADOS</span>}
-                        {season.status === 'ACTIVE' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">EN CURSO</span>}
-                        {season.status === 'COMPLETED' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700">CONCLUIDO</span>}
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">{baseName}</h1>
+                        {season.status === 'DRAFT' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">EN BORRADOR</span>}
+                        {season.status === 'REGISTRATION_CLOSED' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">REGISTROS CERRADOS</span>}
+                        {season.status === 'ACTIVE' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">EN CURSO</span>}
+                        {season.status === 'COMPLETED' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">CONCLUIDO</span>}
                     </div>
                     {season.status === 'DRAFT' && (
                         <div className="flex items-center gap-2">
