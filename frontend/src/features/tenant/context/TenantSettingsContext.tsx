@@ -177,12 +177,12 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     themeClass = 'theme-nuestro-deporte';
                     allowTransfers = true;
                     footerAddress = "Liga Nuestro Deporte";
-                    footerPhone = "";
-                    footerBackgroundClass = "bg-[#091030]";
-                    slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
-                    facebookUrl = "#";
-                    instagramUrl = "#";
-                    twitterUrl = "#";
+                    footerPhone = "722 170 3324";
+                    footerBackgroundClass = "bg-[#060B1C]";
+                    slogan = "Tu pasión, nuestro deporte.";
+                    facebookUrl = "https://www.facebook.com/share/1LNGV1MDGz/?mibextid=wwXIfr";
+                    instagramUrl = "https://www.instagram.com/liga.nuestrodeporte?igsi=MTVzZ2FzbmNuN2szbg==";
+                    twitterUrl = "";
 
                     matchTickerBackgroundClass = "bg-[#040812]";
                     matchCardBackgroundClass = "bg-[#0D1A3C]";
@@ -220,9 +220,12 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         themeClass = 'theme-nuestro-deporte';
                         allowTransfers = true;
                         footerAddress = "Liga Nuestro Deporte";
-                        footerPhone = "";
-                        footerBackgroundClass = "bg-[#091030]";
-                        slogan = "Fomentando el deporte y la sana competencia. Desde 1985.";
+                        footerPhone = "722 170 3324";
+                        footerBackgroundClass = "bg-[#060B1C]";
+                        slogan = "Tu pasión, nuestro deporte.";
+                        facebookUrl = "https://www.facebook.com/share/1LNGV1MDGz/?mibextid=wwXIfr";
+                        instagramUrl = "https://www.instagram.com/liga.nuestrodeporte?igsi=MTVzZ2FzbmNuN2szbg==";
+                        twitterUrl = "";
                         matchTickerBackgroundClass = "bg-[#040812]";
                         matchCardBackgroundClass = "bg-[#0D1A3C]";
                         matchTickerTextClass = "text-white";
