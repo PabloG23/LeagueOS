@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LeagueDashboard } from '@/features/league-dashboard/ui/LeagueDashboard';
 import { RosterDashboard } from '@/features/team-management/ui/RosterDashboard';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { LeagueOSLandingPage } from '@/features/landing/ui/LeagueOSLandingPage';
 import './App.css';
 
 import { AdminDashboardLayout } from '@/features/admin/ui/AdminDashboardLayout';
@@ -32,6 +33,11 @@ function App() {
             <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
+                    {/* Official LeagueOS Landing Page */}
+                    <Route path="/leagueos" element={<LeagueOSLandingPage />} />
+                    <Route path="/landing" element={<LeagueOSLandingPage />} />
+                    <Route path="/about" element={<LeagueOSLandingPage />} />
+
                     {/* Dynamic League Public Dashboard */}
                     <Route path="/" element={<RootRoute />} />
                     <Route path="/:leagueSlug" element={<LeagueDashboard />} />

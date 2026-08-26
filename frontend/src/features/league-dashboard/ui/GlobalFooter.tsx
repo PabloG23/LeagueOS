@@ -29,8 +29,19 @@ export const GlobalFooter: React.FC = () => {
                             <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
                                 {settings.slogan}
                             </p>
-                            <div className="pt-4 text-xs text-slate-500">
-                                &copy; {currentYear} {settings.name} A.C.
+                            <div className="pt-4 flex flex-col gap-2">
+                                <div className="text-xs text-slate-500">
+                                    &copy; {currentYear} {settings.name} A.C.
+                                </div>
+                                <a 
+                                    href="/leagueos?ref=san_lucas" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/40 text-xs font-semibold text-slate-300 hover:text-white transition-all w-fit group"
+                                >
+                                    <img src="/league_logo_new.png" alt="LeagueOS" className="w-4 h-4 object-contain brightness-110 group-hover:scale-110 transition-transform" />
+                                    <span>Powered by <strong className="text-white">LeagueOS</strong></span>
+                                </a>
                             </div>
                         </div>
 
@@ -247,13 +258,24 @@ export const GlobalFooter: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Bottom Legal Bar */}
-                <div className="pt-6 flex items-center justify-center sm:justify-start text-xs font-medium text-slate-400">
+                {/* Bottom Legal Bar & Powered by LeagueOS */}
+                <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-400">
                     <div className="flex items-center gap-2">
                         <span>&copy; {currentYear} {settings.name}</span>
                         <span>•</span>
                         <span>Todos los derechos reservados.</span>
                     </div>
+
+                    <a 
+                        href="/leagueos?ref=nuestro_deporte" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/50 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm group hover:-translate-y-0.5"
+                    >
+                        <img src="/league_logo_new.png" alt="LeagueOS" className="w-4 h-4 object-contain brightness-110 group-hover:scale-110 transition-transform" />
+                        <span>Powered by <strong className="text-white font-bold tracking-tight">League<span className="text-blue-400">OS</span></strong></span>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                    </a>
                 </div>
             </div>
         </footer>
