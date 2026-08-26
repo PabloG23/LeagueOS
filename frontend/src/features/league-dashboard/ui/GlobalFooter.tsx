@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Facebook, Instagram, Twitter, Phone, ArrowUpRight } from 'lucide-react';
+import { Facebook, Instagram, Twitter, MapPin, Phone, ArrowUpRight } from 'lucide-react';
 import { useTenantSettings } from '../../tenant/context/TenantSettingsContext';
 import { cn } from '@/shared/lib/utils';
 
@@ -8,7 +8,86 @@ export const GlobalFooter: React.FC = () => {
     const { settings } = useTenantSettings();
     const currentYear = new Date().getFullYear();
 
-    // Format phone for direct action
+    const isNuestroDeporte = 
+        settings?.themeClass === 'theme-nuestro-deporte' || 
+        settings?.tenantId === '11111111-1111-1111-1111-111111111111' ||
+        settings?.name?.toLowerCase().includes('nuestro deporte');
+
+    // =========================================================================
+    // TENANT SAN LUCAS & GENERIC TENANTS: ORIGINAL FOOTER LAYOUT
+    // =========================================================================
+    if (!isNuestroDeporte) {
+        return (
+            <footer className={`${settings.footerBackgroundClass} text-slate-300 py-16 mt-20`}>
+                <div className="container mx-auto max-w-7xl px-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                        {/* Identity */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-white font-bold text-xl uppercase tracking-tighter">
+                                {settings.name}
+                            </div>
+                            <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+                                {settings.slogan}
+                            </p>
+                            <div className="pt-4 text-xs text-slate-500">
+                                &copy; {currentYear} {settings.name} A.C.
+                            </div>
+                        </div>
+
+                        {/* Contact & Location */}
+                        <div className="space-y-4">
+                            <h4 className="text-white font-semibold uppercase tracking-wider text-sm">Contacto</h4>
+                            <div className="space-y-3">
+                                {settings.footerAddress && (
+                                    <div className="flex items-start gap-3 group">
+                                        <MapPin className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 group-hover:text-white transition-colors" />
+                                        <span
+                                            className="text-sm leading-relaxed group-hover:text-white transition-colors"
+                                            dangerouslySetInnerHTML={{ __html: settings.footerAddress }}
+                                        />
+                                    </div>
+                                )}
+                                {settings.footerPhone && (
+                                    <div className="flex items-center gap-3 group">
+                                        <Phone className="w-5 h-5 text-emerald-400 shrink-0 group-hover:text-white transition-colors" />
+                                        <span className="text-sm group-hover:text-white transition-colors">
+                                            {settings.footerPhone}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Social */}
+                        <div className="space-y-4">
+                            <h4 className="text-white font-semibold uppercase tracking-wider text-sm">Síguenos</h4>
+                            <div className="flex gap-4">
+                                {settings.facebookUrl && (
+                                    <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 group">
+                                        <Facebook className="w-5 h-5" />
+                                    </a>
+                                )}
+                                {settings.instagramUrl && (
+                                    <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all duration-300 group">
+                                        <Instagram className="w-5 h-5" />
+                                    </a>
+                                )}
+                                {settings.twitterUrl && (
+                                    <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-sky-500 hover:text-white transition-all duration-300 group">
+                                        <Twitter className="w-5 h-5" />
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        );
+    }
+
+    // =========================================================================
+    // TENANT LIGA NUESTRO DEPORTE: CUSTOM HIGH-IMPACT FOOTER
+    // =========================================================================
     const cleanPhone = settings.footerPhone?.replace(/\D/g, '') || '';
     const telLink = cleanPhone ? `tel:${cleanPhone}` : undefined;
 
@@ -44,7 +123,7 @@ export const GlobalFooter: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Slogan without quotes */}
+                        {/* Slogan */}
                         {settings.slogan && (
                             <div className="pl-4 border-l-2 border-blue-500/60 py-0.5">
                                 <p className="text-base sm:text-lg font-bold text-slate-200 tracking-tight">
@@ -132,7 +211,7 @@ export const GlobalFooter: React.FC = () => {
                                                 Facebook Oficial
                                             </span>
                                             <span className="text-[10px] text-slate-400 font-medium">
-                                                Liga Nuestro Deporte
+                                                {settings.name}
                                             </span>
                                         </div>
                                     </div>
