@@ -188,7 +188,15 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     matchCardBackgroundClass = "bg-[#0D1A3C]";
                     matchTickerTextClass = "text-white";
 
-                    boardMembers = [];
+                    boardMembers = [
+                        { role: "Presidente", name: "Mike Portocarrero" },
+                        { role: "Vicepresidente", name: "Carlos Mejía" },
+                        { role: "Secretario", name: "Rubén Hidalgo" },
+                        { role: "Tesorero", name: "Alberto Suárez" },
+                        { role: "Comisión Disciplinaria", name: "Igor y Emmanuel" },
+                        { role: "Marketing", name: "MGX Studio" },
+                        { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
+                    ];
                     enableRoundRobinFixtures = true;
                 } else {
                     // Check if authenticated user has a stored tenant in localStorage
@@ -229,7 +237,15 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         matchTickerBackgroundClass = "bg-[#040812]";
                         matchCardBackgroundClass = "bg-[#0D1A3C]";
                         matchTickerTextClass = "text-white";
-                        boardMembers = [];
+                        boardMembers = [
+                            { role: "Presidente", name: "Mike Portocarrero" },
+                            { role: "Vicepresidente", name: "Carlos Mejía" },
+                            { role: "Secretario", name: "Rubén Hidalgo" },
+                            { role: "Tesorero", name: "Alberto Suárez" },
+                            { role: "Comisión Disciplinaria", name: "Igor y Emmanuel" },
+                            { role: "Marketing", name: "MGX Studio" },
+                            { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
+                        ];
                         enableRoundRobinFixtures = true;
                     } else {
                         console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
