@@ -13,15 +13,18 @@ export interface Sponsor {
 }
 
 export const OFFICIAL_SPONSORS: Sponsor[] = [
-    { id: '1', name: 'Centro Odontológico Dental', category: 'Salud y Cuidado Dental', tag: 'Oficial' },
-    { id: '2', name: 'Rifas Chingonas', category: 'Entretenimiento & Premios', tag: 'Oficial' },
-    { id: '3', name: 'Fonda Don Carlos', category: 'Gastronomía Tradicional', tag: 'Oficial' },
-    { id: '4', name: 'Patitas Limpias', category: 'Cuidado y Bienestar Canino', tag: 'Oficial' },
-    { id: '5', name: 'Arqueros', category: 'Equipamiento y Guantes Pro', tag: 'Oficial' },
-    { id: '6', name: 'Pádel City Metepec', category: 'Club & Canchas de Pádel', tag: 'Oficial' },
-    { id: '7', name: 'Ciudad Maderas', category: 'Desarrollo Inmobiliario', tag: 'Patrocinador Master' },
-    { id: '8', name: 'El Tapir', category: 'Restaurante & Bar', tag: 'Oficial' },
-    { id: '9', name: 'Muchachito Alegre', category: 'Música & Eventos', tag: 'Oficial' },
+    { id: '1', name: 'Brathia Fisioterapia', category: 'Fisioterapia & Rehabilitación', logoUrl: '/partners/1.png', tag: 'Oficial' },
+    { id: '2', name: 'El Tapir', category: 'Cervezas y Milanesas', logoUrl: '/partners/2.png', tag: 'Oficial' },
+    { id: '3', name: 'Poderío Deportivo', category: 'Indumentaria Deportiva', logoUrl: '/partners/3.png', tag: 'Oficial' },
+    { id: '4', name: 'Pádel City Metepec', category: 'Club & Canchas de Pádel', logoUrl: '/partners/4.png', tag: 'Oficial' },
+    { id: '5', name: 'Centro Odontológico Digital', category: 'Salud y Cuidado Dental', logoUrl: '/partners/5.png', tag: 'Oficial' },
+    { id: '6', name: 'Rifas Chingonas', category: 'Entretenimiento & Premios', logoUrl: '/partners/6.png', tag: 'Oficial' },
+    { id: '7', name: 'Fonda Don Carlos', category: 'Gastronomía Tradicional', logoUrl: '/partners/7.png', tag: 'Oficial' },
+    { id: '8', name: 'Patitas Limpias', category: 'Cuidado y Bienestar Canino', logoUrl: '/partners/8.png', tag: 'Oficial' },
+    { id: '9', name: 'TES Telecomunicaciones', category: 'Audio, Redes & Telecomunicaciones', logoUrl: '/partners/9.png', tag: 'Oficial' },
+    { id: '10', name: 'Academia Arqueros Javi', category: 'Entrenador de Porteros', logoUrl: '/partners/10.png', tag: 'Oficial' },
+    { id: '11', name: 'Ciudad Maderas', category: 'Desarrollo Inmobiliario', logoUrl: '/partners/11.png', tag: 'Patrocinador Master' },
+    { id: '12', name: 'Muchachito Alegre', category: 'Restaurante & Música', logoUrl: '/partners/12.png', tag: 'Oficial' },
 ];
 
 export const SponsorsTicker: React.FC<{ sponsors?: Sponsor[] }> = ({ sponsors = OFFICIAL_SPONSORS }) => {
@@ -66,9 +69,17 @@ export const SponsorsTicker: React.FC<{ sponsors?: Sponsor[] }> = ({ sponsors = 
                                 key={`${sponsor.id}-${idx}`}
                                 className="flex items-center gap-2.5 px-3 py-1 rounded-xl bg-white/[0.04] hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/40 transition-all duration-300 shrink-0 cursor-default"
                             >
-                                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-[10px] font-black text-white shadow-xs">
-                                    {sponsor.name.substring(0, 1)}
-                                </div>
+                                {sponsor.logoUrl ? (
+                                    <img
+                                        src={sponsor.logoUrl}
+                                        alt={sponsor.name}
+                                        className="h-6 w-auto object-contain max-w-[80px]"
+                                    />
+                                ) : (
+                                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-[10px] font-black text-white shadow-xs">
+                                        {sponsor.name.substring(0, 1)}
+                                    </div>
+                                )}
                                 <div className="flex flex-col">
                                     <span className="text-xs font-black text-slate-200 group-hover:text-white tracking-tight whitespace-nowrap uppercase">
                                         {sponsor.name}
