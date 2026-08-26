@@ -183,7 +183,7 @@ export const MassUploadPlayerModal = ({ isOpen, onClose, onSave, requireJerseyNu
                     <div className="text-center mb-8 w-full">
                         <h3 className="text-2xl font-black text-slate-900 mb-2">Carga Masiva de Jugadores</h3>
                         <p className="text-[15px] text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
-                            Importa múltiples jugadores desde un archivo Excel. El dorsal es opcional y puedes asignarlo ahora o después.
+                            Importa múltiples jugadores desde un archivo Excel.
                         </p>
                     </div>
                     {uploadError && (

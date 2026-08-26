@@ -51,7 +51,11 @@ export const UsersView = () => {
         if (isInitial) setIsLoading(true);
         try {
             const res = await leagueApi.getUsers(tenantId);
-            setUsers(res.data || []);
+            const mappedUsers = (res.data || []).map((u: any) => ({
+                ...u,
+                isActive: u.isActive ?? u.active ?? true,
+            }));
+            setUsers(mappedUsers);
         } catch (error) {
             console.error('Error fetching users:', error);
             showToast('Error al cargar la lista de usuarios.', 'error');
@@ -124,7 +128,7 @@ export const UsersView = () => {
         setTogglingUserId(user.id);
         try {
             const res = await leagueApi.toggleUserStatus(tenantId, user.id);
-            const nextActive = res.data.isActive;
+            const nextActive = res.data.isActive ?? (res.data as any).active;
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: nextActive } : u));
             showToast(nextActive ? 'Acceso de usuario activado' : 'Acceso de usuario suspendido', nextActive ? 'success' : 'info');
         } catch (error: any) {
@@ -334,12 +338,13 @@ Por favor guarda estas credenciales para consultar partidos y gestionar tu infor
                         const isPasswordVisible = !!visiblePasswords[user.id];
                         const waLink = getWhatsAppWelcomeLink(user);
                         const isToggling = togglingUserId === user.id;
+                        const isUserActive = user.isActive ?? (user as any).active ?? true;
 
                         return (
                             <div
                                 key={user.id}
                                 className={`bg-white p-5 rounded-3xl border transition-all flex flex-col justify-between group shadow-2xs hover:shadow-md ${
-                                    user.isActive
+                                    isUserActive
                                         ? 'border-slate-200 hover:border-slate-300'
                                         : 'border-rose-200/80 bg-rose-50/10'
                                 }`}
@@ -528,9 +533,9 @@ Por favor guarda estas credenciales para consultar partidos y gestionar tu infor
                                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                                     {/* Status Badge */}
                                     <div className="flex items-center gap-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${user.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                                        <span className={`text-[11px] font-bold ${user.isActive ? 'text-emerald-700' : 'text-slate-500'}`}>
-                                            {user.isActive ? 'Acceso Activo' : 'Acceso Suspendido'}
+                                        <span className={`w-2 h-2 rounded-full ${isUserActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                                        <span className={`text-[11px] font-bold ${isUserActive ? 'text-emerald-700' : 'text-slate-500'}`}>
+                                            {isUserActive ? 'Acceso Activo' : 'Acceso Suspendido'}
                                         </span>
                                     </div>
 
@@ -540,18 +545,18 @@ Por favor guarda estas credenciales para consultar partidos y gestionar tu infor
                                         onClick={() => handleToggleActive(user)}
                                         disabled={isToggling}
                                         className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                                            user.isActive
+                                            isUserActive
                                                 ? 'bg-rose-50 hover:bg-rose-100 text-rose-700'
                                                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
                                         }`}
-                                        title={user.isActive ? 'Desactivar acceso' : 'Habilitar acceso'}
+                                        title={isUserActive ? 'Desactivar acceso' : 'Habilitar acceso'}
                                     >
                                         {isToggling ? (
-                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                             <Loader2 className="w-3 h-3 animate-spin" />
                                         ) : (
                                             <Power className="w-3 h-3" />
                                         )}
-                                        <span>{user.isActive ? 'Desactivar' : 'Activar'}</span>
+                                        <span>{isUserActive ? 'Desactivar' : 'Activar'}</span>
                                     </button>
                                 </div>
                             </div>

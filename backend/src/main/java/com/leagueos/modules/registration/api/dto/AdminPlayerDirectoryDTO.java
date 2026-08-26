@@ -1,5 +1,6 @@
 package com.leagueos.modules.registration.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,8 @@ public class AdminPlayerDirectoryDTO {
     private String profilePhotoUrl;
     private String signedPhotoUrl;
     private String status; // ACTIVE, INACTIVE, PENDING_VERIFICATION
+
+    @JsonProperty("isActive")
     private boolean isActive;
 
     // Team Info

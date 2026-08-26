@@ -1,5 +1,6 @@
 package com.leagueos.modules.user.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.leagueos.shared.security.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,6 +29,9 @@ public class UserDTO {
     private String photoUrl;
     private String signedPhotoUrl;
     private String rawPassword;
+
+    @JsonProperty("isActive")
     private boolean isActive;
+
     private LocalDateTime createdAt;
 }
