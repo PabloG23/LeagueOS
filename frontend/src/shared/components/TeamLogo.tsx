@@ -26,7 +26,7 @@ export const TeamLogo = ({ teamName, logoUrl, fallbackClass = "text-[10px] font-
         <SecureImage 
             srcKey={logoUrl} 
             alt={teamName || 'Team Logo'} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover filter drop-shadow-[0_1px_2px_rgba(15,23,42,0.25)]"
             loading="lazy"
             onError={() => setError(true)}
         />

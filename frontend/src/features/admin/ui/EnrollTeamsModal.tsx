@@ -217,7 +217,7 @@ export const EnrollTeamsModal = ({
 
                                         {/* Team Shield / Logo */}
                                         <div
-                                            className={`w-11 h-11 rounded-xl p-1 bg-white border flex items-center justify-center shrink-0 transition-all overflow-hidden shadow-xs ${
+                                            className={`w-11 h-11 rounded-xl p-1 bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100/70 border flex items-center justify-center shrink-0 transition-all overflow-hidden shadow-xs ${
                                                 isSelected
                                                     ? 'border-blue-400 ring-2 ring-blue-500/20'
                                                     : 'border-slate-200 group-hover:border-blue-300'
@@ -227,7 +227,7 @@ export const EnrollTeamsModal = ({
                                                 srcKey={team.signedLogoUrl || team.logoUrl}
                                                 fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(team.name)}`}
                                                 alt={team.name}
-                                                className="w-full h-full object-contain"
+                                                className="w-full h-full object-contain filter drop-shadow-[0_1px_2px_rgba(15,23,42,0.22)]"
                                             />
                                         </div>
 

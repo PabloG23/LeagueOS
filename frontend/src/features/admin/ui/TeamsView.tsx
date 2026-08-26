@@ -299,12 +299,13 @@ export const TeamsView = () => {
 
                                                 {/* Hero Shield / Logo */}
                                                 <div className="flex flex-col items-center text-center my-4">
-                                                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white border border-slate-100 p-3.5 shadow-md group-hover:shadow-2xl group-hover:scale-105 group-hover:border-blue-300/80 ring-4 ring-slate-50 group-hover:ring-blue-100/60 transition-all duration-300 flex items-center justify-center overflow-hidden mb-3.5">
+                                                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-slate-950 border border-slate-800 p-3.5 shadow-xl group-hover:shadow-2xl group-hover:scale-105 group-hover:border-blue-500/40 ring-4 ring-slate-100 group-hover:ring-blue-100/80 transition-all duration-300 flex items-center justify-center overflow-hidden mb-3.5 relative">
+                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.15)_0%,_transparent_70%)] pointer-events-none" />
                                                         <SecureImage
                                                             srcKey={team.signedLogoUrl || team.logoUrl}
                                                             fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(team.name)}`}
                                                             alt={team.name}
-                                                            className="w-full h-full object-contain filter drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                            className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:scale-105 relative z-10"
                                                         />
                                                     </div>
                                                     <h3 className="font-black text-xl text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 tracking-tight">
@@ -385,12 +386,13 @@ export const TeamsView = () => {
 
                                                 {/* Hero Shield / Logo (Grayscale with full-color on hover) */}
                                                 <div className="flex flex-col items-center text-center my-4">
-                                                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white border border-slate-200 p-3 shadow-sm group-hover:shadow-md transition-all duration-300 flex items-center justify-center overflow-hidden mb-3">
+                                                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-900 border border-slate-800 p-3 shadow-lg group-hover:shadow-xl transition-all duration-300 flex items-center justify-center overflow-hidden mb-3 relative">
+                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_transparent_70%)] pointer-events-none" />
                                                         <SecureImage
                                                             srcKey={team.signedLogoUrl || team.logoUrl}
                                                             fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(team.name)}`}
                                                             alt={team.name}
-                                                            className="w-full h-full object-contain filter grayscale contrast-90 group-hover:grayscale-0 group-hover:contrast-100 transition-all duration-300"
+                                                            className="w-full h-full object-contain filter grayscale contrast-90 group-hover:grayscale-0 group-hover:contrast-100 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] transition-all duration-300 relative z-10"
                                                         />
                                                     </div>
                                                     <h3 className="font-bold text-lg text-slate-600 group-hover:text-slate-900 transition-colors line-clamp-1 tracking-tight">

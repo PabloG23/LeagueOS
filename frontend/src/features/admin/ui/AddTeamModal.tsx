@@ -194,8 +194,8 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
                         {previewUrl ? (
                             <div className="relative border-2 border-blue-200 bg-blue-50/40 rounded-xl p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-16 h-16 rounded-xl bg-white border border-blue-200 p-1 shadow-sm overflow-hidden flex items-center justify-center">
-                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                                    <div className="w-16 h-16 rounded-xl bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100/70 border border-blue-200/80 p-1.5 shadow-inner overflow-hidden flex items-center justify-center">
+                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(15,23,42,0.22)] drop-shadow-[0_0_1px_rgba(15,23,42,0.30)]" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-900 line-clamp-1">{logoFile?.name}</p>
@@ -225,12 +225,12 @@ export const AddTeamModal = ({ isOpen, onClose, onSave, teamToEdit, existingTeam
                         ) : teamToEdit?.logoUrl ? (
                             <div className="relative border-2 border-slate-200 rounded-xl p-4 flex items-center justify-between bg-slate-50/50">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 p-1 shadow-sm overflow-hidden flex items-center justify-center">
+                                    <div className="w-16 h-16 rounded-xl bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100/70 border border-slate-200 p-1.5 shadow-inner overflow-hidden flex items-center justify-center">
                                         <SecureImage
                                             srcKey={teamToEdit.logoUrl}
                                             fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(teamToEdit.name)}`}
                                             alt={teamToEdit.name}
-                                            className="w-full h-full object-contain"
+                                            className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(15,23,42,0.22)] drop-shadow-[0_0_1px_rgba(15,23,42,0.30)]"
                                         />
                                     </div>
                                     <div>

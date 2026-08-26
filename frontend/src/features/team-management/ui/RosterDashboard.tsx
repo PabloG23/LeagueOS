@@ -256,12 +256,13 @@ export const RosterDashboard = () => {
                 {/* Header Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-5">
-                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white border border-slate-100 p-3 shadow-lg ring-4 ring-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-950 border border-slate-800 p-3 shadow-xl ring-4 ring-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.15)_0%,_transparent_70%)] pointer-events-none" />
                             <SecureImage
                                 srcKey={teamLogo}
                                 fallbackSrc={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(teamName)}`}
                                 alt={teamName}
-                                className="w-full h-full object-contain filter drop-shadow-sm"
+                                className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] relative z-10"
                             />
                         </div>
                         <div>
