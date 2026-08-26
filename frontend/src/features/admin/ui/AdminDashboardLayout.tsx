@@ -108,11 +108,20 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
 
                     <div className="flex items-center gap-4 ml-auto">
                         <div className="text-right hidden sm:block">
-                            <p className="text-sm font-medium text-slate-900">Administrador</p>
-                            <p className="text-xs text-slate-500">{settings.name}</p>
+                            <p className="text-sm font-bold text-slate-900 leading-tight">
+                                {localStorage.getItem('name') || (localStorage.getItem('username') ? `@${localStorage.getItem('username')}` : 'Administrador')}
+                            </p>
+                            <p className="text-xs font-semibold text-slate-500">{settings.name}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border border-blue-200">
-                            <span className="font-bold text-blue-700">AD</span>
+                        <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-200/80 shadow-2xs">
+                            <span className="font-black text-xs text-blue-700">
+                                {(() => {
+                                    const name = localStorage.getItem('name') || localStorage.getItem('username') || 'AD';
+                                    const clean = name.replace('@', '').trim();
+                                    const parts = clean.split(/\s+/);
+                                    return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : (clean.substring(0, 2).toUpperCase() || 'AD');
+                                })()}
+                            </span>
                         </div>
                     </div>
                 </header>

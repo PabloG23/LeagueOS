@@ -102,13 +102,19 @@ export const RosterDashboard = () => {
 
             let targetTeamId = teamId;
             if (!targetTeamId && isTeamRepMode) {
-                // For demo, if teamRepMode without ID, pick the first team or a specific one from DB
-                const myTeam = allTeams.find(t => t.name.includes("Halcones")) || allTeams[0];
-                if (myTeam) targetTeamId = myTeam.id;
+                const storedTeamId = localStorage.getItem('teamId');
+                if (storedTeamId) {
+                    targetTeamId = storedTeamId;
+                } else if (allTeams.length > 0) {
+                    targetTeamId = allTeams[0].id;
+                }
             }
 
             if (targetTeamId) {
                 const team = allTeams.find(t => t.id === targetTeamId);
+                if (team && isTeamRepMode) {
+                    localStorage.setItem('teamName', team.name);
+                }
                 setTeamName(team?.name || 'Equipo Desconocido');
                 setTeamLogo(team?.signedLogoUrl || team?.logoUrl);
                 if (team && team.representative) {
@@ -274,14 +280,16 @@ export const RosterDashboard = () => {
                     </div>
                     {canEdit && (
                         <div className="flex items-center flex-wrap justify-end gap-3">
-                            <button
-                                onClick={handleDownloadCredentials}
-                                disabled={isGeneratingPdf}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                                <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'Descargar Credenciales'}</span>
-                            </button>
+                            {isAdminMode && (
+                                <button
+                                    onClick={handleDownloadCredentials}
+                                    disabled={isGeneratingPdf}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                                    <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'Descargar Credenciales'}</span>
+                                </button>
+                            )}
                             <button
                                 onClick={() => setIsMassUploadModalOpen(true)}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all"

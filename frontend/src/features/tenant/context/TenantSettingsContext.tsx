@@ -193,7 +193,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         { role: "Vicepresidente", name: "Carlos Mejía" },
                         { role: "Secretario", name: "Rubén Hidalgo" },
                         { role: "Tesorero", name: "Alberto Suárez" },
-                        { role: "Comisión Disciplinaria", name: "Igor y Emmanuel" },
+                        { role: "Comisión Disciplinaria", name: "Igor Almaraz y Emmanuel Sánchez" },
                         { role: "Marketing", name: "MGX Studio" },
                         { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
                     ];
@@ -242,7 +242,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                             { role: "Vicepresidente", name: "Carlos Mejía" },
                             { role: "Secretario", name: "Rubén Hidalgo" },
                             { role: "Tesorero", name: "Alberto Suárez" },
-                            { role: "Comisión Disciplinaria", name: "Igor y Emmanuel" },
+                            { role: "Comisión Disciplinaria", name: "Igor Almaraz y Emmanuel Sánchez" },
                             { role: "Marketing", name: "MGX Studio" },
                             { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
                         ];

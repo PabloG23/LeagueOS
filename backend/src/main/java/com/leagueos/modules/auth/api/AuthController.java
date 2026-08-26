@@ -22,6 +22,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final com.leagueos.modules.referee.persistence.RefereeRepository refereeRepository;
+    private final com.leagueos.modules.league.persistence.TeamRepository teamRepository;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
@@ -48,6 +49,25 @@ public class AuthController {
                     .orElse(null);
         }
 
-        return ResponseEntity.ok(new AuthResponse(token, user.getRole().name(), user.getTeamId(), refereeId, user.getTenantId()));
+        String teamName = null;
+        if (user.getTeamId() != null) {
+            teamName = teamRepository.findById(user.getTeamId())
+                    .map(com.leagueos.modules.league.domain.Team::getName)
+                    .orElse(null);
+        }
+
+        AuthResponse authResponse = AuthResponse.builder()
+                .accessToken(token)
+                .tokenType("Bearer")
+                .role(user.getRole().name())
+                .teamId(user.getTeamId())
+                .teamName(teamName)
+                .name(user.getName())
+                .username(user.getUsername())
+                .refereeId(refereeId)
+                .tenantId(user.getTenantId())
+                .build();
+
+        return ResponseEntity.ok(authResponse);
     }
 }

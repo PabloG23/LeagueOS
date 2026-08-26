@@ -47,6 +47,15 @@ export const LoginPage = () => {
             if (data.teamId) {
                 localStorage.setItem('teamId', data.teamId);
             }
+            if (data.teamName) {
+                localStorage.setItem('teamName', data.teamName);
+            }
+            if (data.name) {
+                localStorage.setItem('name', data.name);
+            }
+            if (data.username) {
+                localStorage.setItem('username', data.username);
+            }
             if (data.refereeId) {
                 localStorage.setItem('refereeId', data.refereeId);
             }
