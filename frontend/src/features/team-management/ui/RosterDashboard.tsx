@@ -198,10 +198,17 @@ export const RosterDashboard = () => {
     };
 
     const handleAddPlayer = async (newPlayer: { name: string; photoUrl: string, jerseyNumber?: number }) => {
+        const targetId = teamId || localStorage.getItem('teamId');
+        if (!settings?.tenantId || !targetId) return;
+
+        if (activePlayersCount >= maxActivePlayers) {
+            showToast(`¡Límite de jugadores alcanzado! Máximo ${maxActivePlayers} activos.`, 'error');
+            return;
+        }
+
         try {
-            if (!settings?.tenantId || !teamId) return;
             await leagueApi.registerPlayer(settings.tenantId, {
-                teamId,
+                teamId: targetId,
                 firstName: newPlayer.name.split(' ')[0],
                 lastName: newPlayer.name.split(' ').slice(1).join(' '),
                 profilePhotoUrl: newPlayer.photoUrl,
@@ -216,9 +223,17 @@ export const RosterDashboard = () => {
     };
 
     const handleSaveMassUpload = async (parsedPlayers: any[]) => {
-        if (!settings?.tenantId || !teamId) return;
+        const targetId = teamId || localStorage.getItem('teamId');
+        if (!settings?.tenantId || !targetId) return;
+
+        if (activePlayersCount + parsedPlayers.length > maxActivePlayers) {
+            const errorMsg = `No se pueden registrar ${parsedPlayers.length} jugadores. El equipo tiene ${activePlayersCount} activos y el límite es ${maxActivePlayers}.`;
+            showToast(errorMsg, 'error');
+            throw new Error(errorMsg);
+        }
+
         try {
-            await leagueApi.batchCreatePlayers(settings.tenantId, teamId, parsedPlayers);
+            await leagueApi.batchCreatePlayers(settings.tenantId, targetId, parsedPlayers);
             const count = parsedPlayers.length;
             showToast(`${count} ${count === 1 ? 'jugador importado' : 'jugadores importados'} exitosamente.`, 'success');
             setIsMassUploadModalOpen(false);
@@ -291,14 +306,26 @@ export const RosterDashboard = () => {
                                 </button>
                             )}
                             <button
-                                onClick={() => setIsMassUploadModalOpen(true)}
+                                onClick={() => {
+                                    if (activePlayersCount >= maxActivePlayers) {
+                                        showToast(`El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de importar más.`, 'error');
+                                        return;
+                                    }
+                                    setIsMassUploadModalOpen(true);
+                                }}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all"
                             >
                                 <Upload className="w-4 h-4" />
                                 <span className="hidden sm:inline">Carga Masiva</span>
                             </button>
                             <button
-                                onClick={() => setIsAddModalOpen(true)}
+                                onClick={() => {
+                                    if (activePlayersCount >= maxActivePlayers) {
+                                        showToast(`El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de registrar otro.`, 'error');
+                                        return;
+                                    }
+                                    setIsAddModalOpen(true);
+                                }}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-500/20 transition-all transform hover:scale-[1.02]"
                             >
                                 <Plus className="w-5 h-5" />
