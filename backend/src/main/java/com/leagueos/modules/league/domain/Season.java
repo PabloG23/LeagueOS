@@ -40,5 +40,5 @@ public class Season extends BaseEntity {
     private Integer currentMatchday = 1;
 
     @Column(name = "max_active_players_per_team", nullable = false)
-    private int maxActivePlayersPerTeam = 26;
+    private int maxActivePlayersPerTeam = 30;
 }
