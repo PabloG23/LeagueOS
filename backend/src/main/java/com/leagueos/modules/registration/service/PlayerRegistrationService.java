@@ -263,8 +263,6 @@ public class PlayerRegistrationService {
                     throw new BusinessRuleException("El CURP ingresado ('" + curpUpper + "') para '" + firstName + " " + lastName + "' no es válido o su dígito verificador es incorrecto.");
                 }
                 request.setCurp(curpUpper);
-            } else if (!isForeign && settings.isRequireCurp()) {
-                throw new BusinessRuleException("El CURP es obligatorio para el jugador '" + firstName + " " + lastName + "'.");
             } else {
                 request.setCurp(null);
             }
