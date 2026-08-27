@@ -97,11 +97,11 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-h-screen">
+            <div className="flex-1 flex flex-col min-h-screen min-w-0 max-w-full">
                 {/* Topbar */}
                 <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
                     <button
-                        className="md:hidden p-2 text-slate-600"
+                        className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                         onClick={() => setIsSidebarOpen(true)}
                     >
                         <Menu className="w-6 h-6" />
@@ -121,13 +121,13 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
                                     const clean = name.replace('@', '').trim();
                                     const parts = clean.split(/\s+/);
                                     return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : (clean.substring(0, 2).toUpperCase() || 'AD');
-                                })()}
+                                })( )}
                             </span>
                         </div>
                     </div>
                 </header>
 
-                <main className="flex-1 p-4 md:p-8">
+                <main className="flex-1 p-3 sm:p-4 md:p-8 min-w-0 max-w-full overflow-x-hidden">
                     {children}
                 </main>
             </div>
