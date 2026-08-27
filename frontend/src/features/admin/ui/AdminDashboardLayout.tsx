@@ -85,7 +85,8 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
                     <button
                         onClick={() => {
                             localStorage.clear();
-                            window.location.href = `/${leagueSlug}`;
+                            sessionStorage.clear();
+                            window.location.replace(`/${leagueSlug}/login`);
                         }}
                         className="flex items-center justify-center gap-3 w-full px-4 py-3 text-red-400 hover:text-white hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all font-semibold text-sm group shadow-sm"
                     >

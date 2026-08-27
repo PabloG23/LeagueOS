@@ -15,6 +15,32 @@ api.interceptors.request.use(config => {
     return config;
 });
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // If 401 Unauthorized received on authenticated requests (not during login)
+        if (error.response && error.response.status === 401) {
+            const isLoginRequest = error.config?.url?.includes('/auth/login');
+            const hasToken = Boolean(localStorage.getItem('token'));
+
+            if (!isLoginRequest && hasToken) {
+                localStorage.clear();
+                sessionStorage.clear();
+
+                const currentPath = window.location.pathname;
+                const slugMatch = currentPath.match(/^\/([^\/]+)/);
+                const currentSlug = slugMatch ? slugMatch[1] : 'ligaNuestroDeporte';
+
+                // Avoid redirecting if already on login page
+                if (!currentPath.includes('/login')) {
+                    window.location.href = `/${currentSlug}/login?reason=session_expired`;
+                }
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export interface Tenant {
     id: string;
     name: string;

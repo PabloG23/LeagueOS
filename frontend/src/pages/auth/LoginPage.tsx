@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
-import { Shield, Lock, User, AlertCircle } from 'lucide-react';
+import { Shield, Lock, User, AlertCircle, Clock, Info } from 'lucide-react';
 import api from '@/shared/api/league-api';
 
 export const LoginPage = () => {
@@ -10,6 +10,10 @@ export const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // Read query params for session timeout/expiration messages
+    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const logoutReason = searchParams.get('reason');
 
     // Extract slug from URL to preserve tenant context
     const matchLeague = matchPath("/:leagueSlug/*", location.pathname);
@@ -166,6 +170,30 @@ export const LoginPage = () => {
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6" noValidate>
+                        {logoutReason === 'timeout' && !error && (
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 animate-fadeIn">
+                                <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-semibold text-amber-900">Sesión cerrada por inactividad</h4>
+                                    <p className="text-xs text-amber-700 font-medium leading-relaxed">
+                                        Tu sesión se cerró automáticamente tras 15 minutos sin actividad por seguridad. Ingresa de nuevo para continuar.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {logoutReason === 'session_expired' && !error && (
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3 animate-fadeIn">
+                                <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-semibold text-blue-900">Sesión expirada</h4>
+                                    <p className="text-xs text-blue-700 font-medium leading-relaxed">
+                                        Tu sesión ha caducado. Por favor ingresa tus credenciales nuevamente.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {error && (
                             <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-shake">
                                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />

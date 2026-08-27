@@ -18,6 +18,8 @@ import { RefereeMatchDashboard } from '@/features/referees/ui/RefereeMatchDashbo
 import { SeasonDetailsPage } from '@/pages/dashboard/SeasonDetailsPage';
 import { TenantSettingsProvider } from '@/features/tenant/context/TenantSettingsContext';
 import { ToastProvider } from '@/shared/components/ui/ToastContext';
+import { SessionTimeoutManager } from '@/shared/components/auth/SessionTimeoutManager';
+import { ProtectedRoute } from '@/shared/components/auth/ProtectedRoute';
 
 function RootRoute() {
     const isNuestroDeporteDomain = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('nuestrodeporte');
@@ -30,6 +32,7 @@ function RootRoute() {
 function App() {
     return (
         <BrowserRouter>
+            <SessionTimeoutManager />
             <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
@@ -50,48 +53,68 @@ function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/:leagueSlug/login" element={<LoginPage />} />
 
-                    {/* Admin Routes with Dashboard Layout */}
+                    {/* Admin Routes with Dashboard Layout and ProtectedRoute */}
                     <Route path="/:leagueSlug/admin/teams" element={
-                        <AdminDashboardLayout>
-                            <TeamsView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <TeamsView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
-                    <Route path="/:leagueSlug/admin/teams/:teamId" element={<RosterDashboard />} />
+                    <Route path="/:leagueSlug/admin/teams/:teamId" element={
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <RosterDashboard />
+                        </ProtectedRoute>
+                    } />
                     <Route path="/:leagueSlug/admin/players" element={
-                        <AdminDashboardLayout>
-                            <PlayersDirectoryView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <PlayersDirectoryView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
                     <Route path="/:leagueSlug/admin/matches" element={
-                        <AdminDashboardLayout>
-                            <MatchResultsView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <MatchResultsView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
                     <Route path="/:leagueSlug/admin/fields" element={
-                        <AdminDashboardLayout>
-                            <FieldsManagementView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <FieldsManagementView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
                     <Route path="/:leagueSlug/admin/users" element={
-                        <AdminDashboardLayout>
-                            <UsersView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <UsersView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
                     <Route path="/:leagueSlug/admin/referees" element={<Navigate to="../users" replace />} />
                     <Route path="/:leagueSlug/admin/transfers" element={
-                        <AdminDashboardLayout>
-                            <PlayerTransferView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <PlayerTransferView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
                     <Route path="/:leagueSlug/admin/seasons" element={
-                        <AdminDashboardLayout>
-                            <SeasonsView />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <SeasonsView />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
                     <Route path="/:leagueSlug/admin/seasons/:seasonId" element={
-                        <AdminDashboardLayout>
-                            <SeasonDetailsPage />
-                        </AdminDashboardLayout>
+                        <ProtectedRoute allowedRoles={['ROLE_LEAGUE_ADMIN']}>
+                            <AdminDashboardLayout>
+                                <SeasonDetailsPage />
+                            </AdminDashboardLayout>
+                        </ProtectedRoute>
                     } />
 
                     {/* Legacy Admin Routes (Backward compatibility redirects to ligaNuestroDeporte) */}
@@ -105,11 +128,19 @@ function App() {
 
                     {/* Team Rep Dashboard */}
                     <Route path="/team-dashboard" element={<Navigate to="/ligaNuestroDeporte/team-dashboard" replace />} />
-                    <Route path="/:leagueSlug/team-dashboard" element={<RosterDashboard />} />
+                    <Route path="/:leagueSlug/team-dashboard" element={
+                        <ProtectedRoute allowedRoles={['ROLE_TEAM_REP', 'ROLE_LEAGUE_ADMIN']}>
+                            <RosterDashboard />
+                        </ProtectedRoute>
+                    } />
 
                     {/* Referee Dashboard Legacy / Fallback */}
                     <Route path="/referee/dashboard" element={<Navigate to="/ligaNuestroDeporte/referee/dashboard" replace />} />
-                    <Route path="/:leagueSlug/referee/dashboard" element={<RefereeMatchDashboard />} />
+                    <Route path="/:leagueSlug/referee/dashboard" element={
+                        <ProtectedRoute allowedRoles={['ROLE_REFEREE', 'ROLE_LEAGUE_ADMIN']}>
+                            <RefereeMatchDashboard />
+                        </ProtectedRoute>
+                    } />
 
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>

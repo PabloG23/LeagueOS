@@ -80,7 +80,8 @@ export const RefereeMatchDashboard: React.FC = () => {
 
     const handleLogout = () => {
         localStorage.clear();
-        window.location.href = `/${leagueSlug}/login`;
+        sessionStorage.clear();
+        window.location.replace(`/${leagueSlug}/login`);
     };
 
     return (

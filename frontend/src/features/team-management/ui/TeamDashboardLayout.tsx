@@ -67,7 +67,8 @@ export const TeamDashboardLayout = ({ children }: TeamDashboardLayoutProps) => {
 
     const handleLogout = () => {
         localStorage.clear();
-        window.location.href = `/${leagueSlug}`;
+        sessionStorage.clear();
+        window.location.replace(`/${leagueSlug}/login`);
     };
 
     return (
