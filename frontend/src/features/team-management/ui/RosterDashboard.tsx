@@ -57,14 +57,16 @@ export const RosterDashboard = () => {
     const [teamName, setTeamName] = useState('Cargando...');
     const [teamLogo, setTeamLogo] = useState<string | undefined>(undefined);
     const [teamRep, setTeamRep] = useState<{ name: string, phone: string | null, photoUrl?: string | null }>({ name: 'Sin Asignar', phone: null });
+    const [resolvedTeamId, setResolvedTeamId] = useState<string | undefined>(teamId || (isTeamRepMode ? localStorage.getItem('teamId') || undefined : undefined));
     const { showToast, showConfirm } = useToast();
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
     const handleDownloadCredentials = async () => {
-        if (!settings?.tenantId || !teamId) return;
+        const targetId = resolvedTeamId || teamId || localStorage.getItem('teamId');
+        if (!settings?.tenantId || !targetId) return;
         try {
             setIsGeneratingPdf(true);
-            const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, teamId);
+            const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, targetId);
 
             if (!rawPlayers || rawPlayers.length === 0) {
                 showToast('El equipo no tiene jugadores registrados para generar credenciales', 'warning');
@@ -74,7 +76,7 @@ export const RosterDashboard = () => {
             const { generateCredentialsPdf } = await import('../lib/generateCredentialsPdf');
             
             await generateCredentialsPdf({
-                team: { id: teamId, name: teamName, logoUrl: teamLogo } as any,
+                team: { id: targetId, name: teamName, logoUrl: teamLogo } as any,
                 players: rawPlayers,
                 leagueLogoUrl: settings.logoUrl
             });
@@ -111,9 +113,11 @@ export const RosterDashboard = () => {
             }
 
             if (targetTeamId) {
+                setResolvedTeamId(targetTeamId);
                 const team = allTeams.find(t => t.id === targetTeamId);
                 if (team && isTeamRepMode) {
                     localStorage.setItem('teamName', team.name);
+                    localStorage.setItem('teamId', targetTeamId);
                 }
                 setTeamName(team?.name || 'Equipo Desconocido');
                 setTeamLogo(team?.signedLogoUrl || team?.logoUrl);
@@ -395,7 +399,7 @@ export const RosterDashboard = () => {
                                 setVerifyingPlayer(null);
                             }}
                             onSuccess={() => fetchRoster(false)}
-                            teamId={teamId}
+                            teamId={resolvedTeamId || teamId}
                             tenantId={settings?.tenantId}
                             requireJerseyNumbers={settings?.requireJerseyNumbers}
                             existingPlayer={verifyingPlayer}

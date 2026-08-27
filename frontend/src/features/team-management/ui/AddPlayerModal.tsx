@@ -118,12 +118,13 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
         setIsSubmitting(true);
         try {
             const formData = new FormData();
+            const effectiveTeamId = teamId || localStorage.getItem('teamId') || undefined;
 
             if (playerType === 'mexican') {
                 if (!ineImage) throw new Error("Falta la foto del INE");
                 formData.append('ine_image', ineImage);
                 if (jerseyNumber) formData.append('jersey_number', jerseyNumber);
-                if (teamId) formData.append('team_id', teamId);
+                if (effectiveTeamId) formData.append('team_id', effectiveTeamId);
 
                 if (existingPlayer?.id) {
                     await leagueApi.verifyExistingIne(tenantId, existingPlayer.id, formData);
@@ -142,7 +143,7 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                 if (birthDate) formData.append('birth_date', birthDate);
                 if (curp.trim()) formData.append('curp', curp.trim().toUpperCase());
                 if (jerseyNumber) formData.append('jersey_number', jerseyNumber);
-                if (teamId) formData.append('team_id', teamId);
+                if (effectiveTeamId) formData.append('team_id', effectiveTeamId);
 
                 if (existingPlayer?.id) {
                     await leagueApi.verifyExistingForeign(tenantId, existingPlayer.id, formData);
