@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, ArrowLeft, Upload, Printer, Loader2 } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle } from 'lucide-react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { TeamDashboardLayout } from './TeamDashboardLayout';
 import { AdminDashboardLayout } from '../../admin/ui/AdminDashboardLayout';
@@ -107,8 +107,6 @@ export const RosterDashboard = () => {
                 const storedTeamId = localStorage.getItem('teamId');
                 if (storedTeamId) {
                     targetTeamId = storedTeamId;
-                } else if (allTeams.length > 0) {
-                    targetTeamId = allTeams[0].id;
                 }
             }
 
@@ -145,6 +143,11 @@ export const RosterDashboard = () => {
                     curp: p.curp,
                     birthDate: p.birthDate
                 })));
+            } else {
+                setResolvedTeamId(undefined);
+                setTeamName(isTeamRepMode ? 'Sin Equipo Asignado' : 'Equipo Desconocido');
+                setTeamRep({ name: 'Sin Asignar', phone: null });
+                setPlayers([]);
             }
         } catch (error) {
             console.error("Error fetching roster data:", error);
@@ -255,7 +258,7 @@ export const RosterDashboard = () => {
     );
 
     // Permissions
-    const canEdit = !isPublicMode;
+    const canEdit = !isPublicMode && (!isTeamRepMode || !!resolvedTeamId);
 
     return (
         <Layout>
@@ -275,6 +278,18 @@ export const RosterDashboard = () => {
                             <ArrowLeft className="w-5 h-5" />
                             <span>Volver a Tabla General</span>
                         </Link>
+                    </div>
+                )}
+
+                {isTeamRepMode && !resolvedTeamId && !isLoading && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 flex items-start gap-4 text-amber-900 shadow-sm">
+                        <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-base text-amber-900">No tienes un equipo asignado</h3>
+                            <p className="text-sm text-amber-700 mt-1">
+                                Tu cuenta de usuario no tiene un equipo vinculado en la plataforma. Por favor comunícate con el administrador de la liga para que enlace tu equipo a tu cuenta.
+                            </p>
+                        </div>
                     </div>
                 )}
 

@@ -38,6 +38,9 @@ export const LoginPage = () => {
             const response = await api.post('/auth/login', { username, password });
             const data = response.data;
 
+            // Clear previous session data
+            localStorage.clear();
+
             // Store Auth Data
             localStorage.setItem('token', data.accessToken);
             localStorage.setItem('role', data.role);
