@@ -16,4 +16,5 @@ public class PlayerResponse {
     private UUID teamId;
     private Integer jerseyNumber;
     private PlayerStatus status;
+    private Integer suspendedUntilMatchday;
 }

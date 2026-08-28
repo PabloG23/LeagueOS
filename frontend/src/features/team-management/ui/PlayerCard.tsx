@@ -10,9 +10,11 @@ export interface Player {
     jerseyNumber?: number;
     curp?: string;
     birthDate?: string;
+    suspendedUntilMatchday?: number;
     stats?: {
-        yellowCards: number;
-        redCards: number;
+        yellowCards?: number;
+        redCards?: number;
+        suspendedUntilMatchday?: number;
     };
 }
 
@@ -87,15 +89,15 @@ export const PlayerCard = ({ player, onToggleStatus, requireJerseyNumbers }: Pla
                 )}
 
                 {/* Disciplinary Cards */}
-                {(player.stats && (player.stats.yellowCards > 0 || player.stats.redCards > 0)) && (
+                {(player.stats && ((player.stats.yellowCards || 0) > 0 || (player.stats.redCards || 0) > 0)) && (
                     <div className="flex items-center justify-center gap-3 mb-4 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                        {player.stats.yellowCards > 0 && (
+                        {Boolean(player.stats.yellowCards && player.stats.yellowCards > 0) && (
                             <div className="flex items-center gap-1.5" title={`${player.stats.yellowCards} Tarjetas Amarillas`}>
                                 <div className="w-2.5 h-3.5 bg-yellow-400 rounded-[2px] shadow-sm border border-yellow-500/50" />
                                 <span className="text-xs font-bold text-slate-700">{player.stats.yellowCards}</span>
                             </div>
                         )}
-                        {player.stats.redCards > 0 && (
+                        {Boolean(player.stats.redCards && player.stats.redCards > 0) && (
                             <div className="flex items-center gap-1.5" title={`${player.stats.redCards} Tarjetas Rojas`}>
                                 <div className="w-2.5 h-3.5 bg-red-500 rounded-[2px] shadow-sm border border-red-600/50" />
                                 <span className="text-xs font-bold text-slate-700">{player.stats.redCards}</span>

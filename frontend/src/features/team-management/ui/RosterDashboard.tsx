@@ -141,7 +141,11 @@ export const RosterDashboard = () => {
                     status: p.status,
                     jerseyNumber: p.jerseyNumber,
                     curp: p.curp,
-                    birthDate: p.birthDate
+                    birthDate: p.birthDate,
+                    suspendedUntilMatchday: p.suspendedUntilMatchday,
+                    stats: {
+                        suspendedUntilMatchday: p.suspendedUntilMatchday
+                    }
                 })));
             } else {
                 setResolvedTeamId(undefined);

@@ -203,9 +203,28 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     // --- RENDER STEPS ---
 
     const renderRosterGrid = (roster: Player[], teamName: string, searchQuery: string, setSearchQuery: (q: string) => void) => {
-        const filteredRoster = roster.filter(p =>
-            `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        const currentMatchday = match.matchday || 1;
+        const filteredRoster = roster
+            .filter(p => {
+                // Must be active
+                if (p.status && p.status.toUpperCase() !== 'ACTIVE') {
+                    const stats = events[p.id];
+                    if (!stats?.played && !stats?.goals && !stats?.yellowCards && !stats?.redCard) {
+                        return false;
+                    }
+                }
+                // Must not be suspended for this matchday
+                if (p.suspendedUntilMatchday && currentMatchday <= p.suspendedUntilMatchday) {
+                    const stats = events[p.id];
+                    if (!stats?.played && !stats?.goals && !stats?.yellowCards && !stats?.redCard) {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .filter(p =>
+                `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
+            );
 
         return (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col h-full">

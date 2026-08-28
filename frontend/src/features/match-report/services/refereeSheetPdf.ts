@@ -32,6 +32,19 @@ const loadImage = (url: string): Promise<HTMLImageElement | null> => {
 };
 
 /**
+ * Helper to truncate text with ellipsis if it exceeds the maxWidth (in mm).
+ */
+const fitText = (doc: jsPDF, text: string, maxWidth: number): string => {
+    if (!text) return '';
+    if (doc.getTextWidth(text) <= maxWidth) return text;
+    let truncated = text;
+    while (truncated.length > 0 && doc.getTextWidth(truncated + '...') > maxWidth) {
+        truncated = truncated.slice(0, -1);
+    }
+    return truncated ? `${truncated.trim()}...` : '';
+};
+
+/**
  * Generates and downloads the Official Printed Match Sheet (Cédula Arbitral)
  * in a strictly SINGLE-PAGE Letter Landscape format (279.4 mm x 215.9 mm).
  */
@@ -68,45 +81,52 @@ export const generateRefereeMatchSheetPDF = async ({
         }
     }
 
-    // --- HEADER SECTION (Y: 6 to 22 mm) ---
-    const headerTopY = 6;
+    // --- HEADER SECTION (Y: 5.5 to 21 mm) ---
+    const headerTopY = 5.5;
     let textStartX = margin;
 
     if (logoImg) {
         try {
-            const logoSize = 14;
+            const logoSize = 14.5;
             doc.addImage(logoImg, 'PNG', margin, headerTopY, logoSize, logoSize, undefined, 'FAST');
-            textStartX = margin + logoSize + 3.5;
+            textStartX = margin + logoSize + 3;
         } catch (e) {
             console.warn('Could not render logo in PDF:', e);
         }
     }
 
-    // League Name (Bold, Slate-900)
+    // 1. Calculate width of League Name & Title on the left
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(12);
+    const maxLeagueNameWidth = logoImg ? 65 : 80;
+    const displayedLeagueName = fitText(doc, leagueName.toUpperCase(), maxLeagueNameWidth);
+    const leagueNameWidth = doc.getTextWidth(displayedLeagueName);
+
+    doc.setFontSize(8.5);
+    const docTitleText = 'CÉDULA ARBITRAL OFICIAL';
+    const docTitleWidth = doc.getTextWidth(docTitleText);
+
+    // Render left header (League name + subtitle)
+    doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
-    doc.text(leagueName.toUpperCase(), textStartX, headerTopY + 5.5);
+    doc.text(displayedLeagueName, textStartX, headerTopY + 5.2);
 
-    // Document Title Badge/Text (Bold, Blue-800) - Omitting the long subtitle as requested
-    doc.setFontSize(9.5);
+    doc.setFontSize(8.5);
     doc.setTextColor(30, 64, 175); // blue-800
-    doc.text('CÉDULA ARBITRAL OFICIAL', textStartX, headerTopY + 11.5);
+    doc.text(docTitleText, textStartX, headerTopY + 11.2);
 
-    // --- MATCH METADATA CARD (TOP RIGHT) ---
-    // --- MATCH METADATA CARD (TOP RIGHT) ---
-    const metaCardWidth = 142;
-    const metaCardX = pageWidth - margin - metaCardWidth;
+    // --- MATCH METADATA CARD ---
+    // Colinda inmediatamente con el nombre de la liga (3.5 mm gap) y abarca todo el ancho restante hasta el margen derecho
+    const leftBlockWidth = Math.max(leagueNameWidth, docTitleWidth);
+    const metaCardX = textStartX + leftBlockWidth + 3.5;
+    const metaCardWidth = (pageWidth - margin) - metaCardX;
     const metaCardY = headerTopY;
-    const metaCardHeight = 14;
+    const metaCardHeight = 14.5;
 
+    // Draw metadata container card
     doc.setDrawColor(203, 213, 225); // slate-300
     doc.setFillColor(248, 250, 252); // slate-50
     doc.roundedRect(metaCardX, metaCardY, metaCardWidth, metaCardHeight, 1.5, 1.5, 'FD');
-
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
 
     // Format Date and Time if set in app
     let formattedDate = '';
@@ -130,40 +150,92 @@ export const generateRefereeMatchSheetPDF = async ({
         }
     }
 
-    // Line 1: Torneo | Jornada | Cancha
-    doc.text('TORNEO:', metaCardX + 3, metaCardY + 4.8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(seasonName || 'Torneo Oficial', metaCardX + 17, metaCardY + 4.8);
+    // Dynamic column widths inside meta card to maximize space for Torneo and Cancha/Árbitro
+    const col2Width = 34; // Jornada & Hora
+    const remainingWidth = metaCardWidth - col2Width;
+    const col1Width = remainingWidth * 0.52; // Torneo & Fecha (~52%)
+    const col3Width = remainingWidth * 0.48; // Cancha & Árbitro (~48%)
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('JORNADA:', metaCardX + 70, metaCardY + 4.8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${match.matchday || 1}`, metaCardX + 85, metaCardY + 4.8);
+    const div1X = metaCardX + col1Width;
+    const div2X = div1X + col2Width;
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('CANCHA:', metaCardX + 96, metaCardY + 4.8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(match.location || '', metaCardX + 110, metaCardY + 4.8);
+    // Dividers between columns
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.2);
+    doc.line(div1X, metaCardY + 1.8, div1X, metaCardY + metaCardHeight - 1.8);
+    doc.line(div2X, metaCardY + 1.8, div2X, metaCardY + metaCardHeight - 1.8);
 
-    // Line 2: Fecha | Hora | Árbitro
-    doc.setFont('helvetica', 'bold');
-    doc.text('FECHA:', metaCardX + 3, metaCardY + 10.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(formattedDate, metaCardX + 15, metaCardY + 10.5);
+    doc.setFontSize(7.2);
+    const row1Y = metaCardY + 4.8;
+    const row2Y = metaCardY + 10.8;
 
+    // --- COLUMN 1: TORNEO & FECHA ---
+    const col1X = metaCardX + 3;
+    // Row 1: TORNEO
     doc.setFont('helvetica', 'bold');
-    doc.text('HORA:', metaCardX + 50, metaCardY + 10.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text('TORNEO:', col1X, row1Y);
     doc.setFont('helvetica', 'normal');
-    doc.text(formattedTime, metaCardX + 60, metaCardY + 10.5);
+    doc.setTextColor(51, 65, 85);
+    const maxSeasonWidth = Math.max(25, col1Width - 18);
+    const seasonText = fitText(doc, (seasonName || 'Torneo Oficial').toUpperCase(), maxSeasonWidth);
+    doc.text(seasonText, col1X + 14.5, row1Y);
 
+    // Row 2: FECHA
     doc.setFont('helvetica', 'bold');
-    doc.text('ÁRBITRO:', metaCardX + 78, metaCardY + 10.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text('FECHA:', col1X, row2Y);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const maxDateWidth = Math.max(25, col1Width - 15);
+    const dateText = fitText(doc, formattedDate || 'Por definir', maxDateWidth);
+    doc.text(dateText, col1X + 11.5, row2Y);
+
+    // --- COLUMN 2: JORNADA & HORA ---
+    const col2X = div1X + 3;
+    // Row 1: JORNADA
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('JORNADA:', col2X, row1Y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const roundText = fitText(doc, `${match.matchday || 1}`, 17);
+    doc.text(roundText, col2X + 15, row1Y);
+
+    // Row 2: HORA
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('HORA:', col2X, row2Y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const timeText = fitText(doc, formattedTime || '--:--', 21);
+    doc.text(timeText, col2X + 10, row2Y);
+
+    // --- COLUMN 3: CANCHA & ÁRBITRO ---
+    const col3X = div2X + 3;
+    // Row 1: CANCHA
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('CANCHA:', col3X, row1Y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const maxLocationWidth = Math.max(25, col3Width - 17);
+    const locationText = fitText(doc, (match.location || 'Por definir').toUpperCase(), maxLocationWidth);
+    doc.text(locationText, col3X + 14, row1Y);
+
+    // Row 2: ÁRBITRO
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('ÁRBITRO:', col3X, row2Y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const maxRefereeWidth = Math.max(25, col3Width - 17);
     const effectiveRefereeName = refereeName || match.referee?.name;
     if (effectiveRefereeName) {
-        doc.text(effectiveRefereeName.toUpperCase(), metaCardX + 92, metaCardY + 10.5);
+        const refText = fitText(doc, effectiveRefereeName.toUpperCase(), maxRefereeWidth);
+        doc.text(refText, col3X + 14, row2Y);
     } else {
-        doc.text('_______________________', metaCardX + 92, metaCardY + 10.5);
+        doc.text('___________________', col3X + 14, row2Y);
     }
 
     // --- TEAMS ROSTER TABLES (SIDE BY SIDE) ---
@@ -174,12 +246,16 @@ export const generateRefereeMatchSheetPDF = async ({
     const bannerY = headerTopY + 17;
     const bannerHeight = 5;
 
-    // Prepare rosters (strictly active players only)
+    // Prepare rosters (strictly active and non-suspended players for this matchday)
+    const targetMatchday = match.matchday || 1;
     const prepareRosterRows = (roster: Player[]) => {
-        // Filtrar estrictamente solo jugadores activos
+        // Filtrar estrictamente solo jugadores activos y no suspendidos
         const activePlayers = roster.filter((p) => {
-            if (!p.status) return true;
-            return p.status.toUpperCase() === 'ACTIVE';
+            if (p.status && p.status.toUpperCase() !== 'ACTIVE') return false;
+            if (p.suspendedUntilMatchday && targetMatchday <= p.suspendedUntilMatchday) {
+                return false;
+            }
+            return true;
         });
 
         const sorted = [...activePlayers].sort((a, b) => {
@@ -254,7 +330,8 @@ export const generateRefereeMatchSheetPDF = async ({
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(`LOCAL: ${homeTeamName.toUpperCase()}`, homeStartX + 3, bannerY + 3.6);
+    const homeBannerText = fitText(doc, `LOCAL: ${homeTeamName.toUpperCase()}`, tableWidth - 6);
+    doc.text(homeBannerText, homeStartX + 3, bannerY + 3.6);
 
     // Away Team Banner
     doc.setFillColor(88, 28, 135); // purple-900
@@ -262,7 +339,8 @@ export const generateRefereeMatchSheetPDF = async ({
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(`VISITANTE: ${awayTeamName.toUpperCase()}`, awayStartX + 3, bannerY + 3.6);
+    const awayBannerText = fitText(doc, `VISITANTE: ${awayTeamName.toUpperCase()}`, tableWidth - 6);
+    doc.text(awayBannerText, awayStartX + 3, bannerY + 3.6);
 
     const tableStartY = bannerY + bannerHeight + 0.5;
 

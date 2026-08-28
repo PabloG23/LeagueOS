@@ -11,7 +11,8 @@ import {
     Eye, 
     AlertCircle, 
     Filter,
-    Shield
+    Shield,
+    ChevronDown
 } from 'lucide-react';
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { leagueApi, AdminPlayerDirectoryDTO } from '@/shared/api/league-api';
@@ -275,52 +276,57 @@ export const PlayersDirectoryView = () => {
             {/* Filter and Search Bar */}
             <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-3 sm:gap-4 items-stretch lg:items-center justify-between">
                 {/* Search */}
-                <div className="relative w-full lg:w-80">
+                <div className="relative w-full lg:w-80 shrink-0">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                         type="text"
                         placeholder="Buscar por nombre, CURP o dorsal..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
                     />
                 </div>
 
                 {/* Filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:flex-wrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
                     {/* Team Filter */}
-                    <div className="relative flex items-center">
-                        <Filter className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                    <div className="relative w-full sm:w-auto sm:min-w-[200px] flex-1">
+                        <Filter className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <select
                             value={selectedTeam}
                             onChange={(e) => setSelectedTeam(e.target.value)}
-                            className="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full"
+                            className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer shadow-2xs appearance-none"
                         >
                             <option value="ALL">Todos los equipos ({uniqueTeams.length})</option>
                             {uniqueTeams.map(t => (
                                 <option key={t} value={t}>{t}</option>
                             ))}
                         </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
 
                     {/* Eligibility Filter */}
-                    <select
-                        value={eligibilityFilter}
-                        onChange={(e) => setEligibilityFilter(e.target.value as any)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full"
-                    >
-                        <option value="ALL">Todos los estados</option>
-                        <option value="ELIGIBLE">✓ Solo Elegibles</option>
-                        <option value="PENDING">⏳ Solo Pendientes</option>
-                    </select>
+                    <div className="relative w-full sm:w-auto sm:min-w-[190px] flex-1">
+                        <CheckCircle2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <select
+                            value={eligibilityFilter}
+                            onChange={(e) => setEligibilityFilter(e.target.value as any)}
+                            className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer shadow-2xs appearance-none"
+                        >
+                            <option value="ALL">Todos los estados</option>
+                            <option value="ELIGIBLE">✓ Solo Elegibles</option>
+                            <option value="PENDING">⏳ Solo Pendientes</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
 
                     {/* Sort By */}
-                    <div className="relative flex items-center">
-                        <ArrowUpDown className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                    <div className="relative w-full sm:w-auto sm:min-w-[190px] flex-1">
+                        <ArrowUpDown className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value as any)}
-                            className="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full"
+                            className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer shadow-2xs appearance-none"
                         >
                             <option value="NAME_ASC">Nombre (A-Z)</option>
                             <option value="NAME_DESC">Nombre (Z-A)</option>
@@ -328,6 +334,7 @@ export const PlayersDirectoryView = () => {
                             <option value="GOALS_DESC">Más goles</option>
                             <option value="CARDS_DESC">Más tarjetas</option>
                         </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
                 </div>
             </div>

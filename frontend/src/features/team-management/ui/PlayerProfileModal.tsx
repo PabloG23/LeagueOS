@@ -80,7 +80,7 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
     }, [isOpen, player, settings?.tenantId]);
 
     // Suspension Logic
-    const isSuspended = stats.suspendedUntilMatchday && stats.suspendedUntilMatchday > currentMatchday;
+    const isSuspended = stats.suspendedUntilMatchday && stats.suspendedUntilMatchday >= currentMatchday;
 
     // Playoff Eligibility Logic
     const minMatches = settings?.minMatchesForPlayoffs || 0;

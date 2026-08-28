@@ -66,7 +66,7 @@ public class MatchService {
                     }
                 }
 
-                if (settings != null && settings.isEnableAutoSuspensions() && event.getEventType() == MatchEvent.MatchEventType.RED_CARD) {
+                if (event.getEventType() == MatchEvent.MatchEventType.RED_CARD) {
                     applyAutoSuspension(event, match);
                 }
             }

@@ -562,6 +562,7 @@ public class PlayerRegistrationService {
             response.setJerseyNumber(roster.getJerseyNumber());
             response.setTeamId(roster.getTeam().getId());
         }
+        response.setSuspendedUntilMatchday(player.getSuspendedUntilMatchday());
         return response;
     }
 

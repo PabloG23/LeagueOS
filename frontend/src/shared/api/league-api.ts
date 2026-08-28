@@ -92,6 +92,7 @@ export interface Player {
     jerseyNumber?: number;
     status?: string;
     profilePhotoUrl?: string;
+    suspendedUntilMatchday?: number;
 }
 
 export interface AdminPlayerDirectoryDTO {
