@@ -35,10 +35,10 @@ public class IneExtractionService {
     private final ObjectMapper objectMapper;
 
     private static final List<String> MODELS = List.of(
-            "gemini-3.6-flash",             // Prioridad 1: Versión más estable, rápida y precisa
-            "gemini-3.7-flash",             // Respaldo 1: Última generación
+            "gemini-3.5-flash",             // Prioridad 1: Máxima velocidad y precisión visual estándar
+            "gemini-3.1-pro-preview",       // Respaldo 1: Mayor potencia de visión y razonamiento espacial
             "gemini-3.1-flash-lite",        // Respaldo 2: Ultrarrápido y ligero
-            "gemini-3-flash-preview"        // Respaldo 3: Preview
+            "gemini-3-flash-preview"        // Respaldo 3: Respaldo general
     );
 
     /**
@@ -72,19 +72,21 @@ public class IneExtractionService {
             "- El CURP siempre está explícitamente etiquetado como \"CURP\".\n" +
             "- La estructura del CURP es: 4 letras iniciales + 6 dígitos de fecha (AAMMDD igual a fecha_nacimiento) + 1 letra sexo (H/M) + 2 letras entidad federativa (ej. DF, MC, JC, NL, etc.) + 3 letras consonantes internas + 2 caracteres finales.\n" +
             "- Coteja que los dígitos 5 al 10 del CURP coincidan con el año, mes y día de fecha_nacimiento.\n\n" +
-            "Reglas para ine_rotation (cómo está orientado el TEXTO del INE en esta imagen):\n" +
-            "- \"NORMAL\": el texto del INE se lee normalmente de izquierda a derecha (situación más común).\n" +
-            "- \"ROTATED_90_CW\": para leer el texto debes inclinar la cabeza hacia la DERECHA (el INE está girado 90° horario).\n" +
-            "- \"UPSIDE_DOWN\": el texto del INE está completamente al revés (180°).\n" +
-            "- \"ROTATED_90_CCW\": para leer el texto debes inclinar la cabeza hacia la IZQUIERDA (el INE está girado 90° anti-horario).\n\n" +
-            "Reglas para face_box:\n" +
+            "Reglas críticas para ine_rotation (orientación del INE y del rostro):\n" +
+            "Verifica la orientación física del documento y del rostro de la persona:\n" +
+            "- \"NORMAL\": La cabeza/cabello de la persona apunta hacia ARRIBA (cuello hacia abajo) y el texto se lee naturalmente de izquierda a derecha.\n" +
+            "- \"UPSIDE_DOWN\": La cabeza de la persona apunta hacia ABAJO (de cabeza 180°) y el texto está invertido.\n" +
+            "- \"ROTATED_90_CW\": La cabeza de la persona apunta hacia la DERECHA (documento girado 90° en sentido horario).\n" +
+            "- \"ROTATED_90_CCW\": La cabeza de la persona apunta hacia la IZQUIERDA (documento girado 90° en sentido antihorario).\n\n" +
+            "Reglas críticas para face_box (recorte del rostro para avatar de jugador):\n" +
             "- Coordenadas normalizadas (0.0 a 1.0) en la imagen TAL COMO ESTÁ (sin corregir rotación).\n" +
-            "- Delimita ÚNICAMENTE la foto del rostro: desde cabello hasta barbilla, de mejilla a mejilla.\n" +
-            "- Sin márgenes extra, sin incluir texto/firmas/sellos.";
+            "- Delimita ÚNICAMENTE el óvalo del rostro de la persona: desde la parte superior del cabello hasta la barbilla, y lateralmente de mejilla a mejilla (o de oreja a oreja).\n" +
+            "- PROHIBIDO incluir texto de la credencial: A la derecha o izquierda de la foto suele haber texto como \"NOMBRE\", \"DOMICILIO\", \"CLAVE\". El face_box NO DEBE tocar ni incluir ninguna de estas letras bajo ninguna circunstancia.\n" +
+            "- Si dudas del ancho, prefiere un recorte más ceñido y centrado en la cara antes que invadir la zona de texto o los sellos/firmas.";
 
     public IneExtractionService(
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model:gemini-3.6-flash}") String model,
+            @Value("${gemini.model:gemini-3.5-flash}") String model,
             ObjectMapper objectMapper) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(5));
