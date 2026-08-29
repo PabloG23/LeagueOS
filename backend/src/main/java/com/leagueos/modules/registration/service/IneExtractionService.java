@@ -35,10 +35,10 @@ public class IneExtractionService {
     private final ObjectMapper objectMapper;
 
     private static final List<String> MODELS = List.of(
-            "gemini-3.5-flash",             // Prioridad 1: Máxima velocidad y precisión visual estándar
-            "gemini-3.1-pro-preview",       // Respaldo 1: Mayor potencia de visión y razonamiento espacial
-            "gemini-3.1-flash-lite",        // Respaldo 2: Ultrarrápido y ligero
-            "gemini-3-flash-preview"        // Respaldo 3: Respaldo general
+            "gemini-3.7-flash",             // Prioridad 1: Última generación con máxima inteligencia
+            "gemini-3.5-flash",             // Respaldo 1: Versión estándar probada y rápida
+            "gemini-3.1-pro-preview",       // Respaldo 2: Modelo Pro (máxima precisión de visión/recorte)
+            "gemini-3.5-flash-lite"         // Respaldo 3: Ultrarrápido y ligero
     );
 
     /**
@@ -86,7 +86,7 @@ public class IneExtractionService {
 
     public IneExtractionService(
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model:gemini-3.5-flash}") String model,
+            @Value("${gemini.model:gemini-3.7-flash}") String model,
             ObjectMapper objectMapper) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(5));
@@ -112,6 +112,11 @@ public class IneExtractionService {
                                         "data", base64Image
                                 ))
                         ))
+                ),
+                "generationConfig", Map.of(
+                        "temperature", 0.0,
+                        "responseMimeType", "application/json",
+                        "thinkingConfig", Map.of("thinkingBudget", 0)
                 )
         );
 
