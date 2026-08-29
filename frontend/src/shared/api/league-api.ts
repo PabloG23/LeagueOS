@@ -220,6 +220,7 @@ export interface Match {
     homeScore?: number;
     awayScore?: number;
     status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+    isDoubleForfeit?: boolean;
 }
 
 /**
@@ -365,6 +366,8 @@ export const leagueApi = {
     getSeasonMatches: (tenantId: string, seasonId: string) =>
         api.get<Match[]>(`/competition/seasons/${seasonId}/matches`, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatches: (tenantId: string, matchday: number) => api.get<Match[]>(`/matches/${matchday}`, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateMatchScore: (tenantId: string, matchId: string, homeScore: number, awayScore: number, isDoubleForfeit?: boolean) =>
+        api.patch<Match>(`/matches/${matchId}/score`, { homeScore, awayScore, isDoubleForfeit }, { headers: { 'X-Tenant-ID': tenantId } }),
     submitMatchReport: (tenantId: string, matchId: string, events: any[]) => api.post(`/matches/${matchId}/report`, events, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatchReport: (tenantId: string, matchId: string) => api.get<any[]>(`/matches/${matchId}/report`, { headers: { 'X-Tenant-ID': tenantId } }),
     previewRoundRobinFixtures: (tenantId: string, seasonId: string) =>

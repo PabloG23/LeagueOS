@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, ChevronDown, ChevronUp, AlertCircle, CheckCircle2, Search, FileText, Calendar, Shield, Printer, Loader2, ArrowLeftRight, ImageDown, ShieldCheck, FileDown, Camera, ExternalLink } from 'lucide-react';
+import { Save, ChevronDown, ChevronUp, AlertCircle, CheckCircle2, Search, FileText, Calendar, Shield, Printer, Loader2, ArrowLeftRight, ImageDown, ShieldCheck, FileDown, Camera, ExternalLink, Trophy } from 'lucide-react';
 import { MatchReportWizard } from './MatchReportWizard';
 import { EditMatchScheduleModal } from './EditMatchScheduleModal';
+import { QuickScoreModal } from './QuickScoreModal';
 import { Match, Player, Season, leagueApi, Team } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { useToast } from '@/shared/components/ui/ToastContext';
@@ -20,6 +21,7 @@ interface UIMatch extends Match {
 const MatchRow = ({
     match,
     onOpenWizard,
+    onOpenQuickScore,
     onOpenEditSchedule,
     onDownloadSheet,
     onOpenCardsModal,
@@ -30,6 +32,7 @@ const MatchRow = ({
 }: {
     match: UIMatch;
     onOpenWizard: (m: UIMatch) => void;
+    onOpenQuickScore: (m: UIMatch) => void;
     onOpenEditSchedule: (m: UIMatch) => void;
     onDownloadSheet: (m: UIMatch) => void;
     onOpenCardsModal: (m: UIMatch) => void;
@@ -158,7 +161,17 @@ const MatchRow = ({
                         <span>Horario</span>
                     </button>
 
-                    {/* 2. Photo Report Button (If referee uploaded it) */}
+                    {/* 2. Quick Score Button (Direct Score / No players needed) */}
+                    <button
+                        onClick={() => onOpenQuickScore(match)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/80 shadow-2xs transition-colors"
+                        title="Capturar marcador directo sin requerir jugadores (ideal para jornadas de gracia)"
+                    >
+                        <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Marcador Rápido</span>
+                    </button>
+
+                    {/* 3. Photo Report Button (If referee uploaded it) */}
                     {hasPhotoReport && onDownloadReportPhoto && (
                         <button
                             onClick={() => onDownloadReportPhoto(match)}
@@ -175,7 +188,7 @@ const MatchRow = ({
                         </button>
                     )}
 
-                    {/* 3. PDFs Dropdown Menu (Cédula PDF + Tarjetas PDF) */}
+                    {/* 4. PDFs Dropdown Menu (Cédula PDF + Tarjetas PDF) */}
                     <div className="relative" ref={pdfMenuRef}>
                         <button
                             type="button"
@@ -235,7 +248,7 @@ const MatchRow = ({
                         )}
                     </div>
 
-                    {/* 4. Main Action: Digital Sheet */}
+                    {/* 5. Main Action: Digital Sheet */}
                     <button
                         onClick={() => onOpenWizard(match)}
                         className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${
@@ -332,19 +345,28 @@ const MatchRow = ({
                 )}
 
                 {/* Mobile Action Buttons Grid */}
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
                     <button
                         onClick={() => onOpenEditSchedule(match)}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
+                        className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
                     >
                         <Calendar className="w-3.5 h-3.5 text-slate-500" />
                         <span>Horario</span>
                     </button>
 
                     <button
+                        onClick={() => onOpenQuickScore(match)}
+                        className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 shadow-2xs"
+                        title="Marcador Rápido"
+                    >
+                        <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Marcador</span>
+                    </button>
+
+                    <button
                         onClick={() => onDownloadSheet(match)}
                         disabled={isDownloadingSheet}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs disabled:opacity-50"
+                        className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs disabled:opacity-50"
                     >
                         {isDownloadingSheet ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
@@ -356,7 +378,7 @@ const MatchRow = ({
 
                     <button
                         onClick={() => onOpenWizard(match)}
-                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold shadow-sm ${
+                        className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold shadow-sm ${
                             isFinished
                                 ? 'bg-slate-100 text-slate-800 border border-slate-200'
                                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -381,6 +403,7 @@ export const MatchResultsView = () => {
     const [isLoading, setIsLoading] = useState(true);
     const { showToast } = useToast();
     const [selectedMatch, setSelectedMatch] = useState<UIMatch | null>(null);
+    const [selectedQuickScoreMatch, setSelectedQuickScoreMatch] = useState<UIMatch | null>(null);
     const [selectedEditMatch, setSelectedEditMatch] = useState<UIMatch | null>(null);
     const [selectedCardsMatch, setSelectedCardsMatch] = useState<UIMatch | null>(null);
     const [downloadingMatchId, setDownloadingMatchId] = useState<string | null>(null);
@@ -438,6 +461,7 @@ export const MatchResultsView = () => {
     const handleWizardSuccess = () => {
         loadMatches();
         setSelectedMatch(null);
+        setSelectedQuickScoreMatch(null);
     };
 
     const handleOpenWizard = async (m: UIMatch) => {
@@ -453,15 +477,17 @@ export const MatchResultsView = () => {
             }
 
             const [homeRes, awayRes] = await Promise.all([
-                leagueApi.getTeamPlayers(settings.tenantId, homeId),
-                leagueApi.getTeamPlayers(settings.tenantId, awayId),
+                leagueApi.getTeamPlayers(settings.tenantId, homeId).catch(() => ({ data: [] })),
+                leagueApi.getTeamPlayers(settings.tenantId, awayId).catch(() => ({ data: [] })),
             ]);
-            setHomeRoster(homeRes.data);
-            setAwayRoster(awayRes.data);
+            setHomeRoster(homeRes.data || []);
+            setAwayRoster(awayRes.data || []);
             setSelectedMatch(m);
         } catch (e) {
             console.error("Error fetching rosters", e);
-            showToast("No se pudo cargar la plantilla.", "error");
+            setHomeRoster([]);
+            setAwayRoster([]);
+            setSelectedMatch(m);
         } finally {
             setLoadingRosters(false);
         }
@@ -480,8 +506,8 @@ export const MatchResultsView = () => {
             }
 
             const [homeRes, awayRes] = await Promise.all([
-                leagueApi.getTeamPlayers(settings.tenantId, homeId),
-                leagueApi.getTeamPlayers(settings.tenantId, awayId),
+                leagueApi.getTeamPlayers(settings.tenantId, homeId).catch(() => ({ data: [] })),
+                leagueApi.getTeamPlayers(settings.tenantId, awayId).catch(() => ({ data: [] })),
             ]);
 
             const currentSeason = seasons.find(s => s.id === selectedSeasonId);
@@ -616,6 +642,7 @@ export const MatchResultsView = () => {
                                 key={match.id}
                                 match={match}
                                 onOpenWizard={handleOpenWizard}
+                                onOpenQuickScore={setSelectedQuickScoreMatch}
                                 onOpenEditSchedule={setSelectedEditMatch}
                                 onDownloadSheet={handleDownloadRefereeSheet}
                                 onOpenCardsModal={setSelectedCardsMatch}
@@ -637,6 +664,14 @@ export const MatchResultsView = () => {
                     homeTeamName={selectedMatch.home}
                     awayTeamName={selectedMatch.away}
                     onClose={() => setSelectedMatch(null)}
+                    onSuccess={handleWizardSuccess}
+                />
+            )}
+
+            {selectedQuickScoreMatch && (
+                <QuickScoreModal
+                    match={selectedQuickScoreMatch}
+                    onClose={() => setSelectedQuickScoreMatch(null)}
                     onSuccess={handleWizardSuccess}
                 />
             )}

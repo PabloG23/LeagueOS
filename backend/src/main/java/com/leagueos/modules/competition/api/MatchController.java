@@ -72,4 +72,18 @@ public class MatchController {
             TenantContext.clear();
         }
     }
+
+    @PatchMapping("/{matchId}/score")
+    public ResponseEntity<Match> updateMatchScore(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID matchId,
+            @RequestBody com.leagueos.modules.competition.api.dto.UpdateMatchScoreRequest request) {
+        
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(matchService.updateMatchScore(matchId, request));
+        } finally {
+            TenantContext.clear();
+        }
+    }
 }

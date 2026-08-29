@@ -8,9 +8,11 @@ import com.leagueos.modules.competition.api.dto.PlayerScorerDTO;
 import com.leagueos.modules.competition.api.dto.PlayerStatDTO;
 import com.leagueos.modules.competition.api.dto.TeamStandingDTO;
 import com.leagueos.modules.competition.api.dto.TeamStatDTO;
+import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.domain.MatchEvent;
 import com.leagueos.modules.competition.persistence.MatchEventRepository;
 import com.leagueos.modules.competition.persistence.MatchRepository;
+import com.leagueos.modules.league.domain.Team;
 import com.leagueos.modules.league.domain.TeamRegistration;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
 import com.leagueos.modules.tenant.domain.TenantSettings;
@@ -132,6 +134,17 @@ public class StatsService {
 
         List<MatchResultSummaryDTO> matches = matchRepository.findFinishedMatchSummariesBySeasonId(seasonId);
 
+        // Ensure all teams participating in season matches are present in standingsMap
+        List<Match> allSeasonMatches = matchRepository.findBySeasonId(seasonId);
+        for (Match m : allSeasonMatches) {
+            if (m.getHomeTeam() != null && !standingsMap.containsKey(m.getHomeTeam().getId())) {
+                addTeamToStandings(standingsMap, m.getHomeTeam());
+            }
+            if (m.getAwayTeam() != null && !standingsMap.containsKey(m.getAwayTeam().getId())) {
+                addTeamToStandings(standingsMap, m.getAwayTeam());
+            }
+        }
+
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
         int winPoints = settings.getWinPointsOnWin();
         SportRulesStrategy rulesStrategy = sportRulesService.getStrategy("SOCCER")
@@ -159,12 +172,13 @@ public class StatsService {
             }
         });
 
-        // Sort and assign ranks
+        // Sort and assign ranks (Points DESC -> GD DESC -> GF DESC -> Team Name ASC)
         List<TeamStandingDTO> sorted = standingsMap.values().stream()
                 .sorted(Comparator
-                        .comparingInt(TeamStandingDTO::getPoints).reversed()
-                        .thenComparingInt(TeamStandingDTO::getGoalDifference).reversed()
-                        .thenComparingInt(TeamStandingDTO::getGoalsFor).reversed())
+                        .comparing(TeamStandingDTO::getPoints, Comparator.reverseOrder())
+                        .thenComparing(TeamStandingDTO::getGoalDifference, Comparator.reverseOrder())
+                        .thenComparing(TeamStandingDTO::getGoalsFor, Comparator.reverseOrder())
+                        .thenComparing(TeamStandingDTO::getTeam, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
 
         for (int i = 0; i < sorted.size(); i++) {
@@ -197,6 +211,29 @@ public class StatsService {
             previousValue = value;
         }
         return stats;
+    }
+
+    private void addTeamToStandings(Map<UUID, TeamStandingDTO> standingsMap, Team team) {
+        String logoKey = team.getLogoUrl();
+        String signedLogo = null;
+        if (logoKey != null && !logoKey.isBlank()) {
+            try {
+                signedLogo = logoKey.startsWith("http") ? logoKey : storageService.getSignedUrl(logoKey, 120);
+            } catch (Exception ignored) {
+                signedLogo = logoKey;
+            }
+        }
+
+        standingsMap.put(team.getId(), TeamStandingDTO.builder()
+                .id(team.getId())
+                .team(team.getName())
+                .logoUrl(logoKey)
+                .signedLogoUrl(signedLogo)
+                .played(0).won(0).drawn(0).lost(0)
+                .goalsFor(0).goalsAgainst(0).goalDifference(0)
+                .points(0)
+                .form(new ArrayList<>())
+                .build());
     }
 
     private void applyGoalStats(TeamStandingDTO team, int goalsFor, int goalsAgainst) {

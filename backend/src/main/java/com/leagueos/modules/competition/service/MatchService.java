@@ -87,6 +87,39 @@ public class MatchService {
         }
     }
 
+    @Transactional
+    public Match updateMatchScore(UUID matchId, com.leagueos.modules.competition.api.dto.UpdateMatchScoreRequest request) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found: " + matchId));
+
+        if (!match.getTenantId().equals(TenantContext.getCurrentTenant())) {
+            throw new IllegalStateException("Match does not belong to the current tenant");
+        }
+
+        if (request.getHomeScore() != null) {
+            match.setHomeScore(request.getHomeScore());
+        }
+        if (request.getAwayScore() != null) {
+            match.setAwayScore(request.getAwayScore());
+        }
+        if (request.getStatus() != null) {
+            match.setStatus(request.getStatus());
+        } else {
+            match.setStatus(Match.MatchStatus.FINISHED);
+        }
+        if (request.getIsDoubleForfeit() != null) {
+            match.setIsDoubleForfeit(request.getIsDoubleForfeit());
+        }
+
+        Match savedMatch = matchRepository.save(match);
+
+        if (MatchStage.PLAYOFFS.equals(savedMatch.getStage()) && savedMatch.getPlayoffTie() != null) {
+            playoffService.resolveTie(savedMatch.getPlayoffTie().getId());
+        }
+
+        return savedMatch;
+    }
+
     public List<Match> getMatchesByMatchday(Integer matchday) {
         return matchRepository.findByMatchday(matchday);
     }

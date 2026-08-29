@@ -46,6 +46,8 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     const [awaySearch, setAwaySearch] = useState('');
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
     const [isDoubleForfeit, setIsDoubleForfeit] = useState(false); // New State
+    const [directHomeScore, setDirectHomeScore] = useState<number>(match.homeScore ?? 0);
+    const [directAwayScore, setDirectAwayScore] = useState<number>(match.awayScore ?? 0);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -132,6 +134,19 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
         }
     };
 
+    // Calculations for Summary
+    const calculatedHomeScore = Object.entries(events)
+        .filter(([pid, s]) => s.goals > 0 && homeRoster.some(p => p.id === pid))
+        .reduce((acc, [_, s]) => acc + s.goals, 0);
+
+    const calculatedAwayScore = Object.entries(events)
+        .filter(([pid, s]) => s.goals > 0 && awayRoster.some(p => p.id === pid))
+        .reduce((acc, [_, s]) => acc + s.goals, 0);
+
+    const hasPlayerGoals = calculatedHomeScore > 0 || calculatedAwayScore > 0;
+    const finalHomeScore = hasPlayerGoals ? calculatedHomeScore : directHomeScore;
+    const finalAwayScore = hasPlayerGoals ? calculatedAwayScore : directAwayScore;
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
         const payload: any[] = []; // MatchEventDTO shape
@@ -179,7 +194,16 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
         try {
             if (!settings?.tenantId) throw new Error("Missing tenant");
-            await leagueApi.submitMatchReport(settings.tenantId, match.id, payload);
+
+            if (hasPlayerGoals || payload.length > 0) {
+                await leagueApi.submitMatchReport(settings.tenantId, match.id, payload);
+                if (!hasPlayerGoals && (directHomeScore > 0 || directAwayScore > 0)) {
+                    await leagueApi.updateMatchScore(settings.tenantId, match.id, finalHomeScore, finalAwayScore, isDoubleForfeit);
+                }
+            } else {
+                await leagueApi.updateMatchScore(settings.tenantId, match.id, finalHomeScore, finalAwayScore, isDoubleForfeit);
+            }
+
             showToast("Cédula guardada exitosamente.", "success");
             onSuccess();
         } catch (error) {
@@ -189,15 +213,6 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
             setIsSubmitting(false);
         }
     };
-
-    // Calculations for Summary
-    const calculatedHomeScore = Object.entries(events)
-        .filter(([pid, s]) => s.goals > 0 && homeRoster.some(p => p.id === pid))
-        .reduce((acc, [_, s]) => acc + s.goals, 0);
-
-    const calculatedAwayScore = Object.entries(events)
-        .filter(([pid, s]) => s.goals > 0 && awayRoster.some(p => p.id === pid))
-        .reduce((acc, [_, s]) => acc + s.goals, 0);
 
 
     // --- RENDER STEPS ---
@@ -455,6 +470,18 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                     )}
                     {step === 1 && (
                         <div className="flex flex-col gap-4 min-h-0 flex-1">
+                            {homeRoster.length === 0 && awayRoster.length === 0 && (
+                                <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex items-start gap-3 shadow-2xs">
+                                    <Shield className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <h4 className="text-xs font-black text-blue-950 uppercase tracking-wider">Jornada de Gracia / Equipos sin Jugadores</h4>
+                                        <p className="text-xs text-blue-800 font-medium">
+                                            Los equipos no tienen jugadores registrados todavía. Puedes hacer clic en <strong>Siguiente</strong> para registrar el marcador global directamente y actualizar la tabla de posiciones. Cuando den de alta a los jugadores, podrás regresar a <strong>Editar Cédula</strong> para asignar los anotadores.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Double Forfeit Toggle */}
                             <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-2xs">
                                 <div>
@@ -487,16 +514,81 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                 {/* Scoreboard Header */}
                                 <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm text-center relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5">Marcador Calculado</h3>
+                                    <div className="flex items-center justify-center gap-2 mb-5">
+                                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                                            {hasPlayerGoals ? 'Marcador Calculado por Jugadores' : 'Marcador Global del Encuentro'}
+                                        </h3>
+                                        {!hasPlayerGoals && (
+                                            <span className="text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full">
+                                                Modo Directo
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="flex items-center justify-center gap-6 md:gap-12">
                                         <div className="text-right flex-1 min-w-0">
                                             <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate">{homeTeamName || "Local"}</h2>
                                         </div>
-                                        <div className="flex items-center gap-4 md:gap-6 bg-slate-900 px-6 md:px-8 py-3 rounded-2xl shadow-md shrink-0">
-                                            <span className="text-4xl md:text-5xl font-black text-white">{calculatedHomeScore}</span>
-                                            <span className="text-2xl text-slate-400 font-light">-</span>
-                                            <span className="text-4xl md:text-5xl font-black text-white">{calculatedAwayScore}</span>
-                                        </div>
+
+                                        {hasPlayerGoals ? (
+                                            <div className="flex items-center gap-4 md:gap-6 bg-slate-900 px-6 md:px-8 py-3 rounded-2xl shadow-md shrink-0">
+                                                <span className="text-4xl md:text-5xl font-black text-white tabular-nums">{calculatedHomeScore}</span>
+                                                <span className="text-2xl text-slate-400 font-light">-</span>
+                                                <span className="text-4xl md:text-5xl font-black text-white tabular-nums">{calculatedAwayScore}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3 bg-slate-900 p-2 sm:p-3 rounded-2xl shadow-md shrink-0 text-white">
+                                                <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDirectHomeScore(prev => Math.max(0, prev - 1))}
+                                                        className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-white font-black text-sm flex items-center justify-center"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={directHomeScore}
+                                                        onChange={(e) => setDirectHomeScore(Math.max(0, parseInt(e.target.value) || 0))}
+                                                        className="w-10 text-center font-black text-2xl text-white border-none outline-none bg-transparent tabular-nums"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDirectHomeScore(prev => prev + 1)}
+                                                        className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-sm flex items-center justify-center"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+
+                                                <span className="text-xl text-slate-400 font-light px-1">-</span>
+
+                                                <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDirectAwayScore(prev => Math.max(0, prev - 1))}
+                                                        className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-white font-black text-sm flex items-center justify-center"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={directAwayScore}
+                                                        onChange={(e) => setDirectAwayScore(Math.max(0, parseInt(e.target.value) || 0))}
+                                                        className="w-10 text-center font-black text-2xl text-white border-none outline-none bg-transparent tabular-nums"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDirectAwayScore(prev => prev + 1)}
+                                                        className="w-7 h-7 rounded-lg bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-black text-sm flex items-center justify-center"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="text-left flex-1 min-w-0">
                                             <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate">{awayTeamName || "Visitante"}</h2>
                                         </div>
