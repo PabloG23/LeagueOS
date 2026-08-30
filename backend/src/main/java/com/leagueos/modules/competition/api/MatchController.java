@@ -6,6 +6,7 @@ import com.leagueos.modules.competition.service.MatchService;
 import com.leagueos.shared.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class MatchController {
     private final MatchService matchService;
 
     @PostMapping("/{matchId}/report")
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_REFEREE')")
     public ResponseEntity<Void> submitMatchReport(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID matchId, 
@@ -60,6 +62,7 @@ public class MatchController {
     }
 
     @PutMapping("/{matchId}/schedule")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Match> updateMatchSchedule(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID matchId,
@@ -74,6 +77,7 @@ public class MatchController {
     }
 
     @PatchMapping("/{matchId}/score")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Match> updateMatchScore(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID matchId,

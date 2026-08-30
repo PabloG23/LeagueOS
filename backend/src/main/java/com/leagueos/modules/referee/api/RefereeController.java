@@ -44,6 +44,7 @@ public class RefereeController {
     // ==========================================
 
     @GetMapping("/api/referees")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<List<RefereeDTO>> getAllReferees(@RequestHeader("X-Tenant-ID") UUID tenantId) {
         TenantContext.setCurrentTenant(tenantId);
         try {
@@ -54,6 +55,7 @@ public class RefereeController {
     }
 
     @GetMapping("/api/referees/{id}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeDTO> getRefereeById(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -66,6 +68,7 @@ public class RefereeController {
     }
 
     @PostMapping("/api/referees")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeCreatedDTO> createReferee(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @RequestBody CreateRefereeRequest request) {
@@ -78,6 +81,7 @@ public class RefereeController {
     }
 
     @PutMapping("/api/referees/{id}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeDTO> updateReferee(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -91,6 +95,7 @@ public class RefereeController {
     }
 
     @DeleteMapping("/api/referees/{id}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> deleteReferee(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -104,6 +109,7 @@ public class RefereeController {
     }
 
     @PostMapping("/api/referees/{id}/photo")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeDTO> uploadRefereePhoto(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -117,6 +123,7 @@ public class RefereeController {
     }
 
     @PostMapping("/api/referees/{id}/reset-password")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Map<String, String>> resetRefereePassword(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -130,6 +137,7 @@ public class RefereeController {
     }
 
     @GetMapping("/api/referees/match-report/{matchId}/download-url")
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_REFEREE')")
     public ResponseEntity<Map<String, String>> getMatchReportDownloadUrl(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID matchId) {
@@ -147,6 +155,7 @@ public class RefereeController {
     // ==========================================
 
     @GetMapping("/api/referee/my-matches")
+    @PreAuthorize("hasRole('ROLE_REFEREE')")
     public ResponseEntity<List<RefereeMatchDTO>> getMyMatches(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -159,6 +168,7 @@ public class RefereeController {
     }
 
     @PostMapping("/api/referee/matches/{matchId}/report-photo")
+    @PreAuthorize("hasRole('ROLE_REFEREE')")
     public ResponseEntity<RefereeMatchDTO> uploadMatchReportPhoto(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID matchId,

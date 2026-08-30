@@ -4,6 +4,7 @@ import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.service.MatchSchedulerService;
 import com.leagueos.shared.context.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class CompetitionController {
     private final com.leagueos.modules.media.service.StorageService storageService;
 
     @PostMapping("/matches")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public Match scheduleMatch(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @RequestBody Match match) {
@@ -67,6 +69,7 @@ public class CompetitionController {
     }
 
     @PatchMapping("/matches/{matchId}/result")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public Match recordResult(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID matchId,

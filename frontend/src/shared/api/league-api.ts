@@ -11,6 +11,9 @@ api.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        try {
+            localStorage.setItem('leagueos_last_activity', Date.now().toString());
+        } catch {}
     }
     return config;
 });

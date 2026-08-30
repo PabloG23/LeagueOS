@@ -508,10 +508,29 @@ public class PlayerRegistrationService {
     }
 
     private Person buildAndSavePerson(String firstName, String lastName, String curp, java.time.LocalDate birthDate, String photoUrl, UUID tenantId) {
+        if (curp != null && !curp.isBlank()) {
+            String curpUpper = curp.trim().toUpperCase();
+            Optional<Person> existingOpt = personRepository.findByCurpAndTenantId(curpUpper, tenantId);
+            if (existingOpt.isPresent()) {
+                Person existing = existingOpt.get();
+                existing.setFirstName(firstName);
+                if (lastName != null && !lastName.isEmpty()) {
+                    existing.setLastName(lastName);
+                }
+                if (birthDate != null) {
+                    existing.setBirthDate(birthDate);
+                }
+                if (photoUrl != null && !photoUrl.isBlank()) {
+                    existing.setProfilePhotoUrl(photoUrl);
+                }
+                return personRepository.save(existing);
+            }
+        }
+
         Person person = new Person();
         person.setFirstName(firstName);
         person.setLastName(lastName != null && lastName.isEmpty() ? null : lastName);
-        person.setCurp(curp);
+        person.setCurp(curp != null && !curp.isBlank() ? curp.trim().toUpperCase() : null);
         person.setBirthDate(birthDate);
         person.setProfilePhotoUrl(photoUrl);
         person.setTenantId(tenantId);
@@ -519,6 +538,12 @@ public class PlayerRegistrationService {
     }
 
     private Player buildAndSavePlayer(Person person, UUID tenantId) {
+        if (person.getId() != null) {
+            Optional<Player> existingPlayer = playerRepository.findByPersonId(person.getId());
+            if (existingPlayer.isPresent()) {
+                return existingPlayer.get();
+            }
+        }
         Player player = new Player();
         player.setPerson(person);
         player.setTenantId(tenantId);

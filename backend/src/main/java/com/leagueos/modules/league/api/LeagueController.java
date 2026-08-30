@@ -7,6 +7,7 @@ import com.leagueos.modules.league.service.LeagueService;
 import com.leagueos.shared.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,6 +44,7 @@ public class LeagueController {
     }
 
     @PostMapping("/teams")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public Team createTeam(
             @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @RequestBody Team team) {
@@ -62,6 +64,7 @@ public class LeagueController {
     }
 
     @DeleteMapping("/teams/{teamId}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public void deleteTeam(
             @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId) {
@@ -77,6 +80,7 @@ public class LeagueController {
     }
 
     @PutMapping("/teams/{teamId}/activate")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> activateTeam(
             @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId) {
@@ -93,6 +97,7 @@ public class LeagueController {
     }
 
     @PutMapping("/teams/{teamId}")
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public Team updateTeam(
             @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId,
@@ -109,6 +114,7 @@ public class LeagueController {
     }
 
     @PostMapping(value = "/teams/{teamId}/logo", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public ResponseEntity<Team> uploadTeamLogo(
             @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId,
@@ -138,6 +144,7 @@ public class LeagueController {
     }
 
     @PostMapping("/seasons")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Season> createSeason(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @RequestBody Season season) {
@@ -151,6 +158,7 @@ public class LeagueController {
     }
 
     @PutMapping("/seasons/{id}/activate")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Season> activateSeason(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -163,6 +171,7 @@ public class LeagueController {
     }
 
     @PutMapping("/seasons/{id}/advance-matchday")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Season> advanceMatchday(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -175,6 +184,7 @@ public class LeagueController {
     }
 
     @PutMapping("/seasons/{id}/current-matchday")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Season> updateCurrentMatchday(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -206,6 +216,7 @@ public class LeagueController {
     }
 
     @PostMapping("/seasons/{id}/generate-fixtures/round-robin")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<?> generateRoundRobinFixtures(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -221,6 +232,7 @@ public class LeagueController {
 
 
     @PostMapping("/seasons/{id}/import-calendar")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<?> importCalendar(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable String id,
@@ -236,6 +248,7 @@ public class LeagueController {
     }
 
     @PostMapping("/seasons/{id}/enroll")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<List<com.leagueos.modules.league.domain.TeamRegistration>> enrollTeams(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -261,6 +274,7 @@ public class LeagueController {
     }
 
     @DeleteMapping("/seasons/{id}/teams/{teamId}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> unenrollTeam(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -275,6 +289,7 @@ public class LeagueController {
     }
 
     @DeleteMapping("/seasons/{id}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> deleteSeason(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -296,7 +311,7 @@ public class LeagueController {
     }
 
     @PostMapping("/seasons/{id}/playoffs/generate")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<?> generatePlayoffs(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id,
@@ -325,7 +340,7 @@ public class LeagueController {
     }
 
     @DeleteMapping("/seasons/{id}/playoffs")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<?> deletePlayoffs(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID id) {
@@ -356,6 +371,7 @@ public class LeagueController {
     }
 
     @PostMapping("/fields")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<com.leagueos.modules.league.domain.SoccerField> createField(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @RequestBody com.leagueos.modules.league.domain.SoccerField field) {
@@ -368,6 +384,7 @@ public class LeagueController {
     }
 
     @PutMapping("/fields/{fieldId}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<com.leagueos.modules.league.domain.SoccerField> updateField(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID fieldId,
@@ -381,6 +398,7 @@ public class LeagueController {
     }
 
     @DeleteMapping("/fields/{fieldId}")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> deleteField(
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable UUID fieldId) {

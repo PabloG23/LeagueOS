@@ -8,10 +8,14 @@ import com.leagueos.modules.registration.service.IneExtractionService;
 import com.leagueos.modules.registration.service.PlayerRegistrationService;
 import com.leagueos.shared.context.TenantContext;
 import com.leagueos.shared.domain.exception.BusinessRuleException;
+import com.leagueos.shared.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +33,33 @@ public class PlayerVerificationController {
     private final PlayerRegistrationService playerRegistrationService;
     private final com.leagueos.modules.league.persistence.TeamRepository teamRepository;
     private final com.leagueos.modules.registration.persistence.SeasonRosterRepository seasonRosterRepository;
+
+    private UUID resolveAndValidateTeamId(CustomUserDetails userDetails, UUID requestedTeamId) {
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
+            return requestedTeamId;
+        }
+        if (userDetails.getTeamId() == null) {
+            throw new BusinessRuleException("El usuario representante no tiene un equipo asignado.");
+        }
+        if (requestedTeamId != null && !requestedTeamId.equals(userDetails.getTeamId())) {
+            throw new BusinessRuleException("No tienes permisos para registrar jugadores en otro equipo.");
+        }
+        return userDetails.getTeamId();
+    }
+
+    private void validatePlayerAccess(CustomUserDetails userDetails, UUID playerId) {
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
+            return;
+        }
+        if (userDetails.getTeamId() == null) {
+            throw new BusinessRuleException("Acceso no autorizado.");
+        }
+        boolean belongsToTeam = seasonRosterRepository.findByPlayerId(playerId).stream()
+                .anyMatch(roster -> roster.getTeam() != null && roster.getTeam().getId().equals(userDetails.getTeamId()));
+        if (!belongsToTeam) {
+            throw new BusinessRuleException("No tienes permisos para verificar jugadores de otro equipo.");
+        }
+    }
 
     private String resolveTeamName(UUID teamId, UUID playerId) {
         if (teamId != null) {
@@ -58,19 +89,21 @@ public class PlayerVerificationController {
      * The backend extracts data AND crops the face using Gemini — no face_crop needed from the client.
      */
     @PostMapping(value = "/verify-ine", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public ResponseEntity<PlayerResponse> verifyAndRegisterMexican(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam("ine_image") MultipartFile ineImage,
             @RequestParam(value = "team_id", required = false) UUID teamId,
             @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber) throws Exception {
 
-        UUID tenantId = TenantContext.getCurrentTenant();
-        log.info("Starting verify-ine for tenant: {}, team: {}", tenantId, teamId);
+        UUID effectiveTeamId = resolveAndValidateTeamId(userDetails, teamId);
+        UUID tenantId = UUID.fromString(userDetails.getTenantId());
+        log.info("Starting verify-ine for tenant: {}, team: {}", tenantId, effectiveTeamId);
 
         // 1. Extract data AND face crop using Gemini
         log.info("Calling Gemini OCR for INE image (size: {} bytes)...", ineImage.getSize());
         IneExtractionResult extractedData = ineExtractionService.extractDataFromIne(
                 ineImage.getBytes(), ineImage.getContentType());
-        log.info("Gemini extracted: name={} {}, CURP={}", extractedData.getNombre(), extractedData.getApellidoPaterno(), extractedData.getCurp());
 
         byte[] faceBytes = extractedData.getCroppedFaceBytes();
         if (faceBytes == null || faceBytes.length == 0) {
@@ -88,22 +121,21 @@ public class PlayerVerificationController {
         request.setLastName(lastName);
         request.setBirthDate(extractedData.getFechaNacimiento());
         request.setCurp(extractedData.getCurp());
-        request.setTeamId(teamId);
+        request.setTeamId(effectiveTeamId);
         request.setJerseyNumber(jerseyNumber);
         request.setIsForeign(false);
 
-        playerRegistrationService.validateRegistrationPreconditions(request, teamId, tenantId);
+        playerRegistrationService.validateRegistrationPreconditions(request, effectiveTeamId, tenantId);
 
         // 3. Upload server-cropped face to R2
-        String teamName = resolveTeamName(teamId, null);
+        String teamName = resolveTeamName(effectiveTeamId, null);
         String fullName = (extractedData.getNombre() + " " + (extractedData.getApellidoPaterno() != null ? extractedData.getApellidoPaterno() : "") + " " + (extractedData.getApellidoMaterno() != null ? extractedData.getApellidoMaterno() : "")).trim();
         String faceFilename = storageService.buildPlayerKey(tenantId, teamName, fullName, ".jpg");
-        log.info("Uploading cropped face ({} bytes) to R2 at key {}...", faceBytes.length, faceFilename);
         storageService.uploadFile(faceFilename, faceBytes, "image/jpeg");
         request.setProfilePhotoUrl(faceFilename);
 
         try {
-            PlayerResponse response = playerRegistrationService.registerPlayer(request, teamId, tenantId);
+            PlayerResponse response = playerRegistrationService.registerPlayer(request, effectiveTeamId, tenantId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.warn("Registration failed after upload, deleting orphaned file from R2: {}", faceFilename);
@@ -116,12 +148,15 @@ public class PlayerVerificationController {
      * Verifies an existing PENDING_VERIFICATION player via INE scan.
      */
     @PostMapping(value = "/{id}/verify-ine", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public ResponseEntity<PlayerResponse> verifyExistingMexican(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id,
             @RequestParam("ine_image") MultipartFile ineImage,
             @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber) throws Exception {
 
-        UUID tenantId = TenantContext.getCurrentTenant();
+        validatePlayerAccess(userDetails, id);
+        UUID tenantId = UUID.fromString(userDetails.getTenantId());
 
         IneExtractionResult extractedData = ineExtractionService.extractDataFromIne(
                 ineImage.getBytes(), ineImage.getContentType());
@@ -165,7 +200,9 @@ public class PlayerVerificationController {
      * Registers a foreign player (no INE, no CURP). The client sends the face photo directly.
      */
     @PostMapping(value = "/register-foreign", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public ResponseEntity<PlayerResponse> registerForeign(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam("first_name") String firstName,
             @RequestParam(value = "last_name", required = false) String lastName,
             @RequestParam(value = "birth_date", required = false) String birthDateStr,
@@ -174,7 +211,8 @@ public class PlayerVerificationController {
             @RequestParam(value = "curp", required = false) String curp,
             @RequestParam("face_crop") MultipartFile faceCrop) throws Exception {
 
-        UUID tenantId = TenantContext.getCurrentTenant();
+        UUID effectiveTeamId = resolveAndValidateTeamId(userDetails, teamId);
+        UUID tenantId = UUID.fromString(userDetails.getTenantId());
 
         // 1. Prepare request and pre-validate business rules BEFORE uploading to R2
         PlayerRegistrationRequest request = new PlayerRegistrationRequest();
@@ -186,14 +224,14 @@ public class PlayerVerificationController {
         if (curp != null && !curp.trim().isEmpty()) {
             request.setCurp(curp.trim().toUpperCase());
         }
-        request.setTeamId(teamId);
+        request.setTeamId(effectiveTeamId);
         request.setJerseyNumber(jerseyNumber);
         request.setIsForeign(true);
 
-        playerRegistrationService.validateRegistrationPreconditions(request, teamId, tenantId);
+        playerRegistrationService.validateRegistrationPreconditions(request, effectiveTeamId, tenantId);
 
         // 2. Upload photo to R2
-        String teamName = resolveTeamName(teamId, null);
+        String teamName = resolveTeamName(effectiveTeamId, null);
         String fullName = (firstName + " " + (lastName != null ? lastName : "")).trim();
         String ext = getFileExtension(faceCrop, ".webp");
         String faceFilename = storageService.buildPlayerKey(tenantId, teamName, fullName, ext);
@@ -201,7 +239,7 @@ public class PlayerVerificationController {
         request.setProfilePhotoUrl(faceFilename);
 
         try {
-            PlayerResponse response = playerRegistrationService.registerPlayer(request, teamId, tenantId);
+            PlayerResponse response = playerRegistrationService.registerPlayer(request, effectiveTeamId, tenantId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.warn("Foreign registration failed after upload, deleting orphaned file from R2: {}", faceFilename);
@@ -214,7 +252,9 @@ public class PlayerVerificationController {
      * Verifies an existing PENDING_VERIFICATION player as a foreign player (uploads face crop directly).
      */
     @PostMapping(value = "/{id}/verify-foreign", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public ResponseEntity<PlayerResponse> verifyExistingForeign(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id,
             @RequestParam("first_name") String firstName,
             @RequestParam(value = "last_name", required = false) String lastName,
@@ -223,7 +263,8 @@ public class PlayerVerificationController {
             @RequestParam(value = "curp", required = false) String curp,
             @RequestParam("face_crop") MultipartFile faceCrop) throws Exception {
 
-        UUID tenantId = TenantContext.getCurrentTenant();
+        validatePlayerAccess(userDetails, id);
+        UUID tenantId = UUID.fromString(userDetails.getTenantId());
 
         PlayerRegistrationRequest request = new PlayerRegistrationRequest();
         request.setFirstName(firstName);

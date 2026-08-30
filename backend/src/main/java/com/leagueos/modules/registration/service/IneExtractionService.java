@@ -35,10 +35,10 @@ public class IneExtractionService {
     private final ObjectMapper objectMapper;
 
     private static final List<String> MODELS = List.of(
-            "gemini-3.7-flash",             // Prioridad 1: Última generación con máxima inteligencia
-            "gemini-3.5-flash",             // Respaldo 1: Versión estándar probada y rápida
-            "gemini-3.1-pro-preview",       // Respaldo 2: Modelo Pro (máxima precisión de visión/recorte)
-            "gemini-3.5-flash-lite"         // Respaldo 3: Ultrarrápido y ligero
+            "gemini-3.6-flash",             // Prioridad 1: Más rápido y alta disponibilidad
+            "gemini-3.7-flash",             // Respaldo 1: Modelo flash de última generación
+            "gemini-3.5-flash",             // Respaldo 2: Modelo estándar
+            "gemini-flash-latest"           // Respaldo 3: Alias dinámico más reciente
     );
 
     /**
@@ -86,11 +86,15 @@ public class IneExtractionService {
 
     public IneExtractionService(
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model:gemini-3.7-flash}") String model,
+            @Value("${gemini.model:gemini-3.6-flash}") String model,
             ObjectMapper objectMapper) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
-        requestFactory.setReadTimeout(Duration.ofSeconds(12));
+        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+                .version(java.net.http.HttpClient.Version.HTTP_2)
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        org.springframework.http.client.JdkClientHttpRequestFactory requestFactory =
+                new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(60));
         this.restClient = RestClient.builder().requestFactory(requestFactory).build();
         this.apiKey = apiKey;
         this.objectMapper = objectMapper;
@@ -116,34 +120,33 @@ public class IneExtractionService {
                 "generationConfig", Map.of(
                         "temperature", 0.0,
                         "responseMimeType", "application/json",
-                        "thinkingConfig", Map.of("thinkingBudget", 0)
+                        "thinkingConfig", Map.of("thinkingBudget", 100)
                 )
         );
 
         String responseString = null;
 
         for (String currentModel : MODELS) {
-            for (int attempt = 1; attempt <= 2; attempt++) {
-                try {
-                    String url = String.format(
-                            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                            currentModel, apiKey);
-                    log.info("Gemini OCR — model: {} attempt: {}", currentModel, attempt);
+            try {
+                String url = String.format(
+                        "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
+                        currentModel, apiKey);
+                log.info("Gemini OCR — calling model: {}", currentModel);
 
-                    responseString = restClient.post()
-                            .uri(url)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .body(requestBody)
-                            .retrieve()
-                            .body(String.class);
+                byte[] responseBytes = restClient.post()
+                        .uri(url)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(requestBody)
+                        .retrieve()
+                        .body(byte[].class);
 
-                    if (responseString != null && !responseString.isEmpty()) break;
-                } catch (Exception e) {
-                    log.warn("Gemini model {} attempt {} failed: {}", currentModel, attempt, e.getMessage());
-                    try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+                if (responseBytes != null && responseBytes.length > 0) {
+                    responseString = new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
+                    break;
                 }
+            } catch (Exception e) {
+                log.warn("Gemini model {} call failed with message: {}", currentModel, e.getMessage());
             }
-            if (responseString != null) break;
         }
 
         if (responseString == null) {
