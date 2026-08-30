@@ -3,8 +3,10 @@ package com.leagueos.modules.competition.api;
 import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.service.MatchSchedulerService;
 import com.leagueos.shared.context.TenantContext;
+import com.leagueos.shared.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,8 +23,9 @@ public class CompetitionController {
     @PostMapping("/matches")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public Match scheduleMatch(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @RequestBody Match match) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             match.setTenantId(tenantId);
@@ -34,9 +37,12 @@ public class CompetitionController {
 
     @GetMapping("/seasons/{seasonId}/matches")
     public List<Match> getSeasonMatches(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID seasonId) {
-        TenantContext.setCurrentTenant(tenantId);
+        UUID effectiveTenant = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
+        if (effectiveTenant != null) {
+            TenantContext.setCurrentTenant(effectiveTenant);
+        }
         try {
             List<Match> matches = schedulerService.getMatchesBySeason(seasonId);
             signMatchTeamLogos(matches);
@@ -71,10 +77,11 @@ public class CompetitionController {
     @PatchMapping("/matches/{matchId}/result")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public Match recordResult(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID matchId,
             @RequestParam int homeScore,
             @RequestParam int awayScore) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return schedulerService.recordResult(matchId, homeScore, awayScore);
