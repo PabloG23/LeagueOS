@@ -32,6 +32,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, "Recurso No Encontrado", ex.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFoundException(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Ruta No Encontrada", "El recurso solicitado no existe.");
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
         log.warn("AccessDeniedException: {}", ex.getMessage());

@@ -18,6 +18,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.security.config.Customizer;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
+
 import java.util.List;
 
 @Configuration
@@ -37,6 +41,17 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .headers(headers -> {
+                headers.frameOptions(frame -> frame.deny());
+                headers.contentTypeOptions(Customizer.withDefaults());
+                headers.xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK));
+                headers.referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+                headers.permissionsPolicy(permissions -> permissions.policy("microphone=(), payment=(), usb=(), camera=(self)"));
+                headers.httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000)
+                );
+            })
             .authorizeHttpRequests(auth -> auth
                 // 1. Auth and errors
                 .requestMatchers("/api/auth/**", "/error").permitAll()
