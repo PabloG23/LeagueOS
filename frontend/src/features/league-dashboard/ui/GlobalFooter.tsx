@@ -52,10 +52,9 @@ export const GlobalFooter: React.FC = () => {
                                 {settings.footerAddress && (
                                     <div className="flex items-start gap-3 group">
                                         <MapPin className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 group-hover:text-white transition-colors" />
-                                        <span
-                                            className="text-sm leading-relaxed group-hover:text-white transition-colors"
-                                            dangerouslySetInnerHTML={{ __html: settings.footerAddress }}
-                                        />
+                                        <span className="text-sm leading-relaxed group-hover:text-white transition-colors whitespace-pre-line">
+                                            {settings.footerAddress}
+                                        </span>
                                     </div>
                                 )}
                                 {settings.footerPhone && (
