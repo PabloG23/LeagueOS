@@ -45,7 +45,9 @@ public class RefereeController {
 
     @GetMapping("/api/referees")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
-    public ResponseEntity<List<RefereeDTO>> getAllReferees(@RequestHeader("X-Tenant-ID") UUID tenantId) {
+    public ResponseEntity<List<RefereeDTO>> getAllReferees(
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(refereeService.getAll(tenantId));
@@ -57,8 +59,9 @@ public class RefereeController {
     @GetMapping("/api/referees/{id}")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeDTO> getRefereeById(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID id) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(refereeService.getById(id, tenantId));
@@ -70,8 +73,9 @@ public class RefereeController {
     @PostMapping("/api/referees")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeCreatedDTO> createReferee(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @RequestBody CreateRefereeRequest request) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.status(HttpStatus.CREATED).body(refereeService.create(request, tenantId));
@@ -83,9 +87,10 @@ public class RefereeController {
     @PutMapping("/api/referees/{id}")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeDTO> updateReferee(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID id,
             @RequestBody UpdateRefereeRequest request) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(refereeService.update(id, request, tenantId));
@@ -97,8 +102,9 @@ public class RefereeController {
     @DeleteMapping("/api/referees/{id}")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Void> deleteReferee(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID id) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             refereeService.delete(id, tenantId);
@@ -111,9 +117,10 @@ public class RefereeController {
     @PostMapping("/api/referees/{id}/photo")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<RefereeDTO> uploadRefereePhoto(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file) throws IOException {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(refereeService.uploadPhoto(id, file.getBytes(), file.getContentType(), tenantId));
@@ -125,8 +132,9 @@ public class RefereeController {
     @PostMapping("/api/referees/{id}/reset-password")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
     public ResponseEntity<Map<String, String>> resetRefereePassword(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID id) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             String tempPassword = refereeService.resetPassword(id, tenantId);

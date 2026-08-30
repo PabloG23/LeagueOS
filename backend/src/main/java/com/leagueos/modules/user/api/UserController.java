@@ -29,7 +29,8 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers(
-            @RequestHeader("X-Tenant-ID") UUID tenantId) {
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(userService.getAllUsers(tenantId));
@@ -40,8 +41,9 @@ public class UserController {
 
     @PostMapping("/admins")
     public ResponseEntity<UserDTO> createAdmin(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @Valid @RequestBody CreateAdminRequest request) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             UserDTO created = userService.createAdminUser(request, tenantId);
@@ -53,9 +55,9 @@ public class UserController {
 
     @PatchMapping("/{userId}/toggle-status")
     public ResponseEntity<Map<String, Object>> toggleStatus(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @PathVariable UUID userId) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             boolean active = userService.toggleUserActive(userId, currentUser.getId(), tenantId);
@@ -67,8 +69,9 @@ public class UserController {
 
     @PostMapping("/{userId}/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID userId) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             String newPassword = userService.resetUserPassword(userId, tenantId);
@@ -80,9 +83,9 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @PathVariable UUID userId) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
             userService.deleteUser(userId, currentUser.getId(), tenantId);
@@ -92,3 +95,4 @@ public class UserController {
         }
     }
 }
+
