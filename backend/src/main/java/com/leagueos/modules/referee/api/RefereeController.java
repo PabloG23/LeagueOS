@@ -9,6 +9,7 @@ import com.leagueos.modules.referee.service.MatchReportPhotoService;
 import com.leagueos.modules.referee.service.RefereeService;
 import com.leagueos.shared.context.TenantContext;
 import com.leagueos.shared.security.CustomUserDetails;
+import com.leagueos.shared.util.FileValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -120,6 +121,7 @@ public class RefereeController {
             @AuthenticationPrincipal CustomUserDetails currentUser,
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file) throws IOException {
+        FileValidationUtils.validateImageFile(file);
         UUID tenantId = UUID.fromString(currentUser.getTenantId());
         TenantContext.setCurrentTenant(tenantId);
         try {
@@ -182,6 +184,7 @@ public class RefereeController {
             @PathVariable UUID matchId,
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException {
+        FileValidationUtils.validateImageFile(file);
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(matchReportPhotoService.uploadMatchReportPhoto(

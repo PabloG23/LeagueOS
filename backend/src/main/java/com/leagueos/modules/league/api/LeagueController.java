@@ -5,6 +5,7 @@ import com.leagueos.modules.league.domain.Team;
 import com.leagueos.modules.league.domain.Tenant;
 import com.leagueos.modules.league.service.LeagueService;
 import com.leagueos.shared.context.TenantContext;
+import com.leagueos.shared.util.FileValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -119,6 +120,7 @@ public class LeagueController {
             @RequestHeader(value = "X-Tenant-ID", required = false) UUID tenantId,
             @PathVariable UUID teamId,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws Exception {
+        FileValidationUtils.validateImageFile(file);
         UUID effectiveTenantId = tenantId != null ? tenantId : TenantContext.getCurrentTenant();
         if (effectiveTenantId != null) {
             TenantContext.setCurrentTenant(effectiveTenantId);
@@ -237,6 +239,7 @@ public class LeagueController {
             @RequestHeader("X-Tenant-ID") UUID tenantId,
             @PathVariable String id,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        FileValidationUtils.validateExcelFile(file);
         TenantContext.setCurrentTenant(tenantId);
         try {
             return ResponseEntity.ok(matchImportService.importMatchesFromExcel(id, file));

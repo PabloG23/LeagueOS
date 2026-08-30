@@ -9,6 +9,7 @@ import com.leagueos.modules.registration.service.PlayerRegistrationService;
 import com.leagueos.shared.context.TenantContext;
 import com.leagueos.shared.domain.exception.BusinessRuleException;
 import com.leagueos.shared.security.CustomUserDetails;
+import com.leagueos.shared.util.FileValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -96,6 +97,7 @@ public class PlayerVerificationController {
             @RequestParam(value = "team_id", required = false) UUID teamId,
             @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber) throws Exception {
 
+        FileValidationUtils.validateImageFile(ineImage);
         UUID effectiveTeamId = resolveAndValidateTeamId(userDetails, teamId);
         UUID tenantId = UUID.fromString(userDetails.getTenantId());
         log.info("Starting verify-ine for tenant: {}, team: {}", tenantId, effectiveTeamId);
@@ -155,6 +157,7 @@ public class PlayerVerificationController {
             @RequestParam("ine_image") MultipartFile ineImage,
             @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber) throws Exception {
 
+        FileValidationUtils.validateImageFile(ineImage);
         validatePlayerAccess(userDetails, id);
         UUID tenantId = UUID.fromString(userDetails.getTenantId());
 
@@ -211,6 +214,7 @@ public class PlayerVerificationController {
             @RequestParam(value = "curp", required = false) String curp,
             @RequestParam("face_crop") MultipartFile faceCrop) throws Exception {
 
+        FileValidationUtils.validateImageFile(faceCrop);
         UUID effectiveTeamId = resolveAndValidateTeamId(userDetails, teamId);
         UUID tenantId = UUID.fromString(userDetails.getTenantId());
 
@@ -263,6 +267,7 @@ public class PlayerVerificationController {
             @RequestParam(value = "curp", required = false) String curp,
             @RequestParam("face_crop") MultipartFile faceCrop) throws Exception {
 
+        FileValidationUtils.validateImageFile(faceCrop);
         validatePlayerAccess(userDetails, id);
         UUID tenantId = UUID.fromString(userDetails.getTenantId());
 
