@@ -37,3 +37,5 @@ boot-run.pid
 .env
 .env.*
 *.env
+!.env.example
+

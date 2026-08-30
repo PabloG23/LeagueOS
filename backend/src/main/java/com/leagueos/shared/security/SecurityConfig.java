@@ -32,6 +32,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final TenantContextFilter tenantContextFilter;
+    private final com.leagueos.shared.infrastructure.filter.RateLimitingFilter rateLimitingFilter;
 
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
@@ -82,7 +83,9 @@ public class SecurityConfig {
                 // 4. Everything else (state-changing endpoints, admin panels, player management) requires authentication
                 .anyRequest().authenticated()
             )
-            // JWT filter runs first so authentication is established before tenant resolution
+            // Rate limiting runs first to protect auth and expensive OCR endpoints
+            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
+            // JWT filter runs second so authentication is established before tenant resolution
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(tenantContextFilter, JwtAuthenticationFilter.class);
 
