@@ -68,7 +68,7 @@ interface TenantSettingsContextType {
     updateSettings: (newSettings: Partial<TenantSettings>) => void;
 }
 
-const TenantSettingsContext = createContext<TenantSettingsContextType>({
+export const TenantSettingsContext = createContext<TenantSettingsContextType>({
     settings: DEFAULT_SETTINGS,
     isLoading: true,
     updateSettings: () => {},

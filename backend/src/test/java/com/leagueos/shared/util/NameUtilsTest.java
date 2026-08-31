@@ -3,9 +3,40 @@ package com.leagueos.shared.util;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisplayName("NameUtils — Name Normalization, Levenshtein Distance & OCR Compatibility")
 class NameUtilsTest {
+
+    @Test
+    @DisplayName("Should normalize strings removing accents, whitespace, and special characters")
+    void testNormalize() {
+        assertThat(NameUtils.normalize("José María González-Pérez")).isEqualTo("jose maria gonzalez perez");
+        assertThat(NameUtils.normalize("  MARÍA   DEL   CARMEN  ")).isEqualTo("maria del carmen");
+        assertThat(NameUtils.normalize(null)).isEqualTo("");
+    }
+
+    @Test
+    @DisplayName("Should compute edit distance accurately with Levenshtein")
+    void testLevenshteinDistance() {
+        assertThat(NameUtils.levenshteinDistance("carlos", "carlos")).isEqualTo(0);
+        assertThat(NameUtils.levenshteinDistance("carlos", "karlos")).isEqualTo(1);
+        assertThat(NameUtils.levenshteinDistance("gonzales", "gonzalez")).isEqualTo(1);
+        assertThat(NameUtils.levenshteinDistance(null, "test")).isEqualTo(0);
+        assertThat(NameUtils.levenshteinDistance("test", null)).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("Should match fuzzy tokens within distance threshold")
+    void testTokenMatches() {
+        assertThat(NameUtils.tokenMatches("gonzalez", "gonzales")).isTrue();
+        assertThat(NameUtils.tokenMatches("carlos", "karlos")).isTrue();
+        assertThat(NameUtils.tokenMatches("ana", "ana")).isTrue();
+        assertThat(NameUtils.tokenMatches("", "carlos")).isFalse();
+        assertThat(NameUtils.tokenMatches("carlos", "")).isFalse();
+        assertThat(NameUtils.tokenMatches("roberto", "fernando")).isFalse();
+    }
 
     @Test
     @DisplayName("Should match identical names with accents/case differences")

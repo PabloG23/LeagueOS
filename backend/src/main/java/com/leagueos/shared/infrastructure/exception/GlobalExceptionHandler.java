@@ -11,6 +11,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -79,6 +81,20 @@ public class GlobalExceptionHandler {
         body.put("message", "Existen campos con formato incorrecto o incompletos.");
         body.put("errors", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        log.warn("Tamaño de archivo excedido: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Archivo Demasiado Grande",
+                "El archivo seleccionado excede el tamaño máximo permitido.");
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<Map<String, Object>> handleMultipartException(MultipartException ex) {
+        log.warn("Error en la subida de archivos (petición multipart): {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Error de Subida",
+                "La subida del archivo fue interrumpida o el formato es incorrecto.");
     }
 
     @ExceptionHandler(Exception.class)
