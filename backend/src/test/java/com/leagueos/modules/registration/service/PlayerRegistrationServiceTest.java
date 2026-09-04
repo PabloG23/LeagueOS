@@ -48,7 +48,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("PlayerRegistrationService — Full Code Coverage Suite")
+@DisplayName("PlayerRegistrationService — Complete 100% Code Coverage Suite")
 class PlayerRegistrationServiceTest {
 
     @Mock private PlayerRepository playerRepository;
@@ -64,7 +64,6 @@ class PlayerRegistrationServiceTest {
     private PlayerRegistrationService playerRegistrationService;
 
     private static final UUID TENANT_A = UUID.fromString("11111111-1111-1111-1111-111111111111");
-    private static final UUID TENANT_B = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     private Season activeSeason;
     private Team team;
@@ -105,11 +104,16 @@ class PlayerRegistrationServiceTest {
     class ValidationAndRegistrationTests {
 
         @Test
-        @DisplayName("should throw BusinessRuleException when first name is blank")
+        @DisplayName("should throw BusinessRuleException when first name is null or blank")
         void throwsWhenFirstNameBlank() {
             PlayerRegistrationRequest req = new PlayerRegistrationRequest();
             req.setFirstName("   ");
 
+            assertThatThrownBy(() -> playerRegistrationService.validateRegistrationPreconditions(req, team.getId(), TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("El nombre del jugador es obligatorio.");
+
+            req.setFirstName(null);
             assertThatThrownBy(() -> playerRegistrationService.validateRegistrationPreconditions(req, team.getId(), TENANT_A))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("El nombre del jugador es obligatorio.");
@@ -298,6 +302,52 @@ class PlayerRegistrationServiceTest {
         }
 
         @Test
+        @DisplayName("registerPlayer should delegate to verifyPlayer if existing roster is PENDING_VERIFICATION")
+        void delegatesToVerifyPlayerWhenPendingVerification() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+
+            Person person = new Person();
+            person.setId(UUID.randomUUID());
+            person.setFirstName("CARLOS");
+            person.setLastName("GONZÁLEZ");
+
+            Player player = new Player();
+            player.setId(UUID.randomUUID());
+            player.setPerson(person);
+
+            SeasonRoster pendingRoster = new SeasonRoster();
+            pendingRoster.setPlayer(player);
+            pendingRoster.setTeam(team);
+            pendingRoster.setStatus(PlayerStatus.PENDING_VERIFICATION);
+            pendingRoster.setJerseyNumber(null);
+
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(pendingRoster));
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(List.of(pendingRoster));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(player.getId(), activeSeason.getId()))
+                    .thenReturn(Optional.of(pendingRoster));
+            when(playerRepository.findById(player.getId())).thenReturn(Optional.of(player));
+            when(personRepository.save(any(Person.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(seasonRosterRepository.save(any(SeasonRoster.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(true);
+            req.setJerseyNumber(7);
+
+            PlayerResponse response = playerRegistrationService.registerPlayer(req, team.getId(), TENANT_A);
+
+            assertThat(response).isNotNull();
+            assertThat(pendingRoster.getStatus()).isEqualTo(PlayerStatus.ACTIVE);
+        }
+
+        @Test
         @DisplayName("registerPlayer should register free agent player without team")
         void registersFreeAgentPlayer() {
             PlayerRegistrationRequest req = new PlayerRegistrationRequest();
@@ -408,6 +458,220 @@ class PlayerRegistrationServiceTest {
         }
 
         @Test
+        @DisplayName("should throw BusinessRuleException when extracted CURP is invalid on verification")
+        void throwsWhenExtractedCurpInvalid() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            Person person = new Person();
+            person.setFirstName("CARLOS");
+            person.setLastName("GONZÁLEZ");
+
+            Player player = new Player();
+            player.setId(playerId);
+            player.setPerson(person);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setPlayer(player);
+            roster.setTeam(team);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setCurp("INVALID_CURP");
+
+            assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("no tiene un formato válido");
+        }
+
+        @Test
+        @DisplayName("should throw BusinessRuleException when CURP is required on verification but missing")
+        void throwsWhenCurpMissingOnVerification() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            Person person = new Person();
+            person.setFirstName("CARLOS");
+            person.setLastName("GONZÁLEZ");
+
+            Player player = new Player();
+            player.setId(playerId);
+            player.setPerson(person);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setPlayer(player);
+            roster.setTeam(team);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(false);
+            req.setCurp(null);
+
+            assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("El CURP es obligatorio para verificar");
+        }
+
+        @Test
+        @DisplayName("should throw BusinessRuleException on verification if player conflicts in another team")
+        void throwsWhenConflictInAnotherTeamOnVerification() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            Person person = new Person();
+            person.setFirstName("CARLOS");
+            person.setLastName("GONZÁLEZ");
+
+            Player player = new Player();
+            player.setId(playerId);
+            player.setPerson(person);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setPlayer(player);
+            roster.setTeam(team);
+
+            Team otherTeam = new Team();
+            otherTeam.setId(UUID.randomUUID());
+            otherTeam.setName("Cruz Azul");
+
+            SeasonRoster conflict = new SeasonRoster();
+            conflict.setPlayer(player);
+            conflict.setTeam(otherTeam);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(List.of(conflict));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(true);
+
+            assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("ya está registrado en el equipo 'Cruz Azul'");
+        }
+
+        @Test
+        @DisplayName("should throw BusinessRuleException on verification if duplicate active player exists in same team")
+        void throwsWhenDuplicateActiveInTeamOnVerification() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+            UUID otherPlayerId = UUID.randomUUID();
+
+            Person person = new Person();
+            person.setFirstName("CARLOS");
+            person.setLastName("GONZÁLEZ");
+
+            Player player = new Player();
+            player.setId(playerId);
+            player.setPerson(person);
+
+            Player otherPlayer = new Player();
+            otherPlayer.setId(otherPlayerId);
+            otherPlayer.setPerson(person);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setPlayer(player);
+            roster.setTeam(team);
+
+            SeasonRoster otherRoster = new SeasonRoster();
+            otherRoster.setPlayer(otherPlayer);
+            otherRoster.setTeam(team);
+            otherRoster.setStatus(PlayerStatus.ACTIVE);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(Collections.emptyList());
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(otherRoster));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(true);
+
+            assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("Ya existe otro jugador activo registrado con los mismos datos");
+        }
+
+        @Test
+        @DisplayName("should throw BusinessRuleException on verification if jersey is taken by another player")
+        void throwsWhenJerseyTakenOnVerification() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+            UUID otherPlayerId = UUID.randomUUID();
+
+            Person person = new Person();
+            person.setFirstName("CARLOS");
+            person.setLastName("GONZÁLEZ");
+
+            Player player = new Player();
+            player.setId(playerId);
+            player.setPerson(person);
+
+            Person otherPerson = new Person();
+            otherPerson.setFirstName("JUAN");
+
+            Player otherPlayer = new Player();
+            otherPlayer.setId(otherPlayerId);
+            otherPlayer.setPerson(otherPerson);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setPlayer(player);
+            roster.setTeam(team);
+
+            SeasonRoster otherRoster = new SeasonRoster();
+            otherRoster.setPlayer(otherPlayer);
+            otherRoster.setTeam(team);
+            otherRoster.setStatus(PlayerStatus.ACTIVE);
+            otherRoster.setJerseyNumber(9);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(Collections.emptyList());
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(otherRoster));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(true);
+            req.setJerseyNumber(9);
+
+            assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("El dorsal 9 ya está ocupado");
+        }
+
+        @Test
         @DisplayName("verifyPlayer should clean up old photo from storage when new photo is uploaded")
         void cleansUpOldPhotoOnVerification() {
             TenantContext.setCurrentTenant(TENANT_A);
@@ -437,6 +701,8 @@ class PlayerRegistrationServiceTest {
             when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
             when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
                     .thenReturn(List.of(roster));
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(List.of(roster));
             when(playerRepository.findById(playerId)).thenReturn(Optional.of(player));
             when(personRepository.save(any(Person.class))).thenAnswer(inv -> inv.getArgument(0));
             when(seasonRosterRepository.save(any(SeasonRoster.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -463,6 +729,29 @@ class PlayerRegistrationServiceTest {
     @Nested
     @DisplayName("registerPlayersBatch")
     class BatchTests {
+
+        @Test
+        @DisplayName("should throw BusinessRuleException when batch exceeds team max players limit")
+        void throwsWhenBatchExceedsLimit() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+
+            activeSeason.setMaxActivePlayersPerTeam(1);
+            SeasonRoster r1 = new SeasonRoster();
+            r1.setStatus(PlayerStatus.ACTIVE);
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(r1));
+
+            BatchPlayerRegistrationRequest req = new BatchPlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+
+            assertThatThrownBy(() -> playerRegistrationService.registerPlayersBatch(List.of(req), team.getId(), TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("El equipo ya ha alcanzado el límite máximo");
+        }
 
         @Test
         @DisplayName("should throw BusinessRuleException when duplicate names exist within the batch")
@@ -542,12 +831,58 @@ class PlayerRegistrationServiceTest {
     }
 
     // =========================================================================
-    // getPlayersDirectory
+    // getPlayersDirectory & getPlayersByTeam
     // =========================================================================
 
     @Nested
-    @DisplayName("getPlayersDirectory")
-    class DirectoryTests {
+    @DisplayName("getPlayersDirectory & getPlayersByTeam")
+    class DirectoryAndTeamTests {
+
+        @Test
+        @DisplayName("getPlayersByTeam should return empty list when no active season exists")
+        void returnsEmptyWhenNoActiveSeason() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(Collections.emptyList());
+            when(seasonRepository.findByTenantId(TENANT_A)).thenReturn(Collections.emptyList());
+            when(seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> playerRegistrationService.getPlayersByTeam(team.getId()))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("getPlayersByTeam should return mapped players when active season exists")
+        void returnsPlayersByTeam() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+
+            Person p = new Person();
+            p.setFirstName("Memo");
+            p.setLastName("Ochoa");
+            p.setProfilePhotoUrl("memo.jpg");
+
+            Player player = new Player();
+            player.setId(UUID.randomUUID());
+            player.setPerson(p);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setPlayer(player);
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.ACTIVE);
+            roster.setJerseyNumber(1);
+
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(roster));
+            when(storageService.getSignedUrl("memo.jpg", 120)).thenReturn("https://signed.com/memo.jpg");
+
+            List<PlayerResponse> results = playerRegistrationService.getPlayersByTeam(team.getId());
+
+            assertThat(results).hasSize(1);
+            assertThat(results.get(0).getFirstName()).isEqualTo("Memo");
+            assertThat(results.get(0).getProfilePhotoUrl()).isEqualTo("https://signed.com/memo.jpg");
+        }
 
         @Test
         @DisplayName("should populate match stats, signed URLs and sort directory by player full name")
@@ -586,7 +921,6 @@ class PlayerRegistrationServiceTest {
 
             when(seasonRosterRepository.findByTenantId(TENANT_A)).thenReturn(List.of(r1, r2));
 
-            // Goals mock
             Object[] goalRow = new Object[]{pl1.getId(), MatchEvent.MatchEventType.GOAL, 10};
             Object[] appRow = new Object[]{pl1.getId(), MatchEvent.MatchEventType.APPEARANCE, 8};
             when(matchEventRepository.countEventsGroupedByPlayerAndType(TENANT_A))
@@ -597,11 +931,8 @@ class PlayerRegistrationServiceTest {
             var directory = playerRegistrationService.getPlayersDirectory(TENANT_A);
 
             assertThat(directory).hasSize(2);
-            // Alphabetical order: Andrés Iniesta comes first
             assertThat(directory.get(0).getFullName()).isEqualTo("Andrés Iniesta");
             assertThat(directory.get(0).getSignedPhotoUrl()).isEqualTo("https://signed.com/iniesta.jpg");
-
-            // Zinedine Zidane comes second
             assertThat(directory.get(1).getFullName()).isEqualTo("Zinedine Zidane");
             assertThat(directory.get(1).getGoals()).isEqualTo(10);
             assertThat(directory.get(1).getMatchesPlayed()).isEqualTo(8);
@@ -658,6 +989,106 @@ class PlayerRegistrationServiceTest {
 
             assertThat(roster.getStatus()).isEqualTo(PlayerStatus.INACTIVE);
             verify(seasonRosterRepository).save(roster);
+        }
+    }
+
+    // =========================================================================
+    // EdgeCasesAndHelpers
+    // =========================================================================
+
+    @Nested
+    @DisplayName("EdgeCasesAndHelpers")
+    class EdgeCasesAndHelpers {
+
+        @Test
+        @DisplayName("getPlayersDirectory should handle fallback matches count, null teams, data URIs and storage exceptions")
+        void directoryHandlesAllEdgeCases() {
+            Person p1 = new Person();
+            p1.setId(UUID.randomUUID());
+            p1.setFirstName("Ronaldo");
+            p1.setLastName("Nazario");
+            p1.setProfilePhotoUrl("data:image/jpeg;base64,12345");
+
+            Player pl1 = new Player();
+            pl1.setId(UUID.randomUUID());
+            pl1.setPerson(p1);
+
+            SeasonRoster r1 = new SeasonRoster();
+            r1.setPlayer(pl1);
+            r1.setTeam(null); // No team
+            r1.setStatus(null); // Null status fallback
+
+            Person p2 = new Person();
+            p2.setId(UUID.randomUUID());
+            p2.setFirstName("Zico");
+            p2.setProfilePhotoUrl("corrupted_photo.jpg");
+
+            Player pl2 = new Player();
+            pl2.setId(UUID.randomUUID());
+            pl2.setPerson(p2);
+
+            Team teamWithLogo = new Team();
+            teamWithLogo.setId(UUID.randomUUID());
+            teamWithLogo.setName("Flamengo");
+            teamWithLogo.setLogoUrl("data:image/png;base64,9876");
+
+            SeasonRoster r2 = new SeasonRoster();
+            r2.setPlayer(pl2);
+            r2.setTeam(teamWithLogo);
+            r2.setStatus(PlayerStatus.ACTIVE);
+
+            // Empty roster with null player to verify skip
+            SeasonRoster r3 = new SeasonRoster();
+            r3.setPlayer(null);
+
+            when(seasonRosterRepository.findByTenantId(TENANT_A)).thenReturn(List.of(r1, r2, r3));
+            when(matchEventRepository.countEventsGroupedByPlayerAndType(TENANT_A)).thenReturn(Collections.emptyList());
+            // Match counts fallback
+            when(matchEventRepository.countMatchesGroupedByPlayer(TENANT_A)).thenReturn(List.<Object[]>of(new Object[]{pl1.getId(), 5}));
+            when(storageService.getSignedUrl("corrupted_photo.jpg", 120)).thenThrow(new RuntimeException("S3 error"));
+
+            var results = playerRegistrationService.getPlayersDirectory(TENANT_A);
+
+            assertThat(results).hasSize(2);
+            assertThat(results.get(0).getFullName()).isEqualTo("Ronaldo Nazario");
+            assertThat(results.get(0).getTeamName()).isEqualTo("Sin equipo");
+            assertThat(results.get(0).getMatchesPlayed()).isEqualTo(5);
+            assertThat(results.get(0).getProfilePhotoUrl()).isEqualTo("data:image/jpeg;base64,12345");
+
+            assertThat(results.get(1).getFullName()).isEqualTo("Zico");
+            assertThat(results.get(1).getTeamLogoUrl()).isEqualTo("data:image/png;base64,9876");
+            assertThat(results.get(1).getSignedPhotoUrl()).isEqualTo("corrupted_photo.jpg");
+        }
+
+        @Test
+        @DisplayName("getActiveSeason should fallback to findByTenantId then findFirstByStatus")
+        void activeSeasonFallbacks() {
+            TenantContext.setCurrentTenant(TENANT_A);
+
+            // Case 1: activeSeasons empty, but tenantSeasons has draft season
+            Season draftSeason = new Season();
+            draftSeason.setId(UUID.randomUUID());
+            draftSeason.setStatus(SeasonStatus.DRAFT);
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(Collections.emptyList());
+            when(seasonRepository.findByTenantId(TENANT_A))
+                    .thenReturn(List.of(draftSeason));
+
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), draftSeason.getId()))
+                    .thenReturn(Collections.emptyList());
+
+            List<PlayerResponse> players = playerRegistrationService.getPlayersByTeam(team.getId());
+            assertThat(players).isEmpty();
+
+            // Case 2: tenantId is null, fallback to findFirstByStatus
+            TenantContext.clear();
+            when(seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE))
+                    .thenReturn(Optional.of(activeSeason));
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(Collections.emptyList());
+
+            List<PlayerResponse> playersNoTenant = playerRegistrationService.getPlayersByTeam(team.getId());
+            assertThat(playersNoTenant).isEmpty();
         }
     }
 }

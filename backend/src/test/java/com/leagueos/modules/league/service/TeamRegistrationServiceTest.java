@@ -171,5 +171,28 @@ class TeamRegistrationServiceTest {
 
             verify(teamRegistrationRepository).delete(reg);
         }
+
+        @Test
+        @DisplayName("getEnrolledTeams should return teams with signed logo URLs")
+        void getsEnrolledTeamsWithSignedLogos() {
+            UUID teamId = UUID.randomUUID();
+            Team team = new Team();
+            team.setId(teamId);
+            team.setName("Atlas");
+            team.setLogoUrl("tenant/teams/atlas.png");
+
+            TeamRegistration reg = new TeamRegistration();
+            reg.setTeam(team);
+            reg.setSeason(season);
+
+            when(teamRegistrationRepository.findBySeasonId(seasonId)).thenReturn(List.of(reg));
+            when(storageService.getSignedUrl(eq("tenant/teams/atlas.png"), eq(120)))
+                    .thenReturn("https://signed.com/atlas.png");
+
+            List<TeamRegistration> list = teamRegistrationService.getEnrolledTeams(seasonId);
+
+            assertThat(list).hasSize(1);
+            assertThat(list.get(0).getTeam().getSignedLogoUrl()).isEqualTo("https://signed.com/atlas.png");
+        }
     }
 }

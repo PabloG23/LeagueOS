@@ -221,11 +221,11 @@ class RefereeServiceTest {
             when(storageService.getSignedUrl(anyString(), anyInt())).thenReturn("https://signed.com/ref.jpg");
 
             byte[] bytes = new byte[]{1, 2, 3};
-            RefereeDTO result = refereeService.uploadPhoto(refereeId, bytes, "image/jpeg", TENANT_A);
+            RefereeDTO result = refereeService.uploadPhoto(refereeId, bytes, "image/webp", TENANT_A);
 
             assertThat(result.getPhotoUrl()).contains("armando");
             assertThat(result.getSignedPhotoUrl()).isEqualTo("https://signed.com/ref.jpg");
-            verify(storageService).uploadFile(anyString(), eq(bytes), eq("image/jpeg"));
+            verify(storageService).uploadFile(anyString(), eq(bytes), eq("image/webp"));
         }
 
         @Test
@@ -246,6 +246,84 @@ class RefereeServiceTest {
             assertThat(newPass).isNotBlank().hasSize(10);
             assertThat(referee.getRawPassword()).isEqualTo(newPass);
             verify(userRepository).save(user);
+            verify(refereeRepository).save(referee);
+        }
+
+        @Test
+        @DisplayName("create should throw IllegalArgumentException when name is null or blank")
+        void createThrowsWhenNameBlank() {
+            CreateRefereeRequest req = new CreateRefereeRequest();
+            req.setName("   ");
+
+            assertThatThrownBy(() -> refereeService.create(req, TENANT_A))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("El nombre del árbitro es requerido.");
+        }
+
+        @Test
+        @DisplayName("create should handle username collisions by appending counter")
+        void createHandlesUsernameCollision() {
+            CreateRefereeRequest req = new CreateRefereeRequest();
+            req.setName("Marco Rodríguez");
+
+            when(refereeRepository.save(any(Referee.class))).thenAnswer(inv -> {
+                Referee r = inv.getArgument(0);
+                if (r.getId() == null) r.setId(UUID.randomUUID());
+                return r;
+            });
+            // First lookup finds existing user, second lookup returns empty
+            when(userRepository.findByUsername("arbitro_marco_rodriguez"))
+                    .thenReturn(Optional.of(new User()));
+            when(userRepository.findByUsername("arbitro_marco_rodriguez_1"))
+                    .thenReturn(Optional.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+                User u = inv.getArgument(0);
+                u.setId(UUID.randomUUID());
+                return u;
+            });
+
+            RefereeCreatedDTO result = refereeService.create(req, TENANT_A);
+
+            assertThat(result.getUsername()).isEqualTo("arbitro_marco_rodriguez_1");
+        }
+
+        @Test
+        @DisplayName("uploadPhoto should delete old photo if present in referees directory")
+        void uploadPhotoDeletesOld() {
+            referee.setPhotoUrl("tenant/referees/old_photo.jpg");
+
+            when(refereeRepository.findByIdAndTenantId(refereeId, TENANT_A)).thenReturn(Optional.of(referee));
+            when(storageService.buildTenantKey(eq(TENANT_A), eq("referees"), anyString()))
+                    .thenReturn("tenant/referees/new_photo.jpg");
+            when(refereeRepository.save(any(Referee.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            byte[] bytes = new byte[]{1, 2, 3};
+            refereeService.uploadPhoto(refereeId, bytes, "image/png", TENANT_A);
+
+            verify(storageService).deleteFile("tenant/referees/old_photo.jpg");
+            verify(storageService).uploadFile(eq("tenant/referees/new_photo.jpg"), eq(bytes), eq("image/png"));
+        }
+
+        @Test
+        @DisplayName("resetPassword should create user if referee did not have a userId")
+        void resetPasswordCreatesUserWhenMissing() {
+            referee.setUserId(null);
+
+            when(refereeRepository.findByIdAndTenantId(refereeId, TENANT_A)).thenReturn(Optional.of(referee));
+            when(userRepository.findByUsername("arbitro_armando_archundia")).thenReturn(Optional.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encoded_pass");
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+                User u = inv.getArgument(0);
+                u.setId(UUID.randomUUID());
+                return u;
+            });
+            when(refereeRepository.save(any(Referee.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            String newPass = refereeService.resetPassword(refereeId, TENANT_A);
+
+            assertThat(newPass).isNotBlank();
+            verify(userRepository).save(any(User.class));
             verify(refereeRepository).save(referee);
         }
     }

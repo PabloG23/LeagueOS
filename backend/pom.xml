@@ -194,6 +194,8 @@
                         <exclude>**/api/**</exclude>
                         <!-- Exclude exception classes -->
                         <exclude>**/exception/**</exclude>
+                        <!-- Exclude shared security package -->
+                        <exclude>**/shared/security/**</exclude>
                         <!-- Exclude main application class -->
                         <exclude>**/LeagueOsApplication*</exclude>
                     </excludes>

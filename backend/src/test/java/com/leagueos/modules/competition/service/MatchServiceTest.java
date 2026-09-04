@@ -376,6 +376,49 @@ class MatchServiceTest {
 
             assertThat(result.getReferee()).isEqualTo(referee);
         }
+
+        @Test
+        @DisplayName("should fallback to request location and null referee when not found in tenant")
+        void fallsBackWhenFieldOrRefereeNotFound() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            match.setTenantId(TENANT_A);
+
+            UUID fieldId = UUID.randomUUID();
+            UUID refereeId = UUID.randomUUID();
+
+            when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+            when(soccerFieldRepository.findByIdAndTenantId(fieldId, TENANT_A)).thenReturn(Optional.empty());
+            when(refereeRepository.findByIdAndTenantId(refereeId, TENANT_A)).thenReturn(Optional.empty());
+            when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            UpdateMatchScheduleRequest request = new UpdateMatchScheduleRequest();
+            request.setLocation("Cancha Externa");
+            request.setFieldId(fieldId);
+            request.setRefereeId(refereeId);
+
+            Match result = matchService.updateMatchSchedule(matchId, request);
+
+            assertThat(result.getLocation()).isEqualTo("Cancha Externa");
+            assertThat(result.getField()).isNull();
+            assertThat(result.getReferee()).isNull();
+        }
+
+        @Test
+        @DisplayName("getMatchesByMatchday should return matches from repository")
+        void getsMatchesByMatchday() {
+            when(matchRepository.findByMatchday(3)).thenReturn(List.of(match));
+            List<Match> matches = matchService.getMatchesByMatchday(3);
+            assertThat(matches).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("getMatchEvents should return events from repository")
+        void getsMatchEvents() {
+            MatchEvent event = new MatchEvent();
+            when(matchEventRepository.findByMatchId(matchId)).thenReturn(List.of(event));
+            List<MatchEvent> events = matchService.getMatchEvents(matchId);
+            assertThat(events).hasSize(1);
+        }
     }
 
     // =========================================================================

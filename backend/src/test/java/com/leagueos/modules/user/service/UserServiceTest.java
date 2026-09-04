@@ -1,6 +1,7 @@
 package com.leagueos.modules.user.service;
 
 import com.leagueos.modules.league.persistence.TeamRepository;
+import com.leagueos.modules.referee.domain.Referee;
 import com.leagueos.modules.referee.persistence.RefereeRepository;
 import com.leagueos.modules.user.api.dto.CreateAdminRequest;
 import com.leagueos.modules.user.api.dto.UserDTO;
@@ -257,6 +258,177 @@ class UserServiceTest {
 
             assertThat(status).isFalse();
             assertThat(user.isActive()).isFalse();
+        }
+
+        @Test
+        @DisplayName("toggleUserActive should reject self-deactivation and cross-tenant access")
+        void toggleUserActiveValidations() {
+            UUID adminId = UUID.randomUUID();
+            User user = new User();
+            user.setId(adminId);
+            user.setTenantId(TENANT_A.toString());
+
+            when(userRepository.findById(adminId)).thenReturn(Optional.of(user));
+
+            assertThatThrownBy(() -> userService.toggleUserActive(adminId, adminId, TENANT_A))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("No puedes desactivar tu propia cuenta");
+
+            assertThatThrownBy(() -> userService.toggleUserActive(adminId, UUID.randomUUID(), TENANT_B))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("No autorizado para modificar usuarios de otra liga");
+        }
+
+        @Test
+        @DisplayName("resetUserPassword should update password and sync referee raw_password when user is referee")
+        void resetsUserPasswordAndSyncsReferee() {
+            UUID userId = UUID.randomUUID();
+            User user = new User();
+            user.setId(userId);
+            user.setTenantId(TENANT_A.toString());
+            user.setRole(Role.ROLE_REFEREE);
+
+            Referee ref = new Referee();
+            ref.setId(UUID.randomUUID());
+            ref.setUserId(userId);
+
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(refereeRepository.findByUserId(userId)).thenReturn(Optional.of(ref));
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            String newPass = userService.resetUserPassword(userId, TENANT_A);
+
+            assertThat(newPass).hasSize(10);
+            assertThat(ref.getRawPassword()).isEqualTo(newPass);
+            verify(refereeRepository).save(ref);
+        }
+
+        @Test
+        @DisplayName("deleteUser should unlink user from referee before deleting")
+        void deletesUserAndUnlinksReferee() {
+            UUID userId = UUID.randomUUID();
+            UUID adminId = UUID.randomUUID();
+            User user = new User();
+            user.setId(userId);
+            user.setTenantId(TENANT_A.toString());
+
+            Referee ref = new Referee();
+            ref.setUserId(userId);
+
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(refereeRepository.findByUserId(userId)).thenReturn(Optional.of(ref));
+
+            userService.deleteUser(userId, adminId, TENANT_A);
+
+            assertThat(ref.getUserId()).isNull();
+            verify(refereeRepository).save(ref);
+            verify(userRepository).delete(user);
+        }
+
+        @Test
+        @DisplayName("createOrUpdateTeamRepUser should update existing user when found by teamId")
+        void updatesExistingRepUser() {
+            com.leagueos.modules.league.domain.Team team = new com.leagueos.modules.league.domain.Team();
+            team.setId(UUID.randomUUID());
+            team.setName("Chivas");
+
+            com.leagueos.modules.league.domain.Person rep = new com.leagueos.modules.league.domain.Person();
+            rep.setId(UUID.randomUUID());
+            rep.setFirstName("Fernando");
+            rep.setLastName("Hierro");
+            rep.setPhone("3312345678");
+
+            User existingUser = new User();
+            existingUser.setId(UUID.randomUUID());
+            existingUser.setUsername("rep_chivas");
+
+            when(userRepository.findByTeamId(team.getId())).thenReturn(Optional.of(existingUser));
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            User updated = userService.createOrUpdateTeamRepUser(team, rep, TENANT_A);
+
+            assertThat(updated.getName()).isEqualTo("Fernando Hierro");
+            assertThat(updated.getPhone()).isEqualTo("3312345678");
+            assertThat(updated.getTeamId()).isEqualTo(team.getId());
+        }
+
+        @Test
+        @DisplayName("createOrUpdateTeamRepUser should return null when team or rep is null")
+        void returnsNullWhenTeamOrRepNull() {
+            assertThat(userService.createOrUpdateTeamRepUser(null, new com.leagueos.modules.league.domain.Person(), TENANT_A)).isNull();
+            assertThat(userService.createOrUpdateTeamRepUser(new com.leagueos.modules.league.domain.Team(), null, TENANT_A)).isNull();
+        }
+
+        @Test
+        @DisplayName("createAdminUser should throw IllegalArgumentException when username already exists")
+        void throwsWhenUsernameExists() {
+            CreateAdminRequest req = new CreateAdminRequest();
+            req.setName("Admin Existente");
+            req.setUsername("admin_nd");
+
+            when(userRepository.existsByUsername("admin_nd")).thenReturn(true);
+
+            assertThatThrownBy(() -> userService.createAdminUser(req, TENANT_A))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("ya existe en la plataforma");
+        }
+
+        @Test
+        @DisplayName("getAllUsers should map referee and team rep details including signed URLs and passwords")
+        void mapsRefereeAndTeamRepUsers() {
+            UUID refereeUserId = UUID.randomUUID();
+            UUID refereeId = UUID.randomUUID();
+            User refUser = new User();
+            refUser.setId(refereeUserId);
+            refUser.setUsername("arbitro_paco");
+            refUser.setRole(Role.ROLE_REFEREE);
+            refUser.setTenantId(TENANT_A.toString());
+            refUser.setActive(true);
+
+            Referee ref = new Referee();
+            ref.setId(refereeId);
+            ref.setUserId(refereeUserId);
+            ref.setName("Paco Chacón");
+            ref.setPhone("4421234567");
+            ref.setPhotoUrl("tenant/referees/paco.jpg");
+            ref.setRawPassword("RefPass123");
+
+            UUID teamId = UUID.randomUUID();
+            User repUser = new User();
+            repUser.setId(UUID.randomUUID());
+            repUser.setUsername("rep_pumas");
+            repUser.setRole(Role.ROLE_TEAM_REP);
+            repUser.setTenantId(TENANT_A.toString());
+            repUser.setTeamId(teamId);
+            repUser.setRawPassword(null); // Triggers password generation!
+            repUser.setActive(true);
+
+            com.leagueos.modules.league.domain.Team team = new com.leagueos.modules.league.domain.Team();
+            team.setId(teamId);
+            team.setName("Pumas UNAM");
+            team.setLogoUrl("http://external.com/pumas.png"); // HTTP url!
+
+            when(userRepository.findByTenantIdOrderByCreatedAtDesc(TENANT_A.toString()))
+                    .thenReturn(List.of(refUser, repUser));
+            when(refereeRepository.findByTenantIdOrderByNameAsc(TENANT_A)).thenReturn(List.of(ref));
+            when(teamRepository.findByTenantIdOrderByNameAsc(TENANT_A)).thenReturn(List.of(team));
+            when(storageService.getSignedUrl("tenant/referees/paco.jpg", 120)).thenReturn("https://signed.com/paco.jpg");
+
+            List<UserDTO> results = userService.getAllUsers(TENANT_A);
+
+            assertThat(results).hasSize(2);
+
+            UserDTO refDTO = results.get(0);
+            assertThat(refDTO.getRefereeId()).isEqualTo(refereeId);
+            assertThat(refDTO.getName()).isEqualTo("Paco Chacón");
+            assertThat(refDTO.getPhone()).isEqualTo("4421234567");
+            assertThat(refDTO.getSignedPhotoUrl()).isEqualTo("https://signed.com/paco.jpg");
+            assertThat(refDTO.getRawPassword()).isEqualTo("RefPass123");
+
+            UserDTO repDTO = results.get(1);
+            assertThat(repDTO.getTeamName()).isEqualTo("Pumas UNAM");
+            assertThat(repDTO.getSignedTeamLogoUrl()).isEqualTo("http://external.com/pumas.png");
+            assertThat(repDTO.getRawPassword()).isNotBlank();
         }
     }
 }
