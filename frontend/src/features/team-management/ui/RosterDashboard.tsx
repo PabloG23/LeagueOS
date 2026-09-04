@@ -73,7 +73,17 @@ export const RosterDashboard = () => {
                 return;
             }
             
-            const { generateCredentialsPdf } = await import('../lib/generateCredentialsPdf');
+            let generateCredentialsPdf;
+            try {
+                const module = await import('../lib/generateCredentialsPdf');
+                generateCredentialsPdf = module.generateCredentialsPdf;
+            } catch (importErr: any) {
+                if (importErr?.message?.includes('Failed to fetch dynamically imported module')) {
+                    window.location.reload();
+                    return;
+                }
+                throw importErr;
+            }
             
             await generateCredentialsPdf({
                 team: { id: targetId, name: teamName, logoUrl: teamLogo } as any,
