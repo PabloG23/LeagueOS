@@ -86,7 +86,8 @@ const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
     }
 
     try {
-        const response = await fetch(url);
+        const fetchUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
+        const response = await fetch(fetchUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
         const rawDataUrl = await new Promise<string>((resolve, reject) => {
@@ -157,8 +158,9 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
     const cols = 3;
     const rows = 3;
     
-    const cardWidth = 60;
-    const cardHeight = 90;
+    // Medidas solicitadas por el cliente: 6.5 cm x 9.5 cm (65mm x 95mm)
+    const cardWidth = 65;
+    const cardHeight = 95;
 
     // Calculate margins to center the 3x3 grid
     const totalWidth = cols * cardWidth;
@@ -220,26 +222,13 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
         const x = marginX + (col * cardWidth);
         const y = marginY + (row * cardHeight);
 
-        // -- Draw Card Background --
-        doc.setFillColor(15, 23, 42); // slate-900
+        // -- Fondo superior BLANCO (solicitado por cliente para ahorrar costos de impresión) --
+        doc.setFillColor(255, 255, 255);
         doc.rect(x, y, cardWidth, cardHeight, 'F');
-        
-        // -- Sporty Angle Top Background --
-        doc.setFillColor(30, 58, 138); // blue-900
-        doc.triangle(x, y, x + cardWidth, y, x + cardWidth, y + 45, 'F');
 
-        // -- Border --
-        doc.setDrawColor(51, 65, 85); // slate-700
-        doc.setLineWidth(0.5);
-        doc.rect(x, y, cardWidth, cardHeight, 'D');
-
-        // Header Line (LeagueOS style)
-        doc.setFillColor(59, 130, 246); // blue-500
-        doc.rect(x, y, cardWidth, 3, 'F');
-
-        // -- Draw League Logo (Center Top) --
+        // -- Dibujar Logo de la Liga (Centro Superior) --
         if (leagueLogoImg) {
-            const maxW = 26;
+            const maxW = 28;
             const maxH = 14;
             const aspect = leagueLogoImg.width / leagueLogoImg.height;
             let logoW = maxW;
@@ -252,30 +241,29 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             const logoY = y + 4.5 + (maxH - logoH) / 2;
             doc.addImage(leagueLogoImg.dataUrl, logoX, logoY, logoW, logoH);
         } else {
-            doc.setTextColor(255, 255, 255);
+            doc.setTextColor(15, 23, 42); // slate-900 legible sobre blanco
             doc.setFontSize(9);
             doc.setFont("helvetica", "bolditalic");
             doc.text("LIGA NUESTRO DEPORTE", x + cardWidth / 2, y + 12, { align: 'center' });
         }
 
-        // -- Draw Player Photo (Center) --
+        // -- Foto del Jugador (Centro) --
         const photoImg = playerPhotos[i];
-        const photoSize = 36;
+        const photoSize = 38;
         const photoX = x + (cardWidth - photoSize) / 2;
         const photoY = y + 21;
 
         if (photoImg) {
-            // Draw photo
             doc.addImage(photoImg.dataUrl, photoX, photoY, photoSize, photoSize);
-            // Draw a nice sporty border around photo
-            doc.setDrawColor(250, 204, 21); // gold
+            // Marco deportivo rojo alrededor de la foto
+            doc.setDrawColor(220, 38, 38); // red-600
             doc.setLineWidth(1.2);
             doc.rect(photoX, photoY, photoSize, photoSize);
         } else {
-            // Placeholder silhouette
-            doc.setFillColor(51, 65, 85); // slate-700
+            // Placeholder limpio sobre fondo blanco
+            doc.setFillColor(241, 245, 249); // slate-100
             doc.rect(photoX, photoY, photoSize, photoSize, 'F');
-            doc.setDrawColor(250, 204, 21);
+            doc.setDrawColor(220, 38, 38); // red-600
             doc.setLineWidth(1.2);
             doc.rect(photoX, photoY, photoSize, photoSize);
             doc.setTextColor(148, 163, 184); // slate-400
@@ -284,15 +272,15 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             doc.text("FOTO", photoX + photoSize / 2, photoY + photoSize / 2 + 3, { align: 'center' });
         }
 
-        // -- Draw Player Name --
-        doc.setTextColor(255, 255, 255);
+        // -- Nombre del Jugador (Texto oscuro sobre fondo blanco) --
+        doc.setTextColor(15, 23, 42); // slate-900
         doc.setFont("helvetica", "bolditalic");
         const fullName = [player.firstName, player.lastName].filter(Boolean).join(' ').trim().toUpperCase();
         
         let nameFontSize = 10.5;
         doc.setFontSize(nameFontSize);
         
-        // Auto-scale font size down to 7.5 if single line can fit
+        // Auto-escalar tamaño de fuente si excede el ancho de la tarjeta
         while (doc.getTextWidth(fullName) > cardWidth - 4 && nameFontSize > 7.5) {
             nameFontSize -= 0.5;
             doc.setFontSize(nameFontSize);
@@ -300,19 +288,19 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
         const splitName = doc.splitTextToSize(fullName, cardWidth - 4);
         if (splitName.length === 1) {
-            doc.text(splitName[0], x + cardWidth / 2, photoY + photoSize + 6.5, { align: 'center' });
+            doc.text(splitName[0], x + cardWidth / 2, photoY + photoSize + 6, { align: 'center' });
         } else {
-            // If name wraps across 2 lines, adjust font size and line height
             doc.setFontSize(Math.min(nameFontSize, 8.5));
             doc.text(splitName.slice(0, 2), x + cardWidth / 2, photoY + photoSize + 4.5, { align: 'center', lineHeightFactor: 1.15 });
         }
 
-        // -- Draw Team Name Banner --
+        // -- Raya Roja (Banner del Equipo) --
         const bannerY = photoY + photoSize + 11;
-        doc.setFillColor(250, 204, 21); // gold
-        doc.rect(x, bannerY, cardWidth, 8, 'F');
+        const bannerHeight = 8;
+        doc.setFillColor(220, 38, 38); // red-600
+        doc.rect(x, bannerY, cardWidth, bannerHeight, 'F');
         
-        doc.setTextColor(15, 23, 42); // slate-900 (dark)
+        doc.setTextColor(255, 255, 255); // blanco nítido sobre fondo rojo
         doc.setFont("helvetica", "bolditalic");
         const teamName = (team.name || '').trim().toUpperCase();
         let teamFontSize = 10.5;
@@ -328,20 +316,36 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             doc.text(teamNameSplit.slice(0, 2), x + cardWidth / 2, bannerY + 3.5, { align: 'center', lineHeightFactor: 1.1 });
         }
 
-        // -- Draw Team Logo (Bottom Left) --
+        // -- Sección inferior DEBAJO de la raya amarilla (Se mantiene oscura exactamente como pidió el cliente) --
+        const bottomSectionY = bannerY + bannerHeight;
+        const bottomSectionH = cardHeight - (bottomSectionY - y);
+        doc.setFillColor(15, 23, 42); // slate-900
+        doc.rect(x, bottomSectionY, cardWidth, bottomSectionH, 'F');
+
+        // -- Logo del Equipo (Abajo a la izquierda) --
         if (teamLogoImg) {
-            const tLogoW = 14;
-            const tLogoH = 14 * (teamLogoImg.height / teamLogoImg.width);
-            doc.addImage(teamLogoImg.dataUrl, x + 4, y + cardHeight - tLogoH - 4, tLogoW, tLogoH);
+            const maxLogoH = bottomSectionH - 4;
+            let tLogoW = 14;
+            let tLogoH = 14 * (teamLogoImg.height / teamLogoImg.width);
+            if (tLogoH > maxLogoH) {
+                tLogoH = maxLogoH;
+                tLogoW = maxLogoH * (teamLogoImg.width / teamLogoImg.height);
+            }
+            doc.addImage(teamLogoImg.dataUrl, x + 4, y + cardHeight - tLogoH - 3.5, tLogoW, tLogoH);
         }
 
-        // -- Draw Jersey Number (Bottom Right) --
+        // -- Número de Dorsal (Abajo a la derecha en blanco) --
         if (player.jerseyNumber !== undefined && player.jerseyNumber !== null) {
             doc.setFontSize(32);
             doc.setFont("helvetica", "bolditalic");
             doc.setTextColor(255, 255, 255); // white
             doc.text(`${player.jerseyNumber}`, x + cardWidth - 4, y + cardHeight - 3, { align: 'right' });
         }
+
+        // -- Borde exterior / Guía de recorte para las micas (0.3mm para fácil corte) --
+        doc.setDrawColor(148, 163, 184); // slate-400
+        doc.setLineWidth(0.3);
+        doc.rect(x, y, cardWidth, cardHeight, 'D');
     }
 
     doc.save(`Credenciales_${team.name.replace(/\s+/g, '_')}.pdf`);
