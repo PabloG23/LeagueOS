@@ -143,21 +143,24 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
             },
             {
                 accessorKey: 'goalsFor',
-                header: () => <div className="text-center hidden md:block">GF</div>,
-                cell: (info) => <div className={cn("text-center font-medium hidden md:block whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
+                header: () => <div className="text-center">GF</div>,
+                cell: (info) => <div className={cn("text-center font-medium whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalsAgainst',
-                header: () => <div className="text-center hidden md:block">GC</div>,
-                cell: (info) => <div className={cn("text-center font-medium hidden md:block whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
+                header: () => <div className="text-center">GC</div>,
+                cell: (info) => <div className={cn("text-center font-medium whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-500")}>{info.getValue<number>()}</div>,
             },
             {
                 accessorKey: 'goalDifference',
-                header: () => <div className="text-center hidden md:block">DG</div>,
+                header: () => <div className="text-center">DG</div>,
                 cell: (info) => {
                     const diff = info.getValue<number>();
                     return (
-                        <div className={`text-center font-bold hidden md:block whitespace-nowrap ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-rose-500' : isNuestroDeporte ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <div className={cn(
+                            "text-center font-bold whitespace-nowrap",
+                            diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-rose-500' : isNuestroDeporte ? 'text-slate-400' : 'text-slate-500'
+                        )}>
                             {diff > 0 ? `+${diff}` : diff}
                         </div>
                     );
