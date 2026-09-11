@@ -32,7 +32,8 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
     const [activeTab, setActiveTab] = useState<TabType>('general');
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
+        if (!teamId) return undefined;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId}`;
     };
 
     const renderPlayerList = (players: DisciplinePlayer[], title: string, subtitle: string) => {
@@ -58,7 +59,7 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
                             </div>
 
                             <h4 className="text-xl font-bold tracking-tight mb-0">{leader.name}</h4>
-                            <Link to={getTeamLink(leader.teamId)} className="text-white/80 text-xs font-medium mb-3 hover:text-white hover:underline transition-colors block">
+                            <Link to={getTeamLink(leader.teamId) || '#'} className="text-white/80 text-xs font-medium mb-3 hover:text-white hover:underline transition-colors block">
                                 {leader.team}
                             </Link>
 
@@ -88,7 +89,7 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
                                     <p className="text-sm font-semibold text-slate-700 leading-tight group-hover:text-slate-900">
                                         {player.name}
                                     </p>
-                                    <Link to={getTeamLink(player.teamId)} className="text-[11px] text-slate-500 group-hover:text-red-500 hover:underline block leading-none mt-0.5">
+                                    <Link to={getTeamLink(player.teamId) || '#'} className="text-[11px] text-slate-500 group-hover:text-red-500 hover:underline block leading-none mt-0.5">
                                         {player.team}
                                     </Link>
                                     {activeTab === 'matchday' && player.notes && (
@@ -136,7 +137,7 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
                                 #1 Equipo Indisciplinado
                             </div>
 
-                            <Link to={getTeamLink(leader.id)} className="text-2xl font-bold tracking-tight mb-2 hover:text-white/90 transition-colors">
+                            <Link to={getTeamLink(leader.id) || '#'} className="text-2xl font-bold tracking-tight mb-2 hover:text-white/90 transition-colors">
                                 {leader.name}
                             </Link>
 
@@ -158,7 +159,7 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
                                     {team.rank}
                                 </span>
                                 <div>
-                                    <Link to={getTeamLink(team.id)} className="text-sm font-semibold text-slate-700 leading-tight group-hover:text-slate-900 hover:underline">
+                                    <Link to={getTeamLink(team.id) || '#'} className="text-sm font-semibold text-slate-700 leading-tight group-hover:text-slate-900 hover:underline">
                                         {team.name}
                                     </Link>
                                 </div>
@@ -200,7 +201,7 @@ export const DisciplineDashboardWidget = ({ generalPlayers, matchdayPlayers, tea
                                     </div>
                                     <div className="min-w-0">
                                         <h5 className="font-bold text-[13px] text-slate-800 leading-tight truncate" title={player.name}>{player.name}</h5>
-                                        <Link to={getTeamLink(player.teamId)} className="text-[10px] text-slate-500 hover:text-red-600 transition-colors uppercase font-semibold tracking-wider truncate block mt-0.5" title={player.team}>
+                                        <Link to={getTeamLink(player.teamId) || '#'} className="text-[10px] text-slate-500 hover:text-red-600 transition-colors uppercase font-semibold tracking-wider truncate block mt-0.5" title={player.team}>
                                             {player.team}
                                         </Link>
                                     </div>

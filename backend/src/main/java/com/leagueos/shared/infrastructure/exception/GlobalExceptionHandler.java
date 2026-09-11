@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -95,6 +96,15 @@ public class GlobalExceptionHandler {
         log.warn("Error en la subida de archivos (petición multipart): {}", ex.getMessage());
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Error de Subida",
                 "La subida del archivo fue interrumpida o el formato es incorrecto.");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
+        log.warn("MethodArgumentTypeMismatchException: Parámetro '{}' con valor '{}' tiene formato inválido", 
+                ex.getName(), ex.getValue());
+        String message = String.format("El parámetro '%s' con valor '%s' no tiene el formato esperado.", 
+                ex.getName(), ex.getValue());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Parámetro Inválido", message);
     }
 
     @ExceptionHandler(Exception.class)

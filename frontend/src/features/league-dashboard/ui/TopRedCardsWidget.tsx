@@ -21,7 +21,8 @@ export const TopRedCardsWidget = ({ players }: TopRedCardsWidgetProps) => {
     const runnersUp = players.slice(1, 10); // Show up to 10 total
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
+        if (!teamId) return undefined;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId}`;
     };
 
     return (
@@ -51,7 +52,7 @@ export const TopRedCardsWidget = ({ players }: TopRedCardsWidgetProps) => {
                             </div>
 
                             <h4 className="text-xl font-bold tracking-tight mb-1">{leader.name}</h4>
-                            <Link to={getTeamLink(leader.teamId)} className="text-white/70 text-sm font-medium mb-3 hover:text-white hover:underline transition-colors block">
+                            <Link to={getTeamLink(leader.teamId) || '#'} className="text-white/70 text-sm font-medium mb-3 hover:text-white hover:underline transition-colors block">
                                 {leader.team}
                             </Link>
 
@@ -75,7 +76,7 @@ export const TopRedCardsWidget = ({ players }: TopRedCardsWidgetProps) => {
                                     <p className="text-sm font-semibold text-slate-700 leading-tight group-hover:text-slate-900">
                                         {player.name}
                                     </p>
-                                    <Link to={getTeamLink(player.teamId)} className="text-xs text-slate-500 group-hover:text-red-500 hover:underline block">
+                                    <Link to={getTeamLink(player.teamId) || '#'} className="text-xs text-slate-500 group-hover:text-red-500 hover:underline block">
                                         {player.team}
                                     </Link>
                                 </div>

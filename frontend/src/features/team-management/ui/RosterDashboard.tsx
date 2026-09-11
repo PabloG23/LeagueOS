@@ -39,6 +39,9 @@ const PublicTeamLayout = ({ children }: { children: React.ReactNode }) => (
     </div>
 );
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isValidUuid = (val?: string | null): val is string => !!val && UUID_REGEX.test(val);
+
 export const RosterDashboard = () => {
     const { teamId } = useParams();
     const location = useLocation();
@@ -63,7 +66,7 @@ export const RosterDashboard = () => {
 
     const handleDownloadCredentials = async () => {
         const targetId = resolvedTeamId || teamId || localStorage.getItem('teamId');
-        if (!settings?.tenantId || !targetId) return;
+        if (!settings?.tenantId || !targetId || !isValidUuid(targetId)) return;
         try {
             setIsGeneratingPdf(true);
             const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, targetId);
@@ -120,7 +123,7 @@ export const RosterDashboard = () => {
                 }
             }
 
-            if (targetTeamId) {
+            if (targetTeamId && isValidUuid(targetTeamId)) {
                 setResolvedTeamId(targetTeamId);
                 const team = allTeams.find(t => t.id === targetTeamId);
                 if (team && isTeamRepMode) {
@@ -159,7 +162,7 @@ export const RosterDashboard = () => {
                 })));
             } else {
                 setResolvedTeamId(undefined);
-                setTeamName(isTeamRepMode ? 'Sin Equipo Asignado' : 'Equipo Desconocido');
+                setTeamName(targetTeamId ? 'Equipo no encontrado' : (isTeamRepMode ? 'Sin Equipo Asignado' : 'Equipo Desconocido'));
                 setTeamRep({ name: 'Sin Asignar', phone: null });
                 setPlayers([]);
             }

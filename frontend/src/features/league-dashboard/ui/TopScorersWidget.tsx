@@ -41,7 +41,8 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
     const otherScorers = scorers.filter(s => s.id !== currentLeader?.id).slice(0, 9);
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
+        if (!teamId) return undefined;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId}`;
     };
 
     const resolvePhotoUrl = (url?: string) => {
@@ -187,7 +188,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                 </div>
 
                                 <h4 className="text-lg font-black tracking-tight mb-0.5 leading-tight">{currentLeader.name}</h4>
-                                <Link to={getTeamLink(currentLeader.teamId)} className="text-white/70 text-xs font-semibold mb-2 hover:text-white hover:underline transition-colors block">
+                                <Link to={getTeamLink(currentLeader.teamId) || '#'} className="text-white/70 text-xs font-semibold mb-2 hover:text-white hover:underline transition-colors block">
                                     {currentLeader.team}
                                 </Link>
 
@@ -252,7 +253,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                 )}>
                                                     {scorer.name}
                                                 </p>
-                                                <Link to={getTeamLink(scorer.teamId)} className={cn(
+                                                <Link to={getTeamLink(scorer.teamId) || '#'} className={cn(
                                                     "text-[11px] font-medium truncate hover:underline block",
                                                     isNuestroDeporte ? "text-slate-400 group-hover:text-blue-400" : "text-slate-500 group-hover:text-primary"
                                                 )}>

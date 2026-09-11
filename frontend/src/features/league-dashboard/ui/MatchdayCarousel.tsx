@@ -25,7 +25,8 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
     }, [activeSeasons, activeTabId]);
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
+        if (!teamId) return undefined;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId}`;
     };
 
     if (!settings || activeSeasons.length === 0) {
@@ -209,7 +210,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                                 fallbackClass="text-[10px] font-bold text-white"
                                             />
                                         </div>
-                                        <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.homeScore || 0) > (match.awayScore || 0) ? 'text-white' : 'text-slate-400'}`}>
+                                        <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId) || '#'} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.homeScore || 0) > (match.awayScore || 0) ? 'text-white' : 'text-slate-400'}`}>
                                             {match.homeTeam?.name || 'Local'}
                                         </Link>
                                     </div>
@@ -226,7 +227,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                                                 fallbackClass="text-[10px] font-bold text-white"
                                             />
                                         </div>
-                                        <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId)} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.awayScore || 0) > (match.homeScore || 0) ? 'text-white' : 'text-slate-400'}`}>
+                                        <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId) || '#'} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.awayScore || 0) > (match.homeScore || 0) ? 'text-white' : 'text-slate-400'}`}>
                                             {match.awayTeam?.name || 'Visitante'}
                                         </Link>
                                     </div>

@@ -43,7 +43,8 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
     }, [isOpen, onClose]);
 
     const getTeamLink = (teamId?: string) => {
-        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId || '1'}`;
+        if (!teamId) return undefined;
+        return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId}`;
     };
 
     // Extract unique seasons
@@ -261,7 +262,7 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                                     fallbackClass="text-sm font-bold text-slate-300"
                                                                 />
                                                             </div>
-                                                            <Link to={getTeamLink(match.homeTeamId)} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${homeWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
+                                                            <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId) || '#'} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${homeWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
                                                                 {match.homeTeam?.name || 'Local'}
                                                             </Link>
                                                         </div>
@@ -286,7 +287,7 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                                     fallbackClass="text-sm font-bold text-slate-300"
                                                                 />
                                                             </div>
-                                                            <Link to={getTeamLink(match.awayTeamId)} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${awayWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
+                                                            <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId) || '#'} className={`text-xs text-center leading-tight hover:text-blue-400 line-clamp-3 ${awayWon ? 'font-black text-white' : 'font-semibold text-slate-400'}`}>
                                                                 {match.awayTeam?.name || 'Visitante'}
                                                             </Link>
                                                         </div>

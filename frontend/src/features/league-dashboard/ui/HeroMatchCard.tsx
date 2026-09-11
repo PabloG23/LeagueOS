@@ -6,6 +6,8 @@ interface HeroMatchCardProps {
     awayTeam: string;
     homeLogo?: string;
     awayLogo?: string;
+    homeTeamId?: string;
+    awayTeamId?: string;
     date: string;
     venue: string;
     leagueName: string;
@@ -16,12 +18,16 @@ export const HeroMatchCard = ({
     awayTeam,
     homeLogo,
     awayLogo,
+    homeTeamId,
+    awayTeamId,
     date,
     venue,
     leagueName,
 }: HeroMatchCardProps) => {
     const { leagueSlug } = useParams<{ leagueSlug?: string }>();
     const currentLeague = leagueSlug || 'ligaNuestroDeporte';
+    const homeLink = homeTeamId ? `/${currentLeague}/team/${homeTeamId}` : undefined;
+    const awayLink = awayTeamId ? `/${currentLeague}/team/${awayTeamId}` : undefined;
 
     return (
         <div className="relative w-full h-[400px] rounded-xl overflow-hidden mb-8 group bg-card text-card-foreground shadow-sm border">
@@ -41,16 +47,29 @@ export const HeroMatchCard = ({
 
                 <div className="flex items-center justify-between max-w-4xl w-full">
                     {/* Home Team */}
-                    <Link to={`/${currentLeague}/team/1`} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
-                        <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl group-hover/team:scale-110 transition-transform duration-300">
-                            {homeLogo ? (
-                                <img src={homeLogo} alt={homeTeam} className="w-full h-full object-contain" />
-                            ) : (
-                                <span className="text-2xl font-bold">{homeTeam.substring(0, 2)}</span>
-                            )}
+                    {homeLink ? (
+                        <Link to={homeLink} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
+                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl group-hover/team:scale-110 transition-transform duration-300">
+                                {homeLogo ? (
+                                    <img src={homeLogo} alt={homeTeam} className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-2xl font-bold">{homeTeam.substring(0, 2)}</span>
+                                )}
+                            </div>
+                            <h2 className="text-3xl font-bold text-center underline decoration-transparent group-hover/team:decoration-white transition-all">{homeTeam}</h2>
+                        </Link>
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 flex-1">
+                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl">
+                                {homeLogo ? (
+                                    <img src={homeLogo} alt={homeTeam} className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-2xl font-bold">{homeTeam.substring(0, 2)}</span>
+                                )}
+                            </div>
+                            <h2 className="text-3xl font-bold text-center">{homeTeam}</h2>
                         </div>
-                        <h2 className="text-3xl font-bold text-center underline decoration-transparent group-hover/team:decoration-white transition-all">{homeTeam}</h2>
-                    </Link>
+                    )}
 
                     {/* VS */}
                     <div className="flex flex-col items-center px-8">
@@ -66,16 +85,29 @@ export const HeroMatchCard = ({
                     </div>
 
                     {/* Away Team */}
-                    <Link to={`/${currentLeague}/team/2`} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
-                        <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl group-hover/team:scale-110 transition-transform duration-300">
-                            {awayLogo ? (
-                                <img src={awayLogo} alt={awayTeam} className="w-full h-full object-contain" />
-                            ) : (
-                                <span className="text-2xl font-bold">{awayTeam.substring(0, 2)}</span>
-                            )}
+                    {awayLink ? (
+                        <Link to={awayLink} className="flex flex-col items-center gap-4 flex-1 group/team hover:opacity-80 transition-opacity">
+                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl group-hover/team:scale-110 transition-transform duration-300">
+                                {awayLogo ? (
+                                    <img src={awayLogo} alt={awayTeam} className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-2xl font-bold">{awayTeam.substring(0, 2)}</span>
+                                )}
+                            </div>
+                            <h2 className="text-3xl font-bold text-center underline decoration-transparent group-hover/team:decoration-white transition-all">{awayTeam}</h2>
+                        </Link>
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 flex-1">
+                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-full p-4 flex items-center justify-center border border-white/20 shadow-xl">
+                                {awayLogo ? (
+                                    <img src={awayLogo} alt={awayTeam} className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-2xl font-bold">{awayTeam.substring(0, 2)}</span>
+                                )}
+                            </div>
+                            <h2 className="text-3xl font-bold text-center">{awayTeam}</h2>
                         </div>
-                        <h2 className="text-3xl font-bold text-center underline decoration-transparent group-hover/team:decoration-white transition-all">{awayTeam}</h2>
-                    </Link>
+                    )}
                 </div>
 
                 <div className="mt-8 flex justify-center">
