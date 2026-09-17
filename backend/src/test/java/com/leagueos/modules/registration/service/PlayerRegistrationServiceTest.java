@@ -23,6 +23,7 @@ import com.leagueos.modules.tenant.service.TenantSettingsService;
 import com.leagueos.shared.context.TenantContext;
 import com.leagueos.shared.domain.exception.BusinessRuleException;
 import com.leagueos.shared.domain.exception.ResourceNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -972,6 +973,49 @@ class PlayerRegistrationServiceTest {
         }
 
         @Test
+        @DisplayName("activatePlayer should throw AccessDeniedException when team does not match expectedTeamId")
+        void activatePlayerThrowsAccessDeniedWhenTeamMismatches() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+            UUID otherTeamId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.INACTIVE);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+
+            assertThatThrownBy(() -> playerRegistrationService.activatePlayer(playerId, otherTeamId))
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("activatePlayer should succeed when team matches expectedTeamId")
+        void activatePlayerSucceedsWhenTeamMatches() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.INACTIVE);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(seasonRosterRepository.countByTeamIdAndSeasonIdAndStatus(team.getId(), activeSeason.getId(), PlayerStatus.ACTIVE))
+                    .thenReturn(5);
+
+            playerRegistrationService.activatePlayer(playerId, team.getId());
+
+            assertThat(roster.getStatus()).isEqualTo(PlayerStatus.ACTIVE);
+            verify(seasonRosterRepository).save(roster);
+        }
+
+        @Test
         @DisplayName("deactivatePlayer should mark status as INACTIVE")
         void deactivatesPlayer() {
             TenantContext.setCurrentTenant(TENANT_A);
@@ -986,6 +1030,47 @@ class PlayerRegistrationServiceTest {
                     .thenReturn(Optional.of(roster));
 
             playerRegistrationService.deactivatePlayer(playerId);
+
+            assertThat(roster.getStatus()).isEqualTo(PlayerStatus.INACTIVE);
+            verify(seasonRosterRepository).save(roster);
+        }
+
+        @Test
+        @DisplayName("deactivatePlayer should throw AccessDeniedException when team does not match expectedTeamId")
+        void deactivatePlayerThrowsAccessDeniedWhenTeamMismatches() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+            UUID otherTeamId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.ACTIVE);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+
+            assertThatThrownBy(() -> playerRegistrationService.deactivatePlayer(playerId, otherTeamId))
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("deactivatePlayer should succeed when team matches expectedTeamId")
+        void deactivatePlayerSucceedsWhenTeamMatches() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.ACTIVE);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+
+            playerRegistrationService.deactivatePlayer(playerId, team.getId());
 
             assertThat(roster.getStatus()).isEqualTo(PlayerStatus.INACTIVE);
             verify(seasonRosterRepository).save(roster);

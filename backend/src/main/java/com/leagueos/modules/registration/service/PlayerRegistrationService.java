@@ -21,6 +21,7 @@ import com.leagueos.shared.domain.exception.BusinessRuleException;
 import com.leagueos.shared.domain.exception.ResourceNotFoundException;
 import com.leagueos.shared.util.NameUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,11 +48,15 @@ public class PlayerRegistrationService {
     private final com.leagueos.modules.media.service.StorageService storageService;
 
     @Transactional
-    public void activatePlayer(UUID playerId) {
+    public void activatePlayer(UUID playerId, UUID expectedTeamId) {
         Season activeSeason = getActiveSeason();
 
         SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Player is not assigned to a team in the active season"));
+
+        if (expectedTeamId != null && (roster.getTeam() == null || !expectedTeamId.equals(roster.getTeam().getId()))) {
+            throw new AccessDeniedException("No tienes permisos para realizar esta acción.");
+        }
 
         int currentActivePlayers = seasonRosterRepository.countByTeamIdAndSeasonIdAndStatus(
                 roster.getTeam().getId(),
@@ -70,14 +75,28 @@ public class PlayerRegistrationService {
     }
 
     @Transactional
-    public void deactivatePlayer(UUID playerId) {
+    public void activatePlayer(UUID playerId) {
+        activatePlayer(playerId, null);
+    }
+
+    @Transactional
+    public void deactivatePlayer(UUID playerId, UUID expectedTeamId) {
         Season activeSeason = getActiveSeason();
 
         SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Player roster not found for active season"));
 
+        if (expectedTeamId != null && (roster.getTeam() == null || !expectedTeamId.equals(roster.getTeam().getId()))) {
+            throw new AccessDeniedException("No tienes permisos para realizar esta acción.");
+        }
+
         roster.setStatus(PlayerStatus.INACTIVE);
         seasonRosterRepository.save(roster);
+    }
+
+    @Transactional
+    public void deactivatePlayer(UUID playerId) {
+        deactivatePlayer(playerId, null);
     }
 
     @Transactional(readOnly = true)

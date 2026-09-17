@@ -71,16 +71,34 @@ public class PlayerRegistrationController {
     }
 
     @PatchMapping("/players/{id}/activate")
-    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
-    public ResponseEntity<Void> activatePlayer(@PathVariable UUID id) {
-        playerRegistrationService.activatePlayer(id);
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
+    public ResponseEntity<Void> activatePlayer(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id) {
+        UUID teamConstraint = null;
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
+            if (userDetails.getTeamId() == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            teamConstraint = userDetails.getTeamId();
+        }
+        playerRegistrationService.activatePlayer(id, teamConstraint);
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/players/{id}/deactivate")
-    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
-    public ResponseEntity<Void> deactivatePlayer(@PathVariable UUID id) {
-        playerRegistrationService.deactivatePlayer(id);
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
+    public ResponseEntity<Void> deactivatePlayer(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id) {
+        UUID teamConstraint = null;
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
+            if (userDetails.getTeamId() == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            teamConstraint = userDetails.getTeamId();
+        }
+        playerRegistrationService.deactivatePlayer(id, teamConstraint);
         return ResponseEntity.ok().build();
     }
 }
