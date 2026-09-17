@@ -1,6 +1,5 @@
-import { ReactNode } from 'react';
-import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin, UserCheck, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
+import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin, UserCheck, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
@@ -32,22 +31,30 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
     ].filter(item => !item.hidden);
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex">
+        <div className="min-h-screen bg-slate-50 flex">
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-xs transition-opacity"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside className={`
-                fixed md:sticky top-0 inset-y-0 left-0 z-50 w-64 h-screen bg-sidebar text-sidebar-foreground flex flex-col transform transition-transform duration-200 ease-in-out shrink-0
+                fixed md:sticky top-0 inset-y-0 left-0 z-50 w-64 h-screen h-[100dvh] bg-sidebar text-sidebar-foreground flex flex-col transform transition-transform duration-200 ease-in-out shrink-0
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
                 {/* Brand / Logo Header */}
-                <div className="p-5 flex flex-col items-center justify-center border-b border-white/10 bg-black/10 gap-2 shrink-0">
+                <div className="p-5 flex flex-col items-center justify-center border-b border-white/10 bg-black/10 gap-2 shrink-0 relative">
+                    <button
+                        type="button"
+                        className="md:hidden absolute top-3 right-3 text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                        onClick={() => setIsSidebarOpen(false)}
+                        aria-label="Cerrar menú"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                     <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 p-2 shadow-inner flex items-center justify-center backdrop-blur-sm group hover:scale-105 transition-all">
                         <img
                             src={settings.logoUrl}
@@ -69,6 +76,7 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
                         <Link
                             key={item.path}
                             to={item.path}
+                            onClick={() => setIsSidebarOpen(false)}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${location.pathname === item.path
                                 ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 font-semibold'
                                 : 'text-sidebar-foreground/75 hover:text-white hover:bg-white/10'

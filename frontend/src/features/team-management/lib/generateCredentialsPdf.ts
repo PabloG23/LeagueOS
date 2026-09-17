@@ -144,10 +144,12 @@ const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
 };
 
 export const generateCredentialsPdf = async (options: GenerateCredentialsOptions) => {
-    const { team, players, leagueLogoUrl } = options;
+    const { team, players: inputPlayers, leagueLogoUrl } = options;
+
+    const players = (inputPlayers || []).filter(p => !p.status || p.status === 'ACTIVE');
 
     if (!players || players.length === 0) {
-        throw new Error('No hay jugadores registrados en este equipo.');
+        throw new Error('No hay jugadores activos registrados en este equipo.');
     }
 
     const doc = new jsPDF('p', 'mm', 'a4');

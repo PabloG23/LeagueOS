@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { Users, LogOut, Menu } from 'lucide-react';
+import { Users, LogOut, Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { leagueApi } from '@/shared/api/league-api';
@@ -76,49 +76,68 @@ export const TeamDashboardLayout = ({ children }: TeamDashboardLayoutProps) => {
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-xs transition-opacity"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside className={`
-                fixed md:relative inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-200 ease-in-out flex flex-col md:h-screen h-full
+                fixed md:sticky top-0 inset-y-0 left-0 z-50 w-64 h-screen h-[100dvh] bg-sidebar text-sidebar-foreground flex flex-col transform transition-transform duration-200 ease-in-out shrink-0
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
-                <div className="h-20 flex items-center justify-center border-b border-white/10">
-                    <img
-                        src={settings?.logoUrl || '/nuestro_deporte_logo.png'}
-                        alt={settings?.name || 'Liga'}
-                        className="h-12 w-12 object-contain"
-                    />
+                <div className="h-20 flex items-center justify-between px-5 border-b border-white/10 shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <img
+                            src={settings?.logoUrl || '/nuestro_deporte_logo.png'}
+                            alt={settings?.name || 'Liga'}
+                            className="h-10 w-10 object-contain shrink-0"
+                        />
+                        <div className="min-w-0 truncate">
+                            <span className="text-sm font-bold text-white block truncate">{settings?.name || 'Liga'}</span>
+                            <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider block">Panel de Equipo</span>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="md:hidden text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                        onClick={() => setIsSidebarOpen(false)}
+                        aria-label="Cerrar menú"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
-                <nav className="p-4 space-y-2">
-                    <Link to={`/${leagueSlug}/team-dashboard`} className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-sm hover:opacity-90 transition-colors">
-                        <Users className="w-5 h-5" />
-                        <span className="font-medium">Mi Plantilla</span>
+                <nav className="p-4 space-y-2 flex-1 overflow-y-auto min-h-0">
+                    <Link
+                        to={`/${leagueSlug}/team-dashboard`}
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-sm hover:opacity-90 transition-colors font-medium text-sm"
+                    >
+                        <Users className="w-5 h-5 shrink-0" />
+                        <span>Mi Plantilla</span>
                     </Link>
                 </nav>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+                <div className="p-4 border-t border-white/10 bg-sidebar shrink-0 sticky bottom-0 z-10 shadow-lg">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-sidebar-foreground/70 hover:text-destructive hover:bg-white/10 rounded-lg transition-colors text-left"
+                        className="flex items-center gap-3 w-full px-4 py-3 text-sidebar-foreground/70 hover:text-destructive hover:bg-white/10 rounded-lg transition-colors text-left font-medium text-sm group"
                     >
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Cerrar Sesión</span>
+                        <LogOut className="w-5 h-5 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+                        <span>Cerrar Sesión</span>
                     </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-h-screen">
+            <div className="flex-1 flex flex-col min-h-screen min-w-0 max-w-full">
                 {/* Topbar */}
                 <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
                     <button
-                        className="md:hidden p-2 text-slate-600"
+                        className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                         onClick={() => setIsSidebarOpen(true)}
+                        aria-label="Abrir menú"
                     >
                         <Menu className="w-6 h-6" />
                     </button>

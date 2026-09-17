@@ -65,14 +65,17 @@ export const RosterDashboard = () => {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
     const handleDownloadCredentials = async () => {
-        const targetId = resolvedTeamId || teamId || localStorage.getItem('teamId');
-        if (!settings?.tenantId || !targetId || !isValidUuid(targetId)) return;
+        const targetId = resolvedTeamId || teamId;
+        if (!settings?.tenantId || !targetId) return;
+
         try {
             setIsGeneratingPdf(true);
             const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, targetId);
 
-            if (!rawPlayers || rawPlayers.length === 0) {
-                showToast('El equipo no tiene jugadores registrados para generar credenciales', 'warning');
+            const activePlayers = (rawPlayers || []).filter(p => p.status === 'ACTIVE');
+
+            if (activePlayers.length === 0) {
+                showToast('El equipo no tiene jugadores activos para generar credenciales', 'warning');
                 return;
             }
             
@@ -90,7 +93,7 @@ export const RosterDashboard = () => {
             
             await generateCredentialsPdf({
                 team: { id: targetId, name: teamName, logoUrl: teamLogo } as any,
-                players: rawPlayers,
+                players: activePlayers,
                 leagueLogoUrl: settings.logoUrl
             });
             showToast('Credenciales generadas con éxito', 'success');
