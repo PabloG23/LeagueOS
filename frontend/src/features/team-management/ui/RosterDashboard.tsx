@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle, CheckCircle2, UserX, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { TeamDashboardLayout } from './TeamDashboardLayout';
 import { AdminDashboardLayout } from '../../admin/ui/AdminDashboardLayout';
@@ -63,6 +63,7 @@ export const RosterDashboard = () => {
     const [resolvedTeamId, setResolvedTeamId] = useState<string | undefined>(teamId || (isTeamRepMode ? localStorage.getItem('teamId') || undefined : undefined));
     const { showToast, showConfirm } = useToast();
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isInactiveCollapsed, setIsInactiveCollapsed] = useState(false);
 
     const handleDownloadCredentials = async () => {
         const targetId = resolvedTeamId || teamId;
@@ -186,7 +187,8 @@ export const RosterDashboard = () => {
     const isSanLucas = settings?.tenantId === '22222222-2222-2222-2222-222222222222';
     const maxActivePlayers = isSanLucas ? 25 : 30;
     const activePlayersCount = players.filter(p => p.isActive).length;
-    const inactivePlayersCount = players.length - activePlayersCount;
+    const inactivePlayersCount = players.filter(p => !p.isActive && p.status !== 'PENDING_VERIFICATION').length;
+    const pendingPlayersCount = players.filter(p => p.status === 'PENDING_VERIFICATION').length;
 
     const handleToggleStatus = async (id: string) => {
         if (isPublicMode) return; // Guard
@@ -298,8 +300,30 @@ export const RosterDashboard = () => {
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const activeFilteredPlayers = filteredPlayers.filter(p => p.isActive);
+    const inactiveFilteredPlayers = filteredPlayers.filter(p => !p.isActive && p.status !== 'PENDING_VERIFICATION');
+    const pendingFilteredPlayers = filteredPlayers.filter(p => p.status === 'PENDING_VERIFICATION');
+
     // Permissions
     const canEdit = !isPublicMode && (!isTeamRepMode || !!resolvedTeamId);
+
+    const renderPlayerCard = (player: ExtendedPlayer) => (
+        <div key={player.id} className="cursor-pointer" onClick={() => {
+            if (player.status === 'PENDING_VERIFICATION' && canEdit) {
+                setVerifyingPlayer(player);
+                setIsAddModalOpen(true);
+            } else if (player.status !== 'PENDING_VERIFICATION') {
+                setSelectedPlayer({ ...player, teamName });
+            }
+        }}>
+            <PlayerCard
+                player={player}
+                onToggleStatus={canEdit && player.status !== 'PENDING_VERIFICATION' ? handleToggleStatus : undefined}
+                onDiscard={canEdit ? handleDiscardPendingPlayer : undefined}
+                requireJerseyNumbers={settings?.requireJerseyNumbers}
+            />
+        </div>
+    );
 
     return (
         <Layout>
@@ -404,44 +428,117 @@ export const RosterDashboard = () => {
                     representative={teamRep}
                 />
 
-                {/* Filters & Search */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-4 items-center">
-                    <div className="relative flex-1 w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                {/* Search Toolbar */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 mb-8">
+                    <div className="relative w-full">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar por nombre..."
+                            placeholder="Buscar jugador por nombre..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 text-slate-900 font-medium placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                            className="w-full pl-10 pr-9 py-2 bg-slate-50 text-slate-900 font-medium placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 text-sm transition-all"
                         />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-4 h-4 flex items-center justify-center font-bold"
+                                title="Limpiar búsqueda"
+                            >
+                                ✕
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Players Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredPlayers.map(player => (
-                        <div key={player.id} className="cursor-pointer" onClick={() => {
-                            if (player.status === 'PENDING_VERIFICATION' && canEdit) {
-                                setVerifyingPlayer(player);
-                                setIsAddModalOpen(true);
-                            } else if (player.status !== 'PENDING_VERIFICATION') {
-                                setSelectedPlayer({ ...player, teamName });
-                            }
-                        }}>
-                            <PlayerCard
-                                player={player}
-                                onToggleStatus={canEdit && player.status !== 'PENDING_VERIFICATION' ? handleToggleStatus : undefined}
-                                onDiscard={canEdit ? handleDiscardPendingPlayer : undefined}
-                                requireJerseyNumbers={settings?.requireJerseyNumbers}
-                            />
+                {/* Content Sections */}
+                <div className="space-y-10">
+                    {/* SECTION: ACTIVOS */}
+                    <section>
+                        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
+                            <div className="w-8 h-8 rounded-lg bg-green-100 text-green-700 flex items-center justify-center font-bold shrink-0">
+                                <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Jugadores Activos</h2>
                         </div>
-                    ))}
 
-                    {/* Empty State */}
+                        {activeFilteredPlayers.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                                {activeFilteredPlayers.map(renderPlayerCard)}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center text-slate-400 bg-slate-50 rounded-xl border-dashed border-2 border-slate-200 text-sm">
+                                No hay jugadores activos {searchTerm ? 'que coincidan con la búsqueda' : ''}.
+                            </div>
+                        )}
+                    </section>
+
+                    {/* SECTION: PENDIENTES */}
+                    {pendingFilteredPlayers.length > 0 && (
+                        <section className="pt-2">
+                            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-amber-200">
+                                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
+                                    <Clock className="w-5 h-5" />
+                                </div>
+                                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Pendientes de Verificación</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                                {pendingFilteredPlayers.map(renderPlayerCard)}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* SECTION: INACTIVOS */}
+                    {inactiveFilteredPlayers.length > 0 && (
+                        <section className="pt-4">
+                            <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-200">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                                        <UserX className="w-5 h-5" />
+                                    </div>
+                                    <h2 className="text-lg sm:text-xl font-black text-slate-700 tracking-tight">Jugadores Inactivos</h2>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsInactiveCollapsed(!isInactiveCollapsed)}
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors self-start sm:self-auto px-3 py-1.5 rounded-lg hover:bg-slate-100"
+                                >
+                                    {isInactiveCollapsed ? (
+                                        <>
+                                            <span>Mostrar inactivos</span>
+                                            <ChevronDown className="w-4 h-4" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Ocultar inactivos</span>
+                                            <ChevronUp className="w-4 h-4" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            {!isInactiveCollapsed && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                                    {inactiveFilteredPlayers.map(renderPlayerCard)}
+                                </div>
+                            )}
+                        </section>
+                    )}
+
+                    {/* Overall Empty State when search returns nothing across all categories */}
                     {filteredPlayers.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-slate-400 bg-slate-50 rounded-xl border-dashed border-2 border-slate-200">
-                            No se encontraron jugadores.
+                        <div className="py-14 text-center text-slate-400 bg-slate-50 rounded-2xl border-dashed border-2 border-slate-200">
+                            <p className="text-base font-semibold text-slate-700">No se encontraron jugadores que coincidan con la búsqueda</p>
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="mt-3 px-4 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors"
+                                >
+                                    Limpiar búsqueda
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
