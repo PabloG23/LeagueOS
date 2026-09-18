@@ -1075,6 +1075,113 @@ class PlayerRegistrationServiceTest {
             assertThat(roster.getStatus()).isEqualTo(PlayerStatus.INACTIVE);
             verify(seasonRosterRepository).save(roster);
         }
+
+        @Test
+        @DisplayName("discardPlayerRoster should delete pending roster, player and person when orphaned, and never touch storage")
+        void discardPlayerRosterSuccess() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+            UUID personId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.PENDING_VERIFICATION);
+
+            Person dummyPerson = new Person();
+            dummyPerson.setId(personId);
+
+            Player dummyPlayer = new Player();
+            dummyPlayer.setId(playerId);
+            dummyPlayer.setPerson(dummyPerson);
+            roster.setPlayer(dummyPlayer);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(seasonRosterRepository.findByPlayerId(playerId))
+                    .thenReturn(Collections.emptyList());
+            when(playerRepository.findByPersonId(personId))
+                    .thenReturn(Optional.empty());
+
+            playerRegistrationService.discardPlayerRoster(playerId, team.getId());
+
+            verify(seasonRosterRepository).delete(roster);
+            verify(playerRepository).delete(dummyPlayer);
+            verify(personRepository).delete(dummyPerson);
+            verify(storageService, never()).deleteFile(any());
+        }
+
+        @Test
+        @DisplayName("discardPlayerRoster with 1 arg should delete roster when no team check required")
+        void discardPlayerRosterSingleArgSuccess() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.PENDING_VERIFICATION);
+
+            Player dummyPlayer = new Player();
+            dummyPlayer.setId(playerId);
+            roster.setPlayer(dummyPlayer);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(seasonRosterRepository.findByPlayerId(playerId))
+                    .thenReturn(List.of(new SeasonRoster())); // Still exists in another roster
+
+            playerRegistrationService.discardPlayerRoster(playerId);
+
+            verify(seasonRosterRepository).delete(roster);
+            verify(playerRepository, never()).delete(any());
+            verify(personRepository, never()).delete(any());
+            verify(storageService, never()).deleteFile(any());
+        }
+
+        @Test
+        @DisplayName("discardPlayerRoster should throw AccessDeniedException when team mismatches")
+        void discardPlayerRosterThrowsWhenTeamMismatches() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+            UUID otherTeamId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.PENDING_VERIFICATION);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+
+            assertThatThrownBy(() -> playerRegistrationService.discardPlayerRoster(playerId, otherTeamId))
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("discardPlayerRoster should throw BusinessRuleException when active player has matches")
+        void discardPlayerRosterThrowsWhenPlayerHasMatches() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.ACTIVE);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(matchEventRepository.countDistinctMatchesByPlayerId(playerId))
+                    .thenReturn(3);
+
+            assertThatThrownBy(() -> playerRegistrationService.discardPlayerRoster(playerId, team.getId()))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("No se puede eliminar un jugador que ya tiene participación");
+        }
     }
 
     // =========================================================================

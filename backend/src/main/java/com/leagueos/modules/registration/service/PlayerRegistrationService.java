@@ -99,6 +99,42 @@ public class PlayerRegistrationService {
         deactivatePlayer(playerId, null);
     }
 
+    @Transactional
+    public void discardPlayerRoster(UUID playerId, UUID expectedTeamId) {
+        Season activeSeason = getActiveSeason();
+
+        SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("El jugador no está asignado a la temporada activa"));
+
+        if (expectedTeamId != null && (roster.getTeam() == null || !expectedTeamId.equals(roster.getTeam().getId()))) {
+            throw new AccessDeniedException("No tienes permisos para realizar esta acción.");
+        }
+
+        if (roster.getStatus() != PlayerStatus.PENDING_VERIFICATION) {
+            int matchCount = matchEventRepository.countDistinctMatchesByPlayerId(playerId);
+            if (matchCount > 0) {
+                throw new BusinessRuleException("No se puede eliminar un jugador que ya tiene participación en partidos oficiales.");
+            }
+        }
+
+        Player player = roster.getPlayer();
+        seasonRosterRepository.delete(roster);
+        seasonRosterRepository.flush();
+
+        if (player != null && seasonRosterRepository.findByPlayerId(player.getId()).isEmpty()) {
+            Person person = player.getPerson();
+            playerRepository.delete(player);
+            if (person != null && playerRepository.findByPersonId(person.getId()).isEmpty()) {
+                personRepository.delete(person);
+            }
+        }
+    }
+
+    @Transactional
+    public void discardPlayerRoster(UUID playerId) {
+        discardPlayerRoster(playerId, null);
+    }
+
     @Transactional(readOnly = true)
     public void validateRegistrationPreconditions(PlayerRegistrationRequest request, UUID defaultTeamId, UUID tenantId) {
         if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {

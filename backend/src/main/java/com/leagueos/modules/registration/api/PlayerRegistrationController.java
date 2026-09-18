@@ -101,4 +101,20 @@ public class PlayerRegistrationController {
         playerRegistrationService.deactivatePlayer(id, teamConstraint);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/players/{id}/roster")
+    @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
+    public ResponseEntity<Void> discardPlayerRoster(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id) {
+        UUID teamConstraint = null;
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
+            if (userDetails.getTeamId() == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            teamConstraint = userDetails.getTeamId();
+        }
+        playerRegistrationService.discardPlayerRoster(id, teamConstraint);
+        return ResponseEntity.noContent().build();
+    }
 }

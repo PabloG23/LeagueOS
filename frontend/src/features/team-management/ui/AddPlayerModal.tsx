@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '../../../shared/components/ui/ToastContext';
-import { X, Save, ScanFace, Globe, ShieldCheck, ImageIcon, Lock } from 'lucide-react';
+import { X, Save, ScanFace, Globe, ShieldCheck, ImageIcon, Lock, Trash2 } from 'lucide-react';
 import { leagueApi } from '@/shared/api/league-api';
 
 export interface ExistingPlayerData {
@@ -19,9 +19,10 @@ interface AddPlayerModalProps {
     requireJerseyNumbers?: boolean;
     existingPlayer?: ExistingPlayerData | null;
     onSuccess?: () => void;
+    onDiscard?: (id: string, name: string) => void;
 }
 
-export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerseyNumbers, existingPlayer, onSuccess }: AddPlayerModalProps) => {
+export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerseyNumbers, existingPlayer, onSuccess, onDiscard }: AddPlayerModalProps) => {
     const [step, setStep] = useState<1 | 2>(1);
     const [playerType, setPlayerType] = useState<'mexican' | 'foreign' | null>(null);
     const [ineImage, setIneImage] = useState<File | null>(null);
@@ -168,12 +169,33 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
 
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-                    <h3 className="text-lg font-bold text-slate-900">
-                        {existingPlayer ? 'Verificar Identidad' : 'Registrar Jugador'}
-                    </h3>
-                    <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                            {existingPlayer ? (existingPlayer.name ? `Verificar: ${existingPlayer.name}` : 'Verificar Identidad') : 'Registrar Jugador'}
+                        </h3>
+                        {existingPlayer?.jerseyNumber != null && (
+                            <span className="text-xs font-semibold text-slate-500">Dorsal #{existingPlayer.jerseyNumber}</span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {existingPlayer && onDiscard && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    handleClose();
+                                    onDiscard(existingPlayer.id, existingPlayer.name || 'este jugador');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200/60"
+                                title="Descartar de la plantilla"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Descartar</span>
+                            </button>
+                        )}
+                        <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="overflow-y-auto p-6 flex-1">

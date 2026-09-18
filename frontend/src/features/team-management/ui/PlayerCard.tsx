@@ -22,11 +22,12 @@ interface PlayerCardProps {
     player: Player;
     onToggleStatus?: (id: string) => void;
     onDelete?: (id: string) => void;
+    onDiscard?: (id: string, name: string) => void;
     onEdit?: (id: string) => void;
     requireJerseyNumbers?: boolean;
 }
 
-export const PlayerCard = ({ player, onToggleStatus, requireJerseyNumbers }: PlayerCardProps) => {
+export const PlayerCard = ({ player, onToggleStatus, onDiscard, requireJerseyNumbers }: PlayerCardProps) => {
 
     const isPending = player.status === 'PENDING_VERIFICATION';
     
@@ -108,10 +109,26 @@ export const PlayerCard = ({ player, onToggleStatus, requireJerseyNumbers }: Pla
 
                 {/* Status Toggle or Badge */}
                 {isPending ? (
-                    <span className="mt-auto inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium w-full justify-center bg-amber-100 text-amber-700">
-                        <div className="w-2 h-2 rounded-full bg-amber-500" />
-                        Pendiente Verificar
-                    </span>
+                    <div className="mt-auto flex items-center gap-2 w-full">
+                        <span className="flex-1 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold justify-center bg-amber-100 text-amber-800 border border-amber-200 truncate">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+                            Pendiente Verificar
+                        </span>
+                        {onDiscard && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDiscard(player.id, player.name);
+                                }}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors border border-slate-200 hover:border-red-200 shrink-0"
+                                title="Descartar pre-registro"
+                                aria-label="Descartar pre-registro"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 ) : onToggleStatus ? (
                     <button
                         onClick={(e) => { e.stopPropagation(); onToggleStatus(player.id); }}

@@ -224,6 +224,27 @@ export const RosterDashboard = () => {
         }, "Sí, eliminar", "Cancelar");
     };
 
+    const handleDiscardPendingPlayer = (id: string, playerName: string) => {
+        if (isPublicMode || !settings?.tenantId) return;
+        const tenantId = settings.tenantId;
+
+        showConfirm(
+            `¿Estás seguro de descartar el pre-registro de ${playerName}? Se liberará su dorsal y el cupo en el equipo.`,
+            async () => {
+                try {
+                    await leagueApi.discardPlayerRoster(tenantId, id);
+                    showToast(`Pre-registro de ${playerName} descartado con éxito.`, 'success');
+                    await fetchRoster(false);
+                } catch (error: any) {
+                    const errorMsg = error.response?.data?.message || 'Error al descartar el pre-registro.';
+                    showToast(errorMsg, 'error');
+                }
+            },
+            "Sí, descartar",
+            "Cancelar"
+        );
+    };
+
     const handleAddPlayer = async (newPlayer: { name: string; photoUrl: string, jerseyNumber?: number }) => {
         const targetId = teamId || localStorage.getItem('teamId');
         if (!settings?.tenantId || !targetId) return;
@@ -411,6 +432,7 @@ export const RosterDashboard = () => {
                             <PlayerCard
                                 player={player}
                                 onToggleStatus={canEdit && player.status !== 'PENDING_VERIFICATION' ? handleToggleStatus : undefined}
+                                onDiscard={canEdit ? handleDiscardPendingPlayer : undefined}
                                 requireJerseyNumbers={settings?.requireJerseyNumbers}
                             />
                         </div>
@@ -434,6 +456,7 @@ export const RosterDashboard = () => {
                                 setVerifyingPlayer(null);
                             }}
                             onSuccess={() => fetchRoster(false)}
+                            onDiscard={canEdit ? handleDiscardPendingPlayer : undefined}
                             teamId={resolvedTeamId || teamId}
                             tenantId={settings?.tenantId}
                             requireJerseyNumbers={settings?.requireJerseyNumbers}
