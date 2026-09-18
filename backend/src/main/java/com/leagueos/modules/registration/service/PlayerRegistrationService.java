@@ -66,7 +66,7 @@ public class PlayerRegistrationService {
 
         if (currentActivePlayers >= activeSeason.getMaxActivePlayersPerTeam()) {
             throw new BusinessRuleException(
-                    "Team has reached the maximum number of active players (" + activeSeason.getMaxActivePlayersPerTeam() + ")"
+                    "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
             );
         }
 
@@ -206,7 +206,10 @@ public class PlayerRegistrationService {
                 }
             }
 
-            validateActivePlayerLimit(activeSeason, teamId, existingRosters.size(), 0);
+            long currentActiveCount = existingRosters.stream()
+                    .filter(r -> r.getStatus() == PlayerStatus.ACTIVE)
+                    .count();
+            validateActivePlayerLimit(activeSeason, teamId, (int) currentActiveCount, 1);
 
             if (request.getJerseyNumber() == null) {
                 throw new BusinessRuleException("El número de playera/dorsal es obligatorio.");
@@ -448,6 +451,12 @@ public class PlayerRegistrationService {
                 throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
             }
         }
+
+        // Validate active player limit before activating the player
+        long currentActiveCount = sameTeamRosters.stream()
+                .filter(r -> r.getStatus() == PlayerStatus.ACTIVE)
+                .count();
+        validateActivePlayerLimit(activeSeason, teamId, (int) currentActiveCount, 1);
     }
 
     @Transactional
@@ -555,7 +564,7 @@ public class PlayerRegistrationService {
     }
 
     private void validateActivePlayerLimit(Season season, UUID teamId, int current, int incoming) {
-        if (current + incoming >= season.getMaxActivePlayersPerTeam()) {
+        if (current + incoming > season.getMaxActivePlayersPerTeam()) {
             throw new BusinessRuleException(
                     "El equipo ya ha alcanzado el límite máximo de " + season.getMaxActivePlayersPerTeam() + " jugadores activos."
             );

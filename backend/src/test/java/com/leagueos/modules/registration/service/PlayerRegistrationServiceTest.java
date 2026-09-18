@@ -250,8 +250,10 @@ class PlayerRegistrationServiceTest {
             activeSeason.setMaxActivePlayersPerTeam(2);
             SeasonRoster r1 = new SeasonRoster();
             r1.setTeam(team);
+            r1.setStatus(PlayerStatus.ACTIVE);
             SeasonRoster r2 = new SeasonRoster();
             r2.setTeam(team);
+            r2.setStatus(PlayerStatus.ACTIVE);
             when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
                     .thenReturn(List.of(r1, r2));
             when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
@@ -264,6 +266,42 @@ class PlayerRegistrationServiceTest {
             assertThatThrownBy(() -> playerRegistrationService.validateRegistrationPreconditions(req, team.getId(), TENANT_A))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("límite máximo");
+        }
+
+        @Test
+        @DisplayName("should not throw when inactive players exist and active count is under limit")
+        void allowsRegistrationWhenInactivePlayersExistUnderLimit() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+
+            activeSeason.setMaxActivePlayersPerTeam(2);
+            SeasonRoster r1 = new SeasonRoster();
+            r1.setTeam(team);
+            r1.setStatus(PlayerStatus.ACTIVE);
+            r1.setJerseyNumber(10);
+
+            SeasonRoster r2 = new SeasonRoster();
+            r2.setTeam(team);
+            r2.setStatus(PlayerStatus.INACTIVE);
+            r2.setJerseyNumber(9);
+
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(r1, r2));
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(List.of(r1, r2));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setIsForeign(true);
+            req.setJerseyNumber(11);
+
+            // 1 active + 1 inactive with maxActive=2 => 1 active + 1 incoming = 2 <= 2 => Allowed!
+            org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                    playerRegistrationService.validateRegistrationPreconditions(req, team.getId(), TENANT_A)
+            );
         }
 
         @Test
@@ -670,6 +708,104 @@ class PlayerRegistrationServiceTest {
             assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("El dorsal 9 ya está ocupado");
+        }
+
+        @Test
+        @DisplayName("validateVerificationPreconditions should throw when team active players limit is reached")
+        void throwsWhenVerifyingPlayerAndTeamMaxActiveReached() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            activeSeason.setMaxActivePlayersPerTeam(2);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.PENDING_VERIFICATION);
+
+            SeasonRoster activeRoster1 = new SeasonRoster();
+            activeRoster1.setTeam(team);
+            activeRoster1.setStatus(PlayerStatus.ACTIVE);
+            activeRoster1.setJerseyNumber(1);
+            Player p1 = new Player();
+            p1.setId(UUID.randomUUID());
+            activeRoster1.setPlayer(p1);
+
+            SeasonRoster activeRoster2 = new SeasonRoster();
+            activeRoster2.setTeam(team);
+            activeRoster2.setStatus(PlayerStatus.ACTIVE);
+            activeRoster2.setJerseyNumber(2);
+            Player p2 = new Player();
+            p2.setId(UUID.randomUUID());
+            activeRoster2.setPlayer(p2);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(Collections.emptyList());
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(activeRoster1, activeRoster2));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(true);
+            req.setJerseyNumber(9);
+
+            assertThatThrownBy(() -> playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("límite máximo");
+        }
+
+        @Test
+        @DisplayName("validateVerificationPreconditions should allow verification when inactive players exist and active count is under limit")
+        void allowsVerifyingPlayerWhenInactivePlayersExistUnderLimit() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            UUID playerId = UUID.randomUUID();
+
+            activeSeason.setMaxActivePlayersPerTeam(2);
+
+            SeasonRoster roster = new SeasonRoster();
+            roster.setTeam(team);
+            roster.setStatus(PlayerStatus.PENDING_VERIFICATION);
+
+            SeasonRoster activeRoster = new SeasonRoster();
+            activeRoster.setTeam(team);
+            activeRoster.setStatus(PlayerStatus.ACTIVE);
+            activeRoster.setJerseyNumber(1);
+            Player p1 = new Player();
+            p1.setId(UUID.randomUUID());
+            activeRoster.setPlayer(p1);
+
+            SeasonRoster inactiveRoster = new SeasonRoster();
+            inactiveRoster.setTeam(team);
+            inactiveRoster.setStatus(PlayerStatus.INACTIVE);
+            inactiveRoster.setJerseyNumber(2);
+            Player p2 = new Player();
+            p2.setId(UUID.randomUUID());
+            inactiveRoster.setPlayer(p2);
+
+            when(seasonRepository.findByTenantIdAndStatus(TENANT_A, SeasonStatus.ACTIVE))
+                    .thenReturn(List.of(activeSeason));
+            when(seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId()))
+                    .thenReturn(Optional.of(roster));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(defaultSettings);
+            when(seasonRosterRepository.findBySeasonId(activeSeason.getId()))
+                    .thenReturn(Collections.emptyList());
+            when(seasonRosterRepository.findByTeamIdAndSeasonId(team.getId(), activeSeason.getId()))
+                    .thenReturn(List.of(activeRoster, inactiveRoster));
+
+            PlayerRegistrationRequest req = new PlayerRegistrationRequest();
+            req.setFirstName("Carlos");
+            req.setLastName("González");
+            req.setIsForeign(true);
+            req.setJerseyNumber(9);
+
+            org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                    playerRegistrationService.validateVerificationPreconditions(playerId, req, TENANT_A)
+            );
         }
 
         @Test
