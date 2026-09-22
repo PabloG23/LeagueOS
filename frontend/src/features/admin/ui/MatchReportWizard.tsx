@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search, Shield } from 'lucide-react';
+import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search, Shield, Hash, ArrowUpDown } from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Player } from '@/shared/api/league-api';
 
@@ -40,6 +40,7 @@ interface PlayerStats {
 export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName, awayTeamName, onClose, onSuccess }: MatchReportWizardProps) => {
     const { settings } = useTenantSettings();
     const [step, setStep] = useState(1);
+    const [sortBy, setSortBy] = useState<'jersey' | 'name'>('jersey');
     const [events, setEvents] = useState<Record<string, PlayerStats>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [homeSearch, setHomeSearch] = useState('');
@@ -217,6 +218,21 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
     // --- RENDER STEPS ---
 
+    const sortPlayers = (players: Player[], mode: 'jersey' | 'name') => {
+        return [...players].sort((a, b) => {
+            if (mode === 'jersey') {
+                if (a.jerseyNumber != null && b.jerseyNumber != null) {
+                    return a.jerseyNumber - b.jerseyNumber;
+                }
+                if (a.jerseyNumber != null) return -1;
+                if (b.jerseyNumber != null) return 1;
+                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+            } else {
+                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+            }
+        });
+    };
+
     const renderRosterGrid = (roster: Player[], teamName: string, searchQuery: string, setSearchQuery: (q: string) => void) => {
         const currentMatchday = match.matchday || 1;
         const filteredRoster = roster
@@ -237,9 +253,15 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                 }
                 return true;
             })
-            .filter(p =>
-                `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
-            );
+            .filter(p => {
+                const query = searchQuery.trim().toLowerCase();
+                if (!query) return true;
+                const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+                const jerseyStr = p.jerseyNumber != null ? String(p.jerseyNumber) : '';
+                return fullName.includes(query) || jerseyStr === query || `#${jerseyStr}` === query;
+            });
+
+        const sortedRoster = sortPlayers(filteredRoster, sortBy);
 
         return (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col h-full">
@@ -253,14 +275,14 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                             <h3 className="font-black text-base text-white tracking-tight truncate">{teamName}</h3>
                         </div>
                         <span className="text-xs font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10 shrink-0">
-                            {filteredRoster.length} jugadores
+                            {sortedRoster.length} jugadores
                         </span>
                     </div>
                     <div className="relative">
                         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar jugador por nombre..."
+                            placeholder="Buscar por nombre o # de playera..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 text-sm font-medium border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-xs"
@@ -270,10 +292,10 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
                 {/* Content */}
                 <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1 bg-slate-50/50">
-                    {filteredRoster.length === 0 ? (
+                    {sortedRoster.length === 0 ? (
                         <div className="text-center py-12 text-slate-400 text-sm font-medium">No se encontraron jugadores</div>
                     ) : (
-                        filteredRoster.map(player => {
+                        sortedRoster.map(player => {
                             const stats = getStats(player.id);
                             return (
                                 <div key={player.id} className={`flex flex-col rounded-2xl border transition-all duration-200 relative overflow-hidden ${stats.played ? 'bg-white border-blue-300 shadow-xs' : 'bg-white/90 border-slate-200/80 hover:border-slate-300'}`}>
@@ -295,11 +317,16 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                         {/* Player Info */}
                                         <div className="flex-1 min-w-0 mr-1 py-0.5">
                                             <div className="flex items-start gap-2.5">
-                                                {settings?.requireJerseyNumbers && (
-                                                    <div className={`mt-0.5 flex items-center justify-center w-7 h-7 rounded-lg shadow-2xs border text-xs font-black shrink-0 transition-colors ${stats.played ? 'bg-slate-900 text-white border-slate-800' : 'bg-slate-100 text-slate-500 border-slate-200'}`} title="Dorsal">
-                                                        {player.jerseyNumber || '-'}
-                                                    </div>
-                                                )}
+                                                <div 
+                                                    className={`mt-0.5 flex items-center justify-center min-w-7 h-7 px-1.5 rounded-lg shadow-2xs border text-xs font-black shrink-0 transition-colors ${
+                                                        stats.played 
+                                                            ? 'bg-slate-900 text-white border-slate-800' 
+                                                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                                                    }`} 
+                                                    title={player.jerseyNumber != null ? `Dorsal #${player.jerseyNumber}` : "Sin número"}
+                                                >
+                                                    {player.jerseyNumber != null ? `#${player.jerseyNumber}` : 'S/N'}
+                                                </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className={`font-black text-sm leading-snug whitespace-normal break-words ${stats.played ? 'text-slate-900' : 'text-slate-700'}`}>
                                                         {player.firstName} {player.lastName}
@@ -501,6 +528,39 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                 </label>
                             </div>
 
+                            {/* Sort Selector Bar */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs shrink-0">
+                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                    <ArrowUpDown className="w-4 h-4 text-blue-600 shrink-0" />
+                                    <span>Orden en listas:</span>
+                                </div>
+                                <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-bold">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSortBy('jersey')}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                                            sortBy === 'jersey'
+                                                ? 'bg-white text-blue-700 shadow-xs font-black'
+                                                : 'text-slate-500 hover:text-slate-800'
+                                        }`}
+                                    >
+                                        <Hash className="w-3.5 h-3.5" />
+                                        <span>Por Dorsal (Igual a Cédula PDF)</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSortBy('name')}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                                            sortBy === 'name'
+                                                ? 'bg-white text-blue-700 shadow-xs font-black'
+                                                : 'text-slate-500 hover:text-slate-800'
+                                        }`}
+                                    >
+                                        <span>A-Z Por Nombre</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1 min-h-0">
                                 {renderRosterGrid(homeRoster, homeTeamName || "Local", homeSearch, setHomeSearch)}
                                 {renderRosterGrid(awayRoster, awayTeamName || "Visitante", awaySearch, setAwaySearch)}
@@ -605,8 +665,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                         </h4>
                                         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
                                             <div className="divide-y divide-slate-100">
-                                                {homeRoster
-                                                    .filter(p => getStats(p.id).played)
+                                                {sortPlayers(homeRoster.filter(p => getStats(p.id).played), 'jersey')
                                                     .map(p => {
                                                         const s = getStats(p.id);
                                                         return (
@@ -617,11 +676,9 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                                                     </div>
                                                                     <div className="flex-1 min-w-0 pt-0.5">
                                                                         <div className="flex items-start gap-2">
-                                                                            {settings?.requireJerseyNumbers && (
-                                                                                <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-slate-900 border border-slate-800 text-[10px] font-black text-white shrink-0 shadow-2xs" title="Dorsal">
-                                                                                    {p.jerseyNumber || '-'}
-                                                                                </span>
-                                                                            )}
+                                                                            <span className="mt-0.5 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded bg-slate-900 border border-slate-800 text-[10px] font-black text-white shrink-0 shadow-2xs" title={p.jerseyNumber != null ? `Dorsal #${p.jerseyNumber}` : "Sin número"}>
+                                                                                {p.jerseyNumber != null ? `#${p.jerseyNumber}` : 'S/N'}
+                                                                            </span>
                                                                             <span className="font-black text-slate-900 text-sm whitespace-normal break-words leading-tight">{p.firstName} {p.lastName}</span>
                                                                         </div>
                                                                     </div>
@@ -667,8 +724,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                         </h4>
                                         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
                                             <div className="divide-y divide-slate-100">
-                                                {awayRoster
-                                                    .filter(p => getStats(p.id).played)
+                                                {sortPlayers(awayRoster.filter(p => getStats(p.id).played), 'jersey')
                                                     .map(p => {
                                                         const s = getStats(p.id);
                                                         return (
@@ -679,11 +735,9 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                                                     </div>
                                                                     <div className="flex-1 min-w-0 pt-0.5">
                                                                         <div className="flex items-start gap-2">
-                                                                            {settings?.requireJerseyNumbers && (
-                                                                                <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-slate-900 border border-slate-800 text-[10px] font-black text-white shrink-0 shadow-2xs" title="Dorsal">
-                                                                                    {p.jerseyNumber || '-'}
-                                                                                </span>
-                                                                            )}
+                                                                            <span className="mt-0.5 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded bg-slate-900 border border-slate-800 text-[10px] font-black text-white shrink-0 shadow-2xs" title={p.jerseyNumber != null ? `Dorsal #${p.jerseyNumber}` : "Sin número"}>
+                                                                                {p.jerseyNumber != null ? `#${p.jerseyNumber}` : 'S/N'}
+                                                                            </span>
                                                                             <span className="font-black text-slate-900 text-sm whitespace-normal break-words leading-tight">{p.firstName} {p.lastName}</span>
                                                                         </div>
                                                                     </div>
