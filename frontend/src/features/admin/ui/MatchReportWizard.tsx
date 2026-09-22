@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search, Shield, Hash, ArrowUpDown } from 'lucide-react';
+import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search, Shield } from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Player } from '@/shared/api/league-api';
 
@@ -40,7 +40,6 @@ interface PlayerStats {
 export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName, awayTeamName, onClose, onSuccess }: MatchReportWizardProps) => {
     const { settings } = useTenantSettings();
     const [step, setStep] = useState(1);
-    const [sortBy, setSortBy] = useState<'jersey' | 'name'>('jersey');
     const [events, setEvents] = useState<Record<string, PlayerStats>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [homeSearch, setHomeSearch] = useState('');
@@ -218,18 +217,14 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
     // --- RENDER STEPS ---
 
-    const sortPlayers = (players: Player[], mode: 'jersey' | 'name') => {
+    const sortPlayersByJersey = (players: Player[]) => {
         return [...players].sort((a, b) => {
-            if (mode === 'jersey') {
-                if (a.jerseyNumber != null && b.jerseyNumber != null) {
-                    return a.jerseyNumber - b.jerseyNumber;
-                }
-                if (a.jerseyNumber != null) return -1;
-                if (b.jerseyNumber != null) return 1;
-                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
-            } else {
-                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+            if (a.jerseyNumber != null && b.jerseyNumber != null) {
+                return a.jerseyNumber - b.jerseyNumber;
             }
+            if (a.jerseyNumber != null) return -1;
+            if (b.jerseyNumber != null) return 1;
+            return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
         });
     };
 
@@ -261,7 +256,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                 return fullName.includes(query) || jerseyStr === query || `#${jerseyStr}` === query;
             });
 
-        const sortedRoster = sortPlayers(filteredRoster, sortBy);
+        const sortedRoster = sortPlayersByJersey(filteredRoster);
 
         return (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col h-full">
@@ -528,39 +523,6 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                 </label>
                             </div>
 
-                            {/* Sort Selector Bar */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs shrink-0">
-                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                    <ArrowUpDown className="w-4 h-4 text-blue-600 shrink-0" />
-                                    <span>Orden en listas:</span>
-                                </div>
-                                <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-bold">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSortBy('jersey')}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                                            sortBy === 'jersey'
-                                                ? 'bg-white text-blue-700 shadow-xs font-black'
-                                                : 'text-slate-500 hover:text-slate-800'
-                                        }`}
-                                    >
-                                        <Hash className="w-3.5 h-3.5" />
-                                        <span>Por Dorsal (Igual a Cédula PDF)</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSortBy('name')}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                                            sortBy === 'name'
-                                                ? 'bg-white text-blue-700 shadow-xs font-black'
-                                                : 'text-slate-500 hover:text-slate-800'
-                                        }`}
-                                    >
-                                        <span>A-Z Por Nombre</span>
-                                    </button>
-                                </div>
-                            </div>
-
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1 min-h-0">
                                 {renderRosterGrid(homeRoster, homeTeamName || "Local", homeSearch, setHomeSearch)}
                                 {renderRosterGrid(awayRoster, awayTeamName || "Visitante", awaySearch, setAwaySearch)}
@@ -665,7 +627,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                         </h4>
                                         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
                                             <div className="divide-y divide-slate-100">
-                                                {sortPlayers(homeRoster.filter(p => getStats(p.id).played), 'jersey')
+                                                {sortPlayersByJersey(homeRoster.filter(p => getStats(p.id).played))
                                                     .map(p => {
                                                         const s = getStats(p.id);
                                                         return (
@@ -724,7 +686,7 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                         </h4>
                                         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs">
                                             <div className="divide-y divide-slate-100">
-                                                {sortPlayers(awayRoster.filter(p => getStats(p.id).played), 'jersey')
+                                                {sortPlayersByJersey(awayRoster.filter(p => getStats(p.id).played))
                                                     .map(p => {
                                                         const s = getStats(p.id);
                                                         return (
