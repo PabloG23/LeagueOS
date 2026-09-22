@@ -224,7 +224,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                         : '#1 Líder de Goleo'}
                                 </div>
 
-                                <h4 className="text-lg font-black tracking-tight mb-0.5 leading-tight text-white uppercase drop-shadow-sm max-w-[260px] truncate">
+                                <h4 className="text-base sm:text-lg font-black tracking-tight mb-1 leading-tight text-white uppercase drop-shadow-sm px-2 text-center text-balance line-clamp-2">
                                     {currentLeader.name}
                                 </h4>
                                 <Link 
@@ -366,7 +366,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                 {/* Name & Team */}
                                                 <div className="min-w-0 flex-1 pr-2">
                                                     <p className={cn(
-                                                        "text-xs font-bold truncate leading-snug",
+                                                        "text-xs font-bold leading-tight line-clamp-2 break-words",
                                                         isLeaderRank 
                                                             ? "text-amber-200 font-extrabold" 
                                                             : isNuestroDeporte ? "text-slate-200 group-hover:text-white" : "text-slate-700 group-hover:text-slate-900"
