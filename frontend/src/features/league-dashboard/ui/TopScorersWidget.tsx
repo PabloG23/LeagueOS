@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Trophy, ChevronLeft, ChevronRight, Crown } from 'lucide-react';
+import { User, Trophy, ChevronLeft, ChevronRight, Crown, Shield } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { cn } from '@/shared/lib/utils';
@@ -146,29 +146,36 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                     <>
                         {/* Hero Leader Section (Podio Dorado & Rojo Copa) */}
                         <div className={cn(
-                            "relative px-5 pt-5 pb-4 text-center overflow-hidden transition-all",
+                            "relative px-3 sm:px-5 pt-4 sm:pt-5 pb-4 text-center overflow-hidden transition-all",
                             isNuestroDeporte
                                 ? "bg-gradient-to-br from-red-950/90 via-[#0D1A3C] to-[#091030] text-white border-b border-red-600/30"
                                 : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-b border-slate-700"
                         )}>
-                            {/* Watermark Trophy */}
-                            <div className="absolute top-2 right-2 p-1 opacity-10 pointer-events-none">
-                                <Trophy className="w-28 h-28 text-amber-400" />
-                            </div>
+                            {/* Watermark / Ambient Lighting */}
+                            {isNuestroDeporte ? (
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                            ) : (
+                                <div className="absolute top-2 right-2 p-1 opacity-10 pointer-events-none">
+                                    <Trophy className="w-28 h-28 text-amber-400" />
+                                </div>
+                            )}
 
                             {/* Chevron Controls */}
                             {hasMultipleLeaders && (
-                                <div className="absolute top-4 inset-x-3 flex items-center justify-between z-20 pointer-events-none">
+                                <div className={cn(
+                                    "absolute inset-x-1.5 sm:inset-x-3 flex items-center justify-between z-30 pointer-events-none",
+                                    isNuestroDeporte ? "top-[40%] -translate-y-1/2" : "top-4"
+                                )}>
                                     <button
                                         onClick={handlePrevLeader}
-                                        className="w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center border border-white/20 transition-all pointer-events-auto shadow-md"
+                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center border border-white/20 transition-all pointer-events-auto shadow-lg backdrop-blur-sm"
                                         title="Líder anterior"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={handleNextLeader}
-                                        className="w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center border border-white/20 transition-all pointer-events-auto shadow-md"
+                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center border border-white/20 transition-all pointer-events-auto shadow-lg backdrop-blur-sm"
                                         title="Siguiente líder"
                                     >
                                         <ChevronRight className="w-4 h-4" />
@@ -177,80 +184,134 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                             )}
 
                             <div className="relative z-10 flex flex-col items-center">
-                                {/* Leader Photo with Gold/Red Ring & Crown Badge */}
-                                <div className="relative mb-2">
-                                    <div className={cn(
-                                        "w-24 h-24 rounded-full p-[3px] shadow-2xl transition-transform duration-300 group-hover:scale-105",
-                                        isNuestroDeporte
-                                            ? "bg-gradient-to-tr from-red-600 via-amber-400 to-red-500 shadow-[0_0_25px_rgba(232,35,26,0.35)]"
-                                            : "bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 shadow-[0_0_25px_rgba(245,158,11,0.35)]"
-                                    )}>
-                                        <div className="w-full h-full rounded-full overflow-hidden bg-[#091030] flex items-center justify-center">
-                                            {leaderPhoto && !hasImgError ? (
-                                                <img
-                                                    src={leaderPhoto}
-                                                    alt={currentLeader.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={() => {
-                                                        if (currentLeader?.id) {
-                                                            setImgErrorMap(prev => ({ ...prev, [currentLeader.id]: true }));
-                                                        }
-                                                    }}
-                                                />
-                                            ) : (
-                                                <User className="w-10 h-10 text-white/80" />
-                                            )}
+                                {isNuestroDeporte ? (
+                                    /* FUT / Trading Card Hero presentation for Nuestro Deporte */
+                                    <div className="relative w-full max-w-[240px] sm:max-w-[260px] mx-auto rounded-2xl p-[2px] bg-gradient-to-b from-amber-400 via-red-500/80 to-amber-500/40 shadow-[0_0_30px_rgba(232,35,26,0.35)] transition-all duration-300 hover:shadow-[0_0_40px_rgba(251,191,36,0.45)] mb-3">
+                                        <div className="relative w-full rounded-[14px] overflow-hidden bg-gradient-to-b from-[#141f48] via-[#0d163a] to-[#080d24] flex flex-col items-center p-3 text-center border border-white/10">
+                                            {/* Diagonal glass sheen */}
+                                            <div className="pointer-events-none absolute -top-12 -left-12 w-28 h-28 bg-white/5 rotate-45 blur-sm" />
+
+                                            {/* Floating Crown in corner */}
+                                            <div className="absolute top-2.5 right-2.5 z-20 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 p-1.5 rounded-full shadow-lg border border-amber-200">
+                                                <Crown className="w-3.5 h-3.5 fill-current" />
+                                            </div>
+
+                                            {/* Photo Container */}
+                                            <div className="relative w-full h-52 sm:h-56 rounded-xl overflow-hidden mb-2.5 bg-[#060a1a] flex items-center justify-center">
+                                                {/* Stadium light aura behind player */}
+                                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-400/25 via-blue-500/10 to-transparent pointer-events-none" />
+
+                                                {leaderPhoto && !hasImgError ? (
+                                                    <img
+                                                        src={leaderPhoto}
+                                                        alt={currentLeader.name}
+                                                        className="w-full h-full object-cover object-center"
+                                                        onError={() => {
+                                                            if (currentLeader?.id) {
+                                                                setImgErrorMap(prev => ({ ...prev, [currentLeader.id]: true }));
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <User className="w-16 h-16 text-slate-400" />
+                                                )}
+
+                                                {/* Dark gradient fade-out at bottom only (borde inferior / cuello) */}
+                                                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#080d24] to-transparent pointer-events-none" />
+                                            </div>
+
+                                            {/* Prestige Badge */}
+                                            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-sm bg-amber-400/25 border border-amber-400/50 text-amber-300">
+                                                <Crown className="w-3 h-3 text-amber-300" />
+                                                {hasMultipleLeaders 
+                                                    ? `#1 Co-Líder (${safeIndex + 1} de ${coLeaders.length})`
+                                                    : '#1 Líder de Goleo'}
+                                            </div>
+
+                                            {/* Player Name */}
+                                            <h4 className="text-base sm:text-lg font-black tracking-tight mb-1 leading-tight text-white uppercase drop-shadow-sm px-1 text-center line-clamp-2">
+                                                {currentLeader.name}
+                                            </h4>
+
+                                            {/* Team */}
+                                            <Link 
+                                                to={getTeamLink(currentLeader.teamId) || '#'} 
+                                                className="text-xs font-semibold mb-2.5 transition-colors block uppercase tracking-wider text-slate-300 hover:text-red-400 flex items-center justify-center gap-1.5 max-w-full"
+                                            >
+                                                <Shield className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                                <span className="truncate">{currentLeader.team}</span>
+                                            </Link>
+
+                                            {/* Goles Counter */}
+                                            <div className="flex items-baseline justify-center gap-1.5 bg-black/40 px-4 py-1 rounded-full border border-white/10 shadow-inner">
+                                                <span className="font-['Bebas_Neue'] text-3xl text-red-400 tracking-wider leading-none drop-shadow-md">
+                                                    {currentLeader.goals}
+                                                </span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                                                    {currentLeader.goals === 1 ? 'Gol' : 'Goles'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                    {/* Floating Crown */}
-                                    <div className="absolute -top-1.5 -right-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 p-1.5 rounded-full shadow-lg border border-amber-200 animate-pulse">
-                                        <Crown className="w-3.5 h-3.5 fill-current" />
-                                    </div>
-                                </div>
+                                ) : (
+                                    /* Standard Layout for other tenants */
+                                    <>
+                                        {/* Leader Photo with Gold/Red Ring & Crown Badge */}
+                                        <div className="relative mb-2">
+                                            <div className="w-24 h-24 rounded-full p-[3px] shadow-2xl transition-transform duration-300 group-hover:scale-105 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 shadow-[0_0_25px_rgba(245,158,11,0.35)]">
+                                                <div className="w-full h-full rounded-full overflow-hidden bg-[#091030] flex items-center justify-center">
+                                                    {leaderPhoto && !hasImgError ? (
+                                                        <img
+                                                            src={leaderPhoto}
+                                                            alt={currentLeader.name}
+                                                            className="w-full h-full object-cover"
+                                                            onError={() => {
+                                                                if (currentLeader?.id) {
+                                                                    setImgErrorMap(prev => ({ ...prev, [currentLeader.id]: true }));
+                                                                }
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <User className="w-10 h-10 text-white/80" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Floating Crown */}
+                                            <div className="absolute -top-1.5 -right-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 p-1.5 rounded-full shadow-lg border border-amber-200 animate-pulse">
+                                                <Crown className="w-3.5 h-3.5 fill-current" />
+                                            </div>
+                                        </div>
 
-                                {/* Prestige Badge */}
-                                <div className={cn(
-                                    "inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-sm",
-                                    hasMultipleLeaders
-                                        ? "bg-amber-400/25 border border-amber-400/50 text-amber-300"
-                                        : isNuestroDeporte
-                                            ? "bg-red-500/25 border border-red-400/50 text-red-200"
-                                            : "bg-yellow-400/25 border border-yellow-400/50 text-yellow-300"
-                                )}>
-                                    <Crown className="w-3 h-3 text-amber-300" />
-                                    {hasMultipleLeaders 
-                                        ? `#1 Co-Líder (${safeIndex + 1} de ${coLeaders.length})`
-                                        : '#1 Líder de Goleo'}
-                                </div>
+                                        {/* Prestige Badge */}
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-sm bg-yellow-400/25 border border-yellow-400/50 text-yellow-300">
+                                            <Crown className="w-3 h-3 text-amber-300" />
+                                            {hasMultipleLeaders 
+                                                ? `#1 Co-Líder (${safeIndex + 1} de ${coLeaders.length})`
+                                                : '#1 Líder de Goleo'}
+                                        </div>
 
-                                <h4 className="text-base sm:text-lg font-black tracking-tight mb-1 leading-tight text-white uppercase drop-shadow-sm px-2 text-center text-balance line-clamp-2">
-                                    {currentLeader.name}
-                                </h4>
-                                <Link 
-                                    to={getTeamLink(currentLeader.teamId) || '#'} 
-                                    className={cn(
-                                        "text-xs font-semibold mb-2 transition-colors block uppercase tracking-wider",
-                                        isNuestroDeporte ? "text-slate-300 hover:text-red-400" : "text-white/70 hover:text-white"
-                                    )}
-                                >
-                                    {currentLeader.team}
-                                </Link>
+                                        <h4 className="text-base sm:text-lg font-black tracking-tight mb-1 leading-tight text-white uppercase drop-shadow-sm px-2 text-center text-balance line-clamp-2">
+                                            {currentLeader.name}
+                                        </h4>
+                                        <Link 
+                                            to={getTeamLink(currentLeader.teamId) || '#'} 
+                                            className="text-xs font-semibold mb-2 transition-colors block uppercase tracking-wider text-white/70 hover:text-white"
+                                        >
+                                            {currentLeader.team}
+                                        </Link>
 
-                                {/* Goles Counter */}
-                                <div className="flex items-baseline justify-center gap-1.5">
-                                    <span className={cn(
-                                        "font-black tracking-tight leading-none drop-shadow-md",
-                                        isNuestroDeporte 
-                                            ? "font-['Bebas_Neue'] text-4xl text-red-400 tracking-wider" 
-                                            : "text-3xl text-amber-400"
-                                    )}>
-                                        {currentLeader.goals}
-                                    </span>
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-300">
-                                        {currentLeader.goals === 1 ? 'Gol' : 'Goles'}
-                                    </span>
-                                </div>
+                                        {/* Goles Counter */}
+                                        <div className="flex items-baseline justify-center gap-1.5">
+                                            <span className="font-black tracking-tight leading-none drop-shadow-md text-3xl text-amber-400">
+                                                {currentLeader.goals}
+                                            </span>
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-300">
+                                                {currentLeader.goals === 1 ? 'Gol' : 'Goles'}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
 
                                 {/* Co-leaders Interactive Faces Bar (Podio compartido) */}
                                 {hasMultipleLeaders && (
