@@ -217,7 +217,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                         : isNuestroDeporte
                                             ? "bg-red-500/25 border border-red-400/50 text-red-200"
                                             : "bg-yellow-400/25 border border-yellow-400/50 text-yellow-300"
-                                Flaming text or badge */}
+                                )}>
                                     <Crown className="w-3 h-3 text-amber-300" />
                                     {hasMultipleLeaders 
                                         ? `#1 Co-Líder (${safeIndex + 1} de ${coLeaders.length})`
