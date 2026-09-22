@@ -255,7 +255,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                 {/* Co-leaders Interactive Faces Bar (Podio compartido) */}
                                 {hasMultipleLeaders && (
                                     <div className="mt-3 pt-2.5 border-t border-white/10 w-full flex flex-col items-center">
-                                        <div className="flex items-center justify-center gap-2">
+                                        <div className="flex items-center justify-center gap-2 flex-wrap px-2">
                                             {coLeaders.map((leader, idx) => {
                                                 const photo = resolvePhotoUrl(leader.profilePhotoUrl || (leader as any)?.image);
                                                 const isSelected = idx === safeIndex;
