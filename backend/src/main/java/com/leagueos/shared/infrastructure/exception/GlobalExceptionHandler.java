@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -105,6 +107,20 @@ public class GlobalExceptionHandler {
         String message = String.format("El parámetro '%s' con valor '%s' no tiene el formato esperado.", 
                 ex.getName(), ex.getValue());
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Parámetro Inválido", message);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingRequestHeaderException(MissingRequestHeaderException ex) {
+        log.warn("MissingRequestHeaderException: Encabezado requerido '{}' ausente en la petición", ex.getHeaderName());
+        String message = String.format("El encabezado '%s' es obligatorio.", ex.getHeaderName());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Encabezado Requerido Faltante", message);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
+        log.warn("MissingServletRequestParameterException: Parámetro requerido '{}' ausente en la petición", ex.getParameterName());
+        String message = String.format("El parámetro de consulta '%s' es obligatorio.", ex.getParameterName());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Parámetro Requerido Faltante", message);
     }
 
     @ExceptionHandler(Exception.class)

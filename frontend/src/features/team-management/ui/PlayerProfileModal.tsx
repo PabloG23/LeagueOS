@@ -12,16 +12,16 @@ interface Player {
     jerseyNumber?: number;
     curp?: string;
     birthDate?: string;
-    // Mock stats for demo
     stats?: {
-        matchesPlayed: number;
-        goals: number;
-        yellowCards: number;
-        redCards: number;
+        matchesPlayed?: number;
+        goals?: number;
+        yellowCards?: number;
+        redCards?: number;
         suspendedUntilMatchday?: number;
     };
     teamName?: string;
     teamLogo?: string;
+    suspendedUntilMatchday?: number;
 }
 
 interface PlayerProfileModalProps {
@@ -48,44 +48,56 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
     useEffect(() => {
         if (!isOpen || !player || !settings?.tenantId) return;
 
+        // If player already has complete stats injected from parent (e.g. PlayersDirectoryView), use those directly
+        const hasCompleteStats = player.stats && typeof player.stats.matchesPlayed === 'number';
+        if (hasCompleteStats) {
+            setStats({
+                matchesPlayed: player.stats!.matchesPlayed ?? 0,
+                goals: player.stats!.goals ?? 0,
+                yellowCards: player.stats!.yellowCards ?? 0,
+                redCards: player.stats!.redCards ?? 0,
+                suspendedUntilMatchday: player.stats!.suspendedUntilMatchday ?? player.suspendedUntilMatchday ?? null
+            });
+            setIsFetching(false);
+            return;
+        }
+
+        // Otherwise fetch fresh from the backend (e.g. when opened from team roster)
         const loadStats = async () => {
             setIsFetching(true);
             try {
-                // If player already has stats injected from a parent component, use those
-                if (player.stats) {
-                    setStats({
-                        ...player.stats,
-                        suspendedUntilMatchday: player.stats.suspendedUntilMatchday ?? null
-                    });
-                    return;
-                }
-
-                // Otherwise fetch fresh from the backend
                 const response = await leagueApi.getPlayerStats(player.id, settings.tenantId as string);
                 setStats({
-                    matchesPlayed: response.data.matchesPlayed || 0,
-                    goals: response.data.goals || 0,
-                    yellowCards: response.data.yellowCards || 0,
-                    redCards: response.data.redCards || 0,
-                    suspendedUntilMatchday: response.data.suspendedUntilMatchday || null
+                    matchesPlayed: response.data.matchesPlayed ?? 0,
+                    goals: response.data.goals ?? 0,
+                    yellowCards: response.data.yellowCards ?? 0,
+                    redCards: response.data.redCards ?? 0,
+                    suspendedUntilMatchday: player.stats?.suspendedUntilMatchday ?? player.suspendedUntilMatchday ?? response.data.suspendedUntilMatchday ?? null
                 });
             } catch (error) {
                 console.error("Failed to load player stats", error);
+                setStats({
+                    matchesPlayed: 0,
+                    goals: 0,
+                    yellowCards: 0,
+                    redCards: 0,
+                    suspendedUntilMatchday: player.stats?.suspendedUntilMatchday ?? player.suspendedUntilMatchday ?? null
+                });
             } finally {
                 setIsFetching(false);
             }
         };
 
         loadStats();
-    }, [isOpen, player, settings?.tenantId]);
+    }, [isOpen, player?.id, settings?.tenantId]);
 
     // Suspension Logic
     const isSuspended = stats.suspendedUntilMatchday && stats.suspendedUntilMatchday >= currentMatchday;
 
     // Playoff Eligibility Logic
     const minMatches = settings?.minMatchesForPlayoffs || 0;
-    const isEligible = minMatches === 0 || stats.matchesPlayed >= minMatches;
-    const progressPercent = minMatches > 0 ? Math.min(100, (stats.matchesPlayed / minMatches) * 100) : 100;
+    const isEligible = minMatches === 0 || (stats.matchesPlayed ?? 0) >= minMatches;
+    const progressPercent = minMatches > 0 ? Math.min(100, ((stats.matchesPlayed ?? 0) / minMatches) * 100) : 100;
 
     const calculateAge = (birthDateString?: string) => {
         if (!birthDateString) return null;
@@ -172,19 +184,19 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
                         <div className="grid grid-cols-4 gap-2 mb-8">
                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
                                 <div className="text-xs text-slate-400 font-bold uppercase">Juegos</div>
-                                <div className="text-xl font-black text-slate-700">{stats.matchesPlayed}</div>
+                                <div className="text-xl font-black text-slate-700">{stats.matchesPlayed ?? 0}</div>
                             </div>
                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
                                 <div className="text-xs text-slate-400 font-bold uppercase">Goles</div>
-                                <div className="text-xl font-black text-slate-700">{stats.goals}</div>
+                                <div className="text-xl font-black text-slate-700">{stats.goals ?? 0}</div>
                             </div>
                             <div className="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
                                 <div className="text-xs text-yellow-600/70 font-bold uppercase">Amarillas</div>
-                                <div className="text-xl font-black text-yellow-600">{stats.yellowCards}</div>
+                                <div className="text-xl font-black text-yellow-600">{stats.yellowCards ?? 0}</div>
                             </div>
                             <div className="bg-red-50 p-2 rounded-lg border border-red-100">
                                 <div className="text-xs text-red-600/70 font-bold uppercase">Rojas</div>
-                                <div className="text-xl font-black text-red-600">{stats.redCards}</div>
+                                <div className="text-xl font-black text-red-600">{stats.redCards ?? 0}</div>
                             </div>
                         </div>
                     )}
@@ -211,7 +223,7 @@ export const PlayerProfileModal = ({ isOpen, onClose, player, currentMatchday = 
                                 ></div>
                             </div>
                             <div className="flex justify-between text-xs text-slate-500">
-                                <span>{stats.matchesPlayed} jugados</span>
+                                <span>{stats.matchesPlayed ?? 0} jugados</span>
                                 <span>Requeridos: {minMatches}</span>
                             </div>
                         </div>

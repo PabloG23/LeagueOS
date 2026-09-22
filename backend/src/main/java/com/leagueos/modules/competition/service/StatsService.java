@@ -194,18 +194,19 @@ public class StatsService {
 
     /**
      * Generic rank assignment. Items must already be ordered by the ranking value (descending).
-     * Ties in value produce equal ranks (dense ranking style).
+     * Ties in value produce equal ranks using dense ranking (1, 1, 2, 2, 3...).
      */
     private <T> List<T> assignRanks(List<T> stats,
                                      java.util.function.Function<T, Long> valueExtractor,
                                      java.util.function.BiConsumer<T, Integer> rankSetter) {
-        int currentRank = 1;
+        int currentRank = 0;
         Long previousValue = null;
-        for (int i = 0; i < stats.size(); i++) {
-            T stat = stats.get(i);
+        boolean isFirst = true;
+        for (T stat : stats) {
             Long value = valueExtractor.apply(stat);
-            if (!value.equals(previousValue)) {
-                currentRank = i + 1;
+            if (isFirst || !java.util.Objects.equals(value, previousValue)) {
+                currentRank++;
+                isFirst = false;
             }
             rankSetter.accept(stat, currentRank);
             previousValue = value;

@@ -232,6 +232,28 @@ class StatsServiceTest {
         }
 
         @Test
+        @DisplayName("should assign dense ranks when there are ties")
+        void assignsDenseRanksForTies() {
+            PlayerScorerDTO s1 = PlayerScorerDTO.builder().id(UUID.randomUUID()).name("Player 1").goals(5L).build();
+            PlayerScorerDTO s2 = PlayerScorerDTO.builder().id(UUID.randomUUID()).name("Player 2").goals(5L).build();
+            PlayerScorerDTO s3 = PlayerScorerDTO.builder().id(UUID.randomUUID()).name("Player 3").goals(3L).build();
+            PlayerScorerDTO s4 = PlayerScorerDTO.builder().id(UUID.randomUUID()).name("Player 4").goals(3L).build();
+            PlayerScorerDTO s5 = PlayerScorerDTO.builder().id(UUID.randomUUID()).name("Player 5").goals(1L).build();
+
+            when(matchEventRepository.countGoalsByPlayerForSeason(List.of(seasonId)))
+                    .thenReturn(List.of(s1, s2, s3, s4, s5));
+
+            List<PlayerScorerDTO> result = statsService.getTopScorersForSeason(List.of(seasonId));
+
+            assertThat(result).hasSize(5);
+            assertThat(result.get(0).getRank()).isEqualTo(1);
+            assertThat(result.get(1).getRank()).isEqualTo(1);
+            assertThat(result.get(2).getRank()).isEqualTo(2);
+            assertThat(result.get(3).getRank()).isEqualTo(2);
+            assertThat(result.get(4).getRank()).isEqualTo(3);
+        }
+
+        @Test
         @DisplayName("should return ranked player red cards for season and matchday")
         void returnsRankedRedCards() {
             PlayerStatDTO p1 = PlayerStatDTO.builder().id(UUID.randomUUID()).name("Ramos").redCards(3L).build();
