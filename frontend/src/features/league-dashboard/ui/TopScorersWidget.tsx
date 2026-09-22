@@ -303,7 +303,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                         {/* Scorers List */}
                         {otherScorers.length > 0 && (
                             <div className={cn(
-                                "p-2.5 space-y-1 max-h-[440px] overflow-y-auto scrollbar-thin",
+                                "p-2.5 space-y-1",
                                 isNuestroDeporte ? "bg-[#0D1A3C]" : "bg-white"
                             )}>
                                 {otherScorers.map((scorer, idx) => {
