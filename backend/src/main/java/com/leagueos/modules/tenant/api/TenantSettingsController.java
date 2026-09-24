@@ -34,4 +34,19 @@ public class TenantSettingsController {
             com.leagueos.shared.context.TenantContext.clear();
         }
     }
+
+    @org.springframework.web.bind.annotation.PutMapping("/shootout-extra-point")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    public ResponseEntity<TenantSettings> updateShootoutExtraPoint(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-Tenant-ID", required = false) java.util.UUID tenantId,
+            @org.springframework.web.bind.annotation.RequestParam("enabled") boolean enabled) {
+        if (tenantId != null) {
+            com.leagueos.shared.context.TenantContext.setCurrentTenant(tenantId);
+        }
+        try {
+            return ResponseEntity.ok(service.updateShootoutExtraPoint(enabled, tenantId));
+        } finally {
+            com.leagueos.shared.context.TenantContext.clear();
+        }
+    }
 }

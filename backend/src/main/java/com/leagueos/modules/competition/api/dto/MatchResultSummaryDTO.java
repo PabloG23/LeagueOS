@@ -21,4 +21,12 @@ public class MatchResultSummaryDTO {
     private Integer awayScore;
     private LocalDateTime matchDate;
     private Boolean isDoubleForfeit;
+    private UUID penaltyWinnerTeamId;
+    private Integer homePenaltyScore;
+    private Integer awayPenaltyScore;
+
+    public MatchResultSummaryDTO(UUID homeTeamId, String homeTeamName, UUID awayTeamId, String awayTeamName,
+                                 Integer homeScore, Integer awayScore, LocalDateTime matchDate, Boolean isDoubleForfeit) {
+        this(homeTeamId, homeTeamName, awayTeamId, awayTeamName, homeScore, awayScore, matchDate, isDoubleForfeit, null, null, null);
+    }
 }

@@ -299,6 +299,61 @@ class MatchServiceTest {
             assertThatThrownBy(() -> matchService.updateMatchScore(matchId, request))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
+
+        @Test
+        @DisplayName("should update penalty scores and winner on draw")
+        void updatesPenaltyScoresAndWinnerOnDraw() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            match.setTenantId(TENANT_A);
+            match.setHomeScore(1);
+            match.setAwayScore(1);
+
+            when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+            when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(teamRepository.findById(homeTeam.getId())).thenReturn(Optional.of(homeTeam));
+
+            UpdateMatchScoreRequest request = new UpdateMatchScoreRequest();
+            request.setHomeScore(2);
+            request.setAwayScore(2);
+            request.setHomePenaltyScore(4);
+            request.setAwayPenaltyScore(3);
+            request.setPenaltyWinnerTeamId(homeTeam.getId());
+
+            Match result = matchService.updateMatchScore(matchId, request);
+
+            assertThat(result.getHomeScore()).isEqualTo(2);
+            assertThat(result.getAwayScore()).isEqualTo(2);
+            assertThat(result.getHomePenaltyScore()).isEqualTo(4);
+            assertThat(result.getAwayPenaltyScore()).isEqualTo(3);
+            assertThat(result.getPenaltyWinnerTeam()).isEqualTo(homeTeam);
+        }
+
+        @Test
+        @DisplayName("should clear penalty shootout data when match score is changed to non-draw")
+        void clearsPenaltiesWhenNotDraw() {
+            TenantContext.setCurrentTenant(TENANT_A);
+            match.setTenantId(TENANT_A);
+            match.setHomeScore(2);
+            match.setAwayScore(2);
+            match.setHomePenaltyScore(5);
+            match.setAwayPenaltyScore(4);
+            match.setPenaltyWinnerTeam(homeTeam);
+
+            when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+            when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            UpdateMatchScoreRequest request = new UpdateMatchScoreRequest();
+            request.setHomeScore(3);
+            request.setAwayScore(2); // no longer draw
+
+            Match result = matchService.updateMatchScore(matchId, request);
+
+            assertThat(result.getHomeScore()).isEqualTo(3);
+            assertThat(result.getAwayScore()).isEqualTo(2);
+            assertThat(result.getHomePenaltyScore()).isNull();
+            assertThat(result.getAwayPenaltyScore()).isNull();
+            assertThat(result.getPenaltyWinnerTeam()).isNull();
+        }
     }
 
     // =========================================================================

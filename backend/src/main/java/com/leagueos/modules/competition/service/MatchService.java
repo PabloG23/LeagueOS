@@ -111,6 +111,34 @@ public class MatchService {
             match.setIsDoubleForfeit(request.getIsDoubleForfeit());
         }
 
+        if (match.getHomeScore() != null && match.getAwayScore() != null && !match.getHomeScore().equals(match.getAwayScore())) {
+            match.setHomePenaltyScore(null);
+            match.setAwayPenaltyScore(null);
+            match.setPenaltyWinnerTeam(null);
+        } else {
+            if (request.getHomePenaltyScore() != null) {
+                match.setHomePenaltyScore(request.getHomePenaltyScore());
+            }
+            if (request.getAwayPenaltyScore() != null) {
+                match.setAwayPenaltyScore(request.getAwayPenaltyScore());
+            }
+
+            if (request.getPenaltyWinnerTeamId() != null) {
+                Team penaltyWinner = teamRepository.findById(request.getPenaltyWinnerTeamId()).orElse(null);
+                match.setPenaltyWinnerTeam(penaltyWinner);
+            } else if (Boolean.TRUE.equals(request.getClearPenaltyWinner())) {
+                match.setPenaltyWinnerTeam(null);
+                match.setHomePenaltyScore(null);
+                match.setAwayPenaltyScore(null);
+            } else if (match.getHomePenaltyScore() != null && match.getAwayPenaltyScore() != null) {
+                if (match.getHomePenaltyScore() > match.getAwayPenaltyScore()) {
+                    match.setPenaltyWinnerTeam(match.getHomeTeam());
+                } else if (match.getAwayPenaltyScore() > match.getHomePenaltyScore()) {
+                    match.setPenaltyWinnerTeam(match.getAwayTeam());
+                }
+            }
+        }
+
         Match savedMatch = matchRepository.save(match);
 
         if (MatchStage.PLAYOFFS.equals(savedMatch.getStage()) && savedMatch.getPlayoffTie() != null) {

@@ -80,6 +80,16 @@ public class Match extends BaseEntity {
     @Column(name = "is_double_forfeit")
     private Boolean isDoubleForfeit = false;
 
+    @Column(name = "home_penalty_score")
+    private Integer homePenaltyScore;
+
+    @Column(name = "away_penalty_score")
+    private Integer awayPenaltyScore;
+
+    @ManyToOne(fetch = jakarta.persistence.FetchType.EAGER)
+    @JoinColumn(name = "penalty_winner_team_id")
+    private Team penaltyWinnerTeam;
+
     @jakarta.persistence.Transient
     private String reportPhotoSignedUrl;
 

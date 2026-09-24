@@ -27,6 +27,7 @@ export const createTenantSettings = (overrides: Partial<TenantSettings> = {}): T
     matchCardBackgroundClass: 'bg-white/5',
     matchTickerTextClass: 'text-primary',
     enableRoundRobinFixtures: true,
+    enableShootoutExtraPoint: false,
     ...overrides,
 });
 
@@ -51,6 +52,7 @@ export const TENANT_NUESTRO_DEPORTE = createTenantSettings({
     matchCardBackgroundClass: 'bg-[#0D1A3C]',
     matchTickerTextClass: 'text-white',
     enableRoundRobinFixtures: true,
+    enableShootoutExtraPoint: true,
     boardMembers: [
         { role: 'Presidente', name: 'Mike Portocarrero' },
         { role: 'Vicepresidente', name: 'Carlos Mejía' },
@@ -65,6 +67,7 @@ export const TENANT_SAN_LUCAS = createTenantSettings({
     themeClass: 'theme-san-lucas',
     enableAutoSuspensions: false,
     allowTransfers: false,
+    enableShootoutExtraPoint: false,
     showDisciplineWidget: true,
     footerAddress: 'Zaragoza S/N, San Sebastián, Metepec C.P. 52146',
     footerPhone: '722 634 4082',

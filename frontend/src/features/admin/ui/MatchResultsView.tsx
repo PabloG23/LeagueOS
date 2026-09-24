@@ -42,6 +42,24 @@ const MatchRow = ({
     isLast?: boolean;
 }) => {
     const isFinished = match.status === 'FINISHED';
+    const isDraw = isFinished && match.homeScore !== null && match.homeScore !== undefined && match.homeScore === match.awayScore;
+    const penaltyWinnerId = match.penaltyWinnerTeamId || (match as any).penaltyWinnerTeam?.id;
+    const hasShootout = isDraw && (
+        (match.homePenaltyScore !== null && match.homePenaltyScore !== undefined) ||
+        penaltyWinnerId != null
+    );
+    const homeTeamId = match.homeTeam?.id || match.homeTeamId;
+    const awayTeamId = match.awayTeam?.id || match.awayTeamId;
+
+    const homeWon = isFinished && (
+        (match.homeScore || 0) > (match.awayScore || 0) ||
+        (hasShootout && penaltyWinnerId === homeTeamId)
+    );
+    const awayWon = isFinished && (
+        (match.awayScore || 0) > (match.homeScore || 0) ||
+        (hasShootout && penaltyWinnerId === awayTeamId)
+    );
+
     const hasPhotoReport = Boolean(match.reportPhotoUrl || match.hasReportPhoto);
     const [isPdfMenuOpen, setIsPdfMenuOpen] = useState(false);
     const pdfMenuRef = useRef<HTMLDivElement>(null);
@@ -77,9 +95,20 @@ const MatchRow = ({
                 <div className="flex items-center justify-between flex-1 min-w-0 pr-4">
                     {/* Home Team */}
                     <div className="flex-1 flex items-center justify-end gap-3 min-w-0">
-                        <span className="font-extrabold text-slate-800 text-sm lg:text-base text-right break-words leading-tight">
-                            {match.home}
-                        </span>
+                        <div className="flex items-center gap-1.5 justify-end">
+                            {hasShootout && homeWon && (
+                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 border border-amber-200/80 px-1.5 py-0.5 rounded-md whitespace-nowrap shadow-2xs" title="Punto extra ganado en penales">
+                                    +1 pt
+                                </span>
+                            )}
+                            <span className={`text-sm lg:text-base text-right break-words leading-tight ${
+                                isFinished
+                                    ? (homeWon ? 'font-black text-slate-900' : 'font-semibold text-slate-500')
+                                    : 'font-extrabold text-slate-800'
+                            }`}>
+                                {match.home}
+                            </span>
+                        </div>
                         <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden text-indigo-600 shadow-xs shrink-0">
                             <TeamLogo
                                 teamName={match.home}
@@ -92,10 +121,19 @@ const MatchRow = ({
                     {/* Center: Score / Status & Meta */}
                     <div className="flex flex-col items-center gap-1 px-4 w-44 lg:w-52 text-center shrink-0">
                         {isFinished ? (
-                            <div className="flex items-center gap-3">
-                                <span className="text-2xl font-black text-slate-900 font-mono">{match.homeScore}</span>
-                                <span className="text-slate-300 font-light">-</span>
-                                <span className="text-2xl font-black text-slate-900 font-mono">{match.awayScore}</span>
+                            <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-3">
+                                    <span className={`text-2xl font-black font-mono ${homeWon ? 'text-slate-900' : (awayWon ? 'text-slate-500' : 'text-slate-900')}`}>{match.homeScore}</span>
+                                    <span className="text-slate-300 font-light">-</span>
+                                    <span className={`text-2xl font-black font-mono ${awayWon ? 'text-slate-900' : (homeWon ? 'text-slate-500' : 'text-slate-900')}`}>{match.awayScore}</span>
+                                </div>
+                                {hasShootout && (
+                                    <span className="mt-1 bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs">
+                                        {match.homePenaltyScore !== null && match.homePenaltyScore !== undefined && match.awayPenaltyScore !== null && match.awayPenaltyScore !== undefined
+                                            ? `(${match.homePenaltyScore}) PEN (${match.awayPenaltyScore})`
+                                            : 'Ganó en penales'}
+                                    </span>
+                                )}
                             </div>
                         ) : (
                             <span className="text-[11px] font-black text-slate-600 uppercase tracking-wider bg-slate-100 px-3 py-0.5 rounded-full">
@@ -143,9 +181,20 @@ const MatchRow = ({
                                 fallbackClass="text-xs font-bold text-purple-600"
                             />
                         </div>
-                        <span className="font-extrabold text-slate-800 text-sm lg:text-base text-left break-words leading-tight">
-                            {match.away}
-                        </span>
+                        <div className="flex items-center gap-1.5 justify-start">
+                            <span className={`text-sm lg:text-base text-left break-words leading-tight ${
+                                isFinished
+                                    ? (awayWon ? 'font-black text-slate-900' : 'font-semibold text-slate-500')
+                                    : 'font-extrabold text-slate-800'
+                            }`}>
+                                {match.away}
+                            </span>
+                            {hasShootout && awayWon && (
+                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 border border-amber-200/80 px-1.5 py-0.5 rounded-md whitespace-nowrap shadow-2xs" title="Punto extra ganado en penales">
+                                    +1 pt
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -287,18 +336,38 @@ const MatchRow = ({
                                 fallbackClass="text-sm font-bold text-indigo-600"
                             />
                         </div>
-                        <span className="font-extrabold text-slate-800 text-xs sm:text-sm leading-tight break-words">
-                            {match.home}
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5">
+                            <span className={`text-xs sm:text-sm leading-tight break-words ${
+                                isFinished
+                                    ? (homeWon ? 'font-black text-slate-900' : 'font-semibold text-slate-500')
+                                    : 'font-extrabold text-slate-800'
+                            }`}>
+                                {match.home}
+                            </span>
+                            {hasShootout && homeWon && (
+                                <span className="text-[9px] font-bold text-amber-800 bg-amber-100/80 border border-amber-200/80 px-1.5 py-0.2 rounded shadow-2xs">
+                                    +1 pt
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {/* VS / Score */}
                     <div className="flex flex-col items-center gap-1 shrink-0 px-2">
                         {isFinished ? (
-                            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-xl">
-                                <span className="text-xl font-black text-slate-900 font-mono">{match.homeScore}</span>
-                                <span className="text-slate-400 font-light">-</span>
-                                <span className="text-xl font-black text-slate-900 font-mono">{match.awayScore}</span>
+                            <div className="flex flex-col items-center gap-1">
+                                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-xl">
+                                    <span className={`text-xl font-black font-mono ${homeWon ? 'text-slate-900' : (awayWon ? 'text-slate-500' : 'text-slate-900')}`}>{match.homeScore}</span>
+                                    <span className="text-slate-400 font-light">-</span>
+                                    <span className={`text-xl font-black font-mono ${awayWon ? 'text-slate-900' : (homeWon ? 'text-slate-500' : 'text-slate-900')}`}>{match.awayScore}</span>
+                                </div>
+                                {hasShootout && (
+                                    <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[9px] font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                                        {match.homePenaltyScore !== null && match.homePenaltyScore !== undefined && match.awayPenaltyScore !== null && match.awayPenaltyScore !== undefined
+                                            ? `(${match.homePenaltyScore}) PEN (${match.awayPenaltyScore})`
+                                            : 'Ganó en penales'}
+                                    </span>
+                                )}
                             </div>
                         ) : (
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-lg">
@@ -321,9 +390,20 @@ const MatchRow = ({
                                 fallbackClass="text-sm font-bold text-purple-600"
                             />
                         </div>
-                        <span className="font-extrabold text-slate-800 text-xs sm:text-sm leading-tight break-words">
-                            {match.away}
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5">
+                            <span className={`text-xs sm:text-sm leading-tight break-words ${
+                                isFinished
+                                    ? (awayWon ? 'font-black text-slate-900' : 'font-semibold text-slate-500')
+                                    : 'font-extrabold text-slate-800'
+                            }`}>
+                                {match.away}
+                            </span>
+                            {hasShootout && awayWon && (
+                                <span className="text-[9px] font-bold text-amber-800 bg-amber-100/80 border border-amber-200/80 px-1.5 py-0.2 rounded shadow-2xs">
+                                    +1 pt
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 

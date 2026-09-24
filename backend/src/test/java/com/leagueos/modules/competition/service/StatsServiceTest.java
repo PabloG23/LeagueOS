@@ -187,6 +187,91 @@ class StatsServiceTest {
                 assertThat(standing.getForm()).containsExactly("L");
             }
         }
+
+        @Test
+        @DisplayName("should award extra point to penalty shootout winner when enableShootoutExtraPoint is true")
+        void calculatesStandingsWithShootoutExtraPointWhenEnabled() {
+            List<TeamRegistration> registrations = List.of(
+                    createRegistration(teamA),
+                    createRegistration(teamB)
+            );
+
+            when(teamRegistrationRepository.findBySeasonIdAndStatus(seasonId, TeamRegistration.RegistrationStatus.APPROVED))
+                    .thenReturn(registrations);
+            when(matchRepository.findBySeasonId(seasonId)).thenReturn(Collections.emptyList());
+
+            // Match: Atlas 2 - 2 Pumas, Shootout: Atlas 4 - 3 Pumas (Atlas wins shootout)
+            MatchResultSummaryDTO match = new MatchResultSummaryDTO(
+                    teamA.getId(), "Atlas", teamB.getId(), "Pumas",
+                    2, 2, LocalDateTime.now(), false,
+                    teamA.getId(), 4, 3
+            );
+
+            when(matchRepository.findFinishedMatchSummariesBySeasonId(seasonId)).thenReturn(List.of(match));
+
+            TenantSettings settings = new TenantSettings();
+            settings.setWinPointsOnWin(3);
+            settings.setEnableShootoutExtraPoint(true);
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(settings);
+            when(sportRulesService.getStrategy("SOCCER")).thenReturn(Optional.of(new SoccerRulesStrategy()));
+
+            List<TeamStandingDTO> standings = statsService.calculateStandings(seasonId);
+
+            assertThat(standings).hasSize(2);
+
+            // Atlas: 1 base draw pt + 1 extra pt = 2 pts, extraPoints = 1, rank 1
+            TeamStandingDTO winner = standings.get(0);
+            assertThat(winner.getTeam()).isEqualTo("Atlas");
+            assertThat(winner.getPoints()).isEqualTo(2);
+            assertThat(winner.getExtraPoints()).isEqualTo(1);
+            assertThat(winner.getDrawn()).isEqualTo(1);
+            assertThat(winner.getForm()).containsExactly("D");
+
+            // Pumas: 1 base draw pt + 0 extra pt = 1 pt, extraPoints = 0, rank 2
+            TeamStandingDTO loser = standings.get(1);
+            assertThat(loser.getTeam()).isEqualTo("Pumas");
+            assertThat(loser.getPoints()).isEqualTo(1);
+            assertThat(loser.getExtraPoints()).isEqualTo(0);
+            assertThat(loser.getDrawn()).isEqualTo(1);
+            assertThat(loser.getForm()).containsExactly("D");
+        }
+
+        @Test
+        @DisplayName("should NOT award extra point when enableShootoutExtraPoint is false (standard FIFA rules)")
+        void doesNotAwardExtraPointWhenShootoutDisabled() {
+            List<TeamRegistration> registrations = List.of(
+                    createRegistration(teamA),
+                    createRegistration(teamB)
+            );
+
+            when(teamRegistrationRepository.findBySeasonIdAndStatus(seasonId, TeamRegistration.RegistrationStatus.APPROVED))
+                    .thenReturn(registrations);
+            when(matchRepository.findBySeasonId(seasonId)).thenReturn(Collections.emptyList());
+
+            // Match: Atlas 1 - 1 Pumas, with shootout recorded but setting is false
+            MatchResultSummaryDTO match = new MatchResultSummaryDTO(
+                    teamA.getId(), "Atlas", teamB.getId(), "Pumas",
+                    1, 1, LocalDateTime.now(), false,
+                    teamA.getId(), 5, 4
+            );
+
+            when(matchRepository.findFinishedMatchSummariesBySeasonId(seasonId)).thenReturn(List.of(match));
+
+            TenantSettings settings = new TenantSettings();
+            settings.setWinPointsOnWin(3);
+            settings.setEnableShootoutExtraPoint(false);
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(settings);
+            when(sportRulesService.getStrategy("SOCCER")).thenReturn(Optional.of(new SoccerRulesStrategy()));
+
+            List<TeamStandingDTO> standings = statsService.calculateStandings(seasonId);
+
+            assertThat(standings).hasSize(2);
+            for (TeamStandingDTO standing : standings) {
+                assertThat(standing.getPoints()).isEqualTo(1);
+                assertThat(standing.getExtraPoints()).isEqualTo(0);
+                assertThat(standing.getDrawn()).isEqualTo(1);
+            }
+        }
     }
 
     // =========================================================================

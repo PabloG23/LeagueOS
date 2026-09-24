@@ -34,6 +34,7 @@ export interface TenantSettings {
 
     // Feature flags
     enableRoundRobinFixtures: boolean;
+    enableShootoutExtraPoint?: boolean;
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -60,6 +61,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
     matchTickerTextClass: "text-primary",
 
     enableRoundRobinFixtures: true,
+    enableShootoutExtraPoint: false,
 };
 
 interface TenantSettingsContextType {
@@ -130,6 +132,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 let matchCardBackgroundClass = "bg-white/5";
                 let matchTickerTextClass = "text-primary";
                 let enableRoundRobinFixtures = true;
+                let enableShootoutExtraPoint = false;
 
                 console.log(`[TenantContext] Analyzing URL: ${location.pathname}, Hostname: ${window.location.hostname}`);
 
@@ -198,6 +201,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                         { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
                     ];
                     enableRoundRobinFixtures = true;
+                    enableShootoutExtraPoint = true;
                 } else {
                     // Check if authenticated user has a stored tenant in localStorage
                     const storedTenantId = localStorage.getItem('tenantId');
@@ -247,6 +251,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                             { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
                         ];
                         enableRoundRobinFixtures = true;
+                        enableShootoutExtraPoint = true;
                     } else {
                         console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
                     }
@@ -273,6 +278,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 // Merge backend settings with frontend branding REGARDLESS of API failure
                 setSettings({
                     ...DEFAULT_SETTINGS, // The default interface base
+                    enableShootoutExtraPoint,
                     ...(typeof responseData === 'object' ? responseData : {}),     // Overrides from backend (if any)
                     name,
                     logoUrl,

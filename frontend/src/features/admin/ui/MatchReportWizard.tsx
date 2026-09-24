@@ -17,6 +17,7 @@ const SoccerBall = ({ className }: { className?: string }) => (
 );
 
 import { useToast } from '@/shared/components/ui/ToastContext';
+import { cn } from '@/shared/lib/utils';
 
 interface MatchReportWizardProps {
     match: Match;
@@ -49,6 +50,15 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     const [directHomeScore, setDirectHomeScore] = useState<number>(match.homeScore ?? 0);
     const [directAwayScore, setDirectAwayScore] = useState<number>(match.awayScore ?? 0);
     const { showToast } = useToast();
+
+    const homeTeamId = match.homeTeam?.id || match.homeTeamId;
+    const awayTeamId = match.awayTeam?.id || match.awayTeamId;
+
+    const [homePenaltyScore, setHomePenaltyScore] = useState<number | ''>(match.homePenaltyScore ?? '');
+    const [awayPenaltyScore, setAwayPenaltyScore] = useState<number | ''>(match.awayPenaltyScore ?? '');
+    const [penaltyWinnerTeamId, setPenaltyWinnerTeamId] = useState<string | null>(
+        match.penaltyWinnerTeamId || (match as any).penaltyWinnerTeam?.id || null
+    );
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -147,6 +157,25 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     const finalHomeScore = hasPlayerGoals ? calculatedHomeScore : directHomeScore;
     const finalAwayScore = hasPlayerGoals ? calculatedAwayScore : directAwayScore;
 
+    const isTie = finalHomeScore === finalAwayScore && !isDoubleForfeit;
+    const showShootoutOption = Boolean(settings?.enableShootoutExtraPoint && isTie);
+
+    const handleHomePenaltyChange = (val: number | '') => {
+        setHomePenaltyScore(val);
+        if (typeof val === 'number' && typeof awayPenaltyScore === 'number') {
+            if (val > awayPenaltyScore && homeTeamId) setPenaltyWinnerTeamId(homeTeamId);
+            else if (awayPenaltyScore > val && awayTeamId) setPenaltyWinnerTeamId(awayTeamId);
+        }
+    };
+
+    const handleAwayPenaltyChange = (val: number | '') => {
+        setAwayPenaltyScore(val);
+        if (typeof val === 'number' && typeof homePenaltyScore === 'number') {
+            if (homePenaltyScore > val && homeTeamId) setPenaltyWinnerTeamId(homeTeamId);
+            else if (val > homePenaltyScore && awayTeamId) setPenaltyWinnerTeamId(awayTeamId);
+        }
+    };
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
         const payload: any[] = []; // MatchEventDTO shape
@@ -197,12 +226,18 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
 
             if (hasPlayerGoals || payload.length > 0) {
                 await leagueApi.submitMatchReport(settings.tenantId, match.id, payload);
-                if (!hasPlayerGoals && (directHomeScore > 0 || directAwayScore > 0)) {
-                    await leagueApi.updateMatchScore(settings.tenantId, match.id, finalHomeScore, finalAwayScore, isDoubleForfeit);
-                }
-            } else {
-                await leagueApi.updateMatchScore(settings.tenantId, match.id, finalHomeScore, finalAwayScore, isDoubleForfeit);
             }
+
+            await leagueApi.updateMatchScore(
+                settings.tenantId,
+                match.id,
+                finalHomeScore,
+                finalAwayScore,
+                isDoubleForfeit,
+                showShootoutOption && typeof homePenaltyScore === 'number' ? homePenaltyScore : null,
+                showShootoutOption && typeof awayPenaltyScore === 'number' ? awayPenaltyScore : null,
+                showShootoutOption ? penaltyWinnerTeamId : null
+            );
 
             showToast("Cédula guardada exitosamente.", "success");
             onSuccess();
@@ -616,6 +651,99 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Shootout / Extra Point Section */}
+                                {showShootoutOption && (
+                                    <div className="bg-amber-50/90 border border-amber-200/90 rounded-3xl p-5 space-y-3.5 shadow-xs animate-in fade-in duration-200">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                <h4 className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                                                    Punto Extra por Penales
+                                                </h4>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-xs text-amber-800 leading-tight">
+                                            Indica el resultado de la tanda de penales o selecciona al equipo ganador para otorgar el <strong>+1 punto extra</strong> en la tabla de posiciones.
+                                        </p>
+
+                                        {/* Penalty Score Inputs & Winner Selection */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => homeTeamId && setPenaltyWinnerTeamId(homeTeamId)}
+                                                className={cn(
+                                                    "p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 cursor-pointer",
+                                                    penaltyWinnerTeamId === homeTeamId
+                                                        ? "bg-amber-500 border-amber-600 text-white shadow-md shadow-amber-500/20"
+                                                        : "bg-white border-amber-200 text-slate-700 hover:bg-amber-100/50"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span className="font-black text-sm truncate max-w-[180px]">{homeTeamName || "Local"}</span>
+                                                    {penaltyWinnerTeamId === homeTeamId && (
+                                                        <span className="text-[11px] font-black bg-white/20 px-2 py-0.5 rounded-md text-white whitespace-nowrap">
+                                                            +1 PT Extra
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between w-full" onClick={(e) => e.stopPropagation()}>
+                                                    <span className="text-xs uppercase font-bold tracking-wider opacity-85">Goles Penales:</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="0"
+                                                        value={homePenaltyScore}
+                                                        onChange={(e) => handleHomePenaltyChange(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                                                        className={cn(
+                                                            "w-16 h-8 px-2 text-center font-black text-sm rounded-lg border outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                            penaltyWinnerTeamId === homeTeamId
+                                                                ? "bg-white text-slate-900 border-white"
+                                                                : "bg-amber-50 border-amber-200 text-slate-900"
+                                                        )}
+                                                    />
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => awayTeamId && setPenaltyWinnerTeamId(awayTeamId)}
+                                                className={cn(
+                                                    "p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-3 cursor-pointer",
+                                                    penaltyWinnerTeamId === awayTeamId
+                                                        ? "bg-amber-500 border-amber-600 text-white shadow-md shadow-amber-500/20"
+                                                        : "bg-white border-amber-200 text-slate-700 hover:bg-amber-100/50"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span className="font-black text-sm truncate max-w-[180px]">{awayTeamName || "Visitante"}</span>
+                                                    {penaltyWinnerTeamId === awayTeamId && (
+                                                        <span className="text-[11px] font-black bg-white/20 px-2 py-0.5 rounded-md text-white whitespace-nowrap">
+                                                            +1 PT Extra
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between w-full" onClick={(e) => e.stopPropagation()}>
+                                                    <span className="text-xs uppercase font-bold tracking-wider opacity-85">Goles Penales:</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="0"
+                                                        value={awayPenaltyScore}
+                                                        onChange={(e) => handleAwayPenaltyChange(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                                                        className={cn(
+                                                            "w-16 h-8 px-2 text-center font-black text-sm rounded-lg border outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                            penaltyWinnerTeamId === awayTeamId
+                                                                ? "bg-white text-slate-900 border-white"
+                                                                : "bg-amber-50 border-amber-200 text-slate-900"
+                                                        )}
+                                                    />
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Team Summaries Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

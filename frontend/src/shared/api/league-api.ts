@@ -224,6 +224,10 @@ export interface Match {
     awayScore?: number;
     status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
     isDoubleForfeit?: boolean;
+    homePenaltyScore?: number | null;
+    awayPenaltyScore?: number | null;
+    penaltyWinnerTeamId?: string | null;
+    penaltyWinnerTeam?: Team;
 }
 
 /**
@@ -370,8 +374,21 @@ export const leagueApi = {
     getSeasonMatches: (tenantId: string, seasonId: string) =>
         api.get<Match[]>(`/competition/seasons/${seasonId}/matches`, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatches: (tenantId: string, matchday: number) => api.get<Match[]>(`/matches/${matchday}`, { headers: { 'X-Tenant-ID': tenantId } }),
-    updateMatchScore: (tenantId: string, matchId: string, homeScore: number, awayScore: number, isDoubleForfeit?: boolean) =>
-        api.patch<Match>(`/matches/${matchId}/score`, { homeScore, awayScore, isDoubleForfeit }, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateMatchScore: (
+        tenantId: string,
+        matchId: string,
+        homeScore: number,
+        awayScore: number,
+        isDoubleForfeit?: boolean,
+        homePenaltyScore?: number | null,
+        awayPenaltyScore?: number | null,
+        penaltyWinnerTeamId?: string | null
+    ) =>
+        api.patch<Match>(
+            `/matches/${matchId}/score`,
+            { homeScore, awayScore, isDoubleForfeit, homePenaltyScore, awayPenaltyScore, penaltyWinnerTeamId },
+            { headers: { 'X-Tenant-ID': tenantId } }
+        ),
     submitMatchReport: (tenantId: string, matchId: string, events: any[]) => api.post(`/matches/${matchId}/report`, events, { headers: { 'X-Tenant-ID': tenantId } }),
     getMatchReport: (tenantId: string, matchId: string) => api.get<any[]>(`/matches/${matchId}/report`, { headers: { 'X-Tenant-ID': tenantId } }),
     previewRoundRobinFixtures: (tenantId: string, seasonId: string) =>
@@ -423,6 +440,8 @@ export const leagueApi = {
         api.get<AdminPlayerDirectoryDTO[]>('/registration/players/directory', { headers: { 'X-Tenant-ID': tenantId } }),
     updateMinMatchesForPlayoffs: (tenantId: string, minMatches: number) =>
         api.put(`/tenants/settings/min-matches?minMatches=${minMatches}`, null, { headers: { 'X-Tenant-ID': tenantId } }),
+    updateShootoutExtraPoint: (tenantId: string, enabled: boolean) =>
+        api.put(`/tenants/settings/shootout-extra-point?enabled=${enabled}`, null, { headers: { 'X-Tenant-ID': tenantId } }),
 
     // User Management (Unified)
     getUsers: (tenantId: string) =>

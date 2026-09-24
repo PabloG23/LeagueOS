@@ -25,8 +25,10 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     void deleteBySeasonId(UUID seasonId);
 
     @Query("SELECT new com.leagueos.modules.competition.api.dto.MatchResultSummaryDTO(" +
-           "m.homeTeam.id, m.homeTeam.name, m.awayTeam.id, m.awayTeam.name, m.homeScore, m.awayScore, m.matchDate, m.isDoubleForfeit) " +
+           "m.homeTeam.id, m.homeTeam.name, m.awayTeam.id, m.awayTeam.name, m.homeScore, m.awayScore, m.matchDate, m.isDoubleForfeit, " +
+           "pwt.id, m.homePenaltyScore, m.awayPenaltyScore) " +
            "FROM Match m " +
+           "LEFT JOIN m.penaltyWinnerTeam pwt " +
            "WHERE m.season.id = :seasonId AND m.status = 'FINISHED' " +
            "ORDER BY m.matchDate ASC")
     List<MatchResultSummaryDTO> findFinishedMatchSummariesBySeasonId(@Param("seasonId") UUID seasonId);

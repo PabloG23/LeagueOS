@@ -44,4 +44,22 @@ public class TenantSettingsService {
         settings.setMinMatchesForPlayoffs(Math.max(0, minMatches));
         return repository.save(settings);
     }
+
+    @org.springframework.transaction.annotation.Transactional
+    public TenantSettings updateShootoutExtraPoint(boolean enabled, UUID explicitTenantId) {
+        UUID tenantId = explicitTenantId != null ? explicitTenantId : TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            throw new IllegalStateException("Tenant context not found");
+        }
+
+        TenantSettings settings = repository.findByTenantId(tenantId)
+                .orElseGet(() -> {
+                    TenantSettings s = new TenantSettings();
+                    s.setTenantId(tenantId);
+                    return s;
+                });
+
+        settings.setEnableShootoutExtraPoint(enabled);
+        return repository.save(settings);
+    }
 }

@@ -39,4 +39,7 @@ public class TenantSettings extends BaseEntity {
 
     @Column(name = "require_curp")
     private boolean requireCurp = false;
+
+    @Column(name = "enable_shootout_extra_point")
+    private boolean enableShootoutExtraPoint = false;
 }

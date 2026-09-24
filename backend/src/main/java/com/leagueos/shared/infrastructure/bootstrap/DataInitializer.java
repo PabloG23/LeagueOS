@@ -47,6 +47,7 @@ public class DataInitializer implements CommandLineRunner {
             s.setShowOffenseDefenseWidgets(isPrimary);
             s.setRequireJerseyNumbers(!isPrimary);
             s.setMinMatchesForPlayoffs(5);
+            s.setEnableShootoutExtraPoint(isPrimary);
             tenantSettingsRepository.save(s);
         }
 

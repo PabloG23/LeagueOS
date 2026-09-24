@@ -151,91 +151,123 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                     className="flex w-max animate-marquee group-hover:[animation-play-state:paused] gap-4 pl-4"
                     style={{ animationDuration: `${matchAnimationDuration}s` }}
                 >
-                    {[...matches, ...matches].map((match, idx) => (
-                        <div
-                            key={`${match.id}-${idx}`}
-                            className={`w-[290px] min-w-[290px] min-h-[115px] flex flex-col justify-center ${settings.matchCardBackgroundClass || 'bg-card'} backdrop-blur-md rounded-2xl p-4 gap-3 border border-red-700/40 hover:border-red-500/80 transition-all cursor-pointer shadow-sm hover:shadow-md hover:shadow-red-900/20 hover:-translate-y-0.5`}
-                        >
-                            <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-1 gap-2">
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider whitespace-nowrap overflow-hidden text-ellipsis">
-                                        {formatMatchDateTime(match.matchDate)}
-                                    </span>
-                                    {match.location && (
-                                        match.field?.locationUrl ? (
-                                            <a
-                                                href={match.field.locationUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="text-[10px] uppercase font-bold text-blue-400 hover:text-blue-300 transition-colors tracking-wider truncate flex items-center gap-1 hover:underline cursor-pointer w-max max-w-full mt-0.5"
-                                                title={`Ver ubicación de ${match.location} en Google Maps`}
-                                            >
-                                                <MapPin className="w-2.5 h-2.5 shrink-0 text-blue-400" />
-                                                <span className="truncate">{match.location}</span>
-                                            </a>
-                                        ) : (
-                                            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate flex items-center gap-1 mt-0.5" title={match.location}>
-                                                <MapPin className="w-2.5 h-2.5 shrink-0 text-slate-500" />
-                                                <span className="truncate">{match.location}</span>
-                                            </span>
-                                        )
+                    {[...matches, ...matches].map((match, idx) => {
+                        const isFinished = match.status === 'FINISHED';
+                        const isDraw = isFinished && match.homeScore !== null && match.homeScore !== undefined && match.homeScore === match.awayScore;
+                        const penaltyWinnerId = match.penaltyWinnerTeamId || (match as any).penaltyWinnerTeam?.id;
+                        const hasShootout = isDraw && (
+                            (match.homePenaltyScore !== null && match.homePenaltyScore !== undefined) ||
+                            penaltyWinnerId != null
+                        );
+                        const homeWon = isFinished && (
+                            (match.homeScore || 0) > (match.awayScore || 0) ||
+                            (hasShootout && penaltyWinnerId === (match.homeTeam?.id || match.homeTeamId))
+                        );
+                        const awayWon = isFinished && (
+                            (match.awayScore || 0) > (match.homeScore || 0) ||
+                            (hasShootout && penaltyWinnerId === (match.awayTeam?.id || match.awayTeamId))
+                        );
+
+                        return (
+                            <div
+                                key={`${match.id}-${idx}`}
+                                className={`w-[290px] min-w-[290px] min-h-[115px] flex flex-col justify-center ${settings.matchCardBackgroundClass || 'bg-card'} backdrop-blur-md rounded-2xl p-4 gap-3 border border-red-700/40 hover:border-red-500/80 transition-all cursor-pointer shadow-sm hover:shadow-md hover:shadow-red-900/20 hover:-translate-y-0.5`}
+                            >
+                                <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-1 gap-2">
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider whitespace-nowrap overflow-hidden text-ellipsis">
+                                            {formatMatchDateTime(match.matchDate)}
+                                        </span>
+                                        {match.location && (
+                                            match.field?.locationUrl ? (
+                                                <a
+                                                    href={match.field.locationUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="text-[10px] uppercase font-bold text-blue-400 hover:text-blue-300 transition-colors tracking-wider truncate flex items-center gap-1 hover:underline cursor-pointer w-max max-w-full mt-0.5"
+                                                    title={`Ver ubicación de ${match.location} en Google Maps`}
+                                                >
+                                                    <MapPin className="w-2.5 h-2.5 shrink-0 text-blue-400" />
+                                                    <span className="truncate">{match.location}</span>
+                                                </a>
+                                            ) : (
+                                                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate flex items-center gap-1 mt-0.5" title={match.location}>
+                                                    <MapPin className="w-2.5 h-2.5 shrink-0 text-slate-500" />
+                                                    <span className="truncate">{match.location}</span>
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* Photo Report Badge / Button */}
+                                    {(match.hasReportPhoto || match.reportPhotoUrl) && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setSelectedMatchForReport(match);
+                                            }}
+                                            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold transition-all shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                                            title="Ver foto de la cédula arbitral oficial"
+                                        >
+                                            <FileText className="w-3 h-3" />
+                                            <span>Cédula</span>
+                                        </button>
                                     )}
                                 </div>
-
-                                {/* Photo Report Badge / Button */}
-                                {(match.hasReportPhoto || match.reportPhotoUrl) && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setSelectedMatchForReport(match);
-                                        }}
-                                        className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold transition-all shrink-0 hover:scale-105 active:scale-95 shadow-xs"
-                                        title="Ver foto de la cédula arbitral oficial"
-                                    >
-                                        <FileText className="w-3 h-3" />
-                                        <span>Cédula</span>
-                                    </button>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                {/* Home Team */}
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                                            <TeamLogo 
-                                                teamName={match.homeTeam?.name || match.homeTeamId} 
-                                                logoUrl={match.homeTeam?.signedLogoUrl || match.homeTeam?.logoUrl} 
-                                                fallbackClass="text-[10px] font-bold text-white"
-                                            />
+                                <div className="space-y-2">
+                                    {/* Home Team */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <TeamLogo 
+                                                    teamName={match.homeTeam?.name || match.homeTeamId} 
+                                                    logoUrl={match.homeTeam?.signedLogoUrl || match.homeTeam?.logoUrl} 
+                                                    fallbackClass="text-[10px] font-bold text-white"
+                                                />
+                                            </div>
+                                            <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId) || '#'} className={`text-sm font-medium hover:text-primary hover:underline ${homeWon ? 'text-white font-bold' : (isFinished ? 'text-slate-400' : 'text-slate-200')}`}>
+                                                {match.homeTeam?.name || 'Local'}
+                                            </Link>
                                         </div>
-                                        <Link to={getTeamLink(match.homeTeam?.id || match.homeTeamId) || '#'} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.homeScore || 0) > (match.awayScore || 0) ? 'text-white' : 'text-slate-400'}`}>
-                                            {match.homeTeam?.name || 'Local'}
-                                        </Link>
-                                    </div>
-                                    <span className="font-black text-2xl text-white">{match.homeScore ?? '-'}</span>
-                                </div>
-
-                                {/* Away Team */}
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                                            <TeamLogo 
-                                                teamName={match.awayTeam?.name || match.awayTeamId} 
-                                                logoUrl={match.awayTeam?.signedLogoUrl || match.awayTeam?.logoUrl} 
-                                                fallbackClass="text-[10px] font-bold text-white"
-                                            />
+                                        <div className="flex items-baseline gap-1.5 shrink-0">
+                                            <span className={`font-black text-2xl ${homeWon ? 'text-white' : (isFinished && awayWon ? 'text-slate-400' : 'text-white')}`}>{match.homeScore ?? '-'}</span>
+                                            {hasShootout && match.homePenaltyScore !== null && match.homePenaltyScore !== undefined && (
+                                                <span className={`text-xs font-bold ${homeWon ? 'text-amber-400' : 'text-slate-500'}`} title="Goles en penales">
+                                                    ({match.homePenaltyScore})
+                                                </span>
+                                            )}
                                         </div>
-                                        <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId) || '#'} className={`text-sm font-medium hover:text-primary hover:underline ${match.status !== 'SCHEDULED' && (match.awayScore || 0) > (match.homeScore || 0) ? 'text-white' : 'text-slate-400'}`}>
-                                            {match.awayTeam?.name || 'Visitante'}
-                                        </Link>
                                     </div>
-                                    <span className="font-black text-2xl text-white">{match.awayScore ?? '-'}</span>
+
+                                    {/* Away Team */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <TeamLogo 
+                                                    teamName={match.awayTeam?.name || match.awayTeamId} 
+                                                    logoUrl={match.awayTeam?.signedLogoUrl || match.awayTeam?.logoUrl} 
+                                                    fallbackClass="text-[10px] font-bold text-white"
+                                                />
+                                            </div>
+                                            <Link to={getTeamLink(match.awayTeam?.id || match.awayTeamId) || '#'} className={`text-sm font-medium hover:text-primary hover:underline ${awayWon ? 'text-white font-bold' : (isFinished ? 'text-slate-400' : 'text-slate-200')}`}>
+                                                {match.awayTeam?.name || 'Visitante'}
+                                            </Link>
+                                        </div>
+                                        <div className="flex items-baseline gap-1.5 shrink-0">
+                                            <span className={`font-black text-2xl ${awayWon ? 'text-white' : (isFinished && homeWon ? 'text-slate-400' : 'text-white')}`}>{match.awayScore ?? '-'}</span>
+                                            {hasShootout && match.awayPenaltyScore !== null && match.awayPenaltyScore !== undefined && (
+                                                <span className={`text-xs font-bold ${awayWon ? 'text-amber-400' : 'text-slate-500'}`} title="Goles en penales">
+                                                    ({match.awayPenaltyScore})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 

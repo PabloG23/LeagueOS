@@ -128,6 +128,7 @@ public class StatsService {
                     .played(0).won(0).drawn(0).lost(0)
                     .goalsFor(0).goalsAgainst(0).goalDifference(0)
                     .points(0)
+                    .extraPoints(0)
                     .form(new ArrayList<>())
                     .build());
         }
@@ -147,6 +148,7 @@ public class StatsService {
 
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
         int winPoints = settings.getWinPointsOnWin();
+        boolean enableShootoutExtraPoint = settings.isEnableShootoutExtraPoint();
         SportRulesStrategy rulesStrategy = sportRulesService.getStrategy("SOCCER")
                 .orElseThrow(() -> new IllegalStateException("No se encontró una estrategia de reglas para el deporte SOCCER."));
 
@@ -162,7 +164,7 @@ public class StatsService {
             applyGoalStats(home, homeScore, awayScore);
             applyGoalStats(away, awayScore, homeScore);
 
-            applyMatchResult(home, away, match, homeScore, awayScore, rulesStrategy, winPoints);
+            applyMatchResult(home, away, match, homeScore, awayScore, rulesStrategy, winPoints, enableShootoutExtraPoint);
         }
 
         // Truncate form to last 5 matches
@@ -233,6 +235,7 @@ public class StatsService {
                 .played(0).won(0).drawn(0).lost(0)
                 .goalsFor(0).goalsAgainst(0).goalDifference(0)
                 .points(0)
+                .extraPoints(0)
                 .form(new ArrayList<>())
                 .build());
     }
@@ -246,7 +249,7 @@ public class StatsService {
 
     private void applyMatchResult(TeamStandingDTO home, TeamStandingDTO away,
                                    MatchResultSummaryDTO match, int homeScore, int awayScore,
-                                   SportRulesStrategy rules, int winPoints) {
+                                   SportRulesStrategy rules, int winPoints, boolean enableShootoutExtraPoint) {
         if (Boolean.TRUE.equals(match.getIsDoubleForfeit())) {
             home.setLost(home.getLost() + 1);
             home.getForm().add("L");
@@ -272,11 +275,36 @@ public class StatsService {
         } else {
             int pts = rules.calculateMatchPoints(buildResult(homeScore, awayScore, true), winPoints);
             home.setDrawn(home.getDrawn() + 1);
-            home.setPoints(home.getPoints() + pts);
             home.getForm().add("D");
             away.setDrawn(away.getDrawn() + 1);
-            away.setPoints(away.getPoints() + pts);
             away.getForm().add("D");
+
+            int homeMatchPoints = pts;
+            int awayMatchPoints = pts;
+
+            if (enableShootoutExtraPoint) {
+                UUID penaltyWinnerId = match.getPenaltyWinnerTeamId();
+                if (penaltyWinnerId == null && match.getHomePenaltyScore() != null && match.getAwayPenaltyScore() != null) {
+                    if (match.getHomePenaltyScore() > match.getAwayPenaltyScore()) {
+                        penaltyWinnerId = home.getId();
+                    } else if (match.getAwayPenaltyScore() > match.getHomePenaltyScore()) {
+                        penaltyWinnerId = away.getId();
+                    }
+                }
+
+                if (penaltyWinnerId != null) {
+                    if (penaltyWinnerId.equals(home.getId())) {
+                        homeMatchPoints += 1;
+                        home.setExtraPoints(home.getExtraPoints() + 1);
+                    } else if (penaltyWinnerId.equals(away.getId())) {
+                        awayMatchPoints += 1;
+                        away.setExtraPoints(away.getExtraPoints() + 1);
+                    }
+                }
+            }
+
+            home.setPoints(home.getPoints() + homeMatchPoints);
+            away.setPoints(away.getPoints() + awayMatchPoints);
         }
     }
 

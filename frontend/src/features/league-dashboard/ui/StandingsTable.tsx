@@ -27,6 +27,7 @@ export type TeamStanding = {
     goalsAgainst: number;
     goalDifference: number;
     points: number;
+    extraPoints?: number;
     form: ('W' | 'D' | 'L')[];
 };
 

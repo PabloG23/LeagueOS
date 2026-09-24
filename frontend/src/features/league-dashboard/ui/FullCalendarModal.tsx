@@ -182,8 +182,20 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                         {activeMatches.map(match => {
                                             const isFinished = match.status === 'FINISHED';
-                                            const homeWon = isFinished && (match.homeScore || 0) > (match.awayScore || 0);
-                                            const awayWon = isFinished && (match.awayScore || 0) > (match.homeScore || 0);
+                                            const isDraw = isFinished && match.homeScore !== null && match.homeScore !== undefined && match.homeScore === match.awayScore;
+                                            const penaltyWinnerId = match.penaltyWinnerTeamId || (match as any).penaltyWinnerTeam?.id;
+                                            const hasShootout = isDraw && (
+                                                (match.homePenaltyScore !== null && match.homePenaltyScore !== undefined) ||
+                                                penaltyWinnerId != null
+                                            );
+                                            const homeWon = isFinished && (
+                                                (match.homeScore || 0) > (match.awayScore || 0) ||
+                                                (hasShootout && penaltyWinnerId === (match.homeTeam?.id || match.homeTeamId))
+                                            );
+                                            const awayWon = isFinished && (
+                                                (match.awayScore || 0) > (match.homeScore || 0) ||
+                                                (hasShootout && penaltyWinnerId === (match.awayTeam?.id || match.awayTeamId))
+                                            );
 
                                             return (
                                                 <div key={match.id} className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex flex-col gap-4 hover:bg-slate-800/80 hover:border-white/20 transition-all group">
@@ -268,14 +280,23 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                                                         </div>
 
                                                         {/* Score */}
-                                                        <div className="flex items-center justify-center gap-3 w-[40%] mt-2">
-                                                            <span className={`text-3xl sm:text-4xl ${homeWon ? 'font-black text-white' : 'font-bold text-slate-200'}`}>
-                                                                {isFinished ? (match.homeScore ?? '-') : '-'}
-                                                            </span>
-                                                            <span className="text-slate-600 font-bold text-xl">-</span>
-                                                            <span className={`text-3xl sm:text-4xl ${awayWon ? 'font-black text-white' : 'font-bold text-slate-200'}`}>
-                                                                {isFinished ? (match.awayScore ?? '-') : '-'}
-                                                            </span>
+                                                        <div className="flex flex-col items-center justify-center w-[40%] mt-2">
+                                                            <div className="flex items-center justify-center gap-3">
+                                                                <span className={`text-3xl sm:text-4xl ${homeWon ? 'font-black text-white' : (isFinished && awayWon ? 'font-bold text-slate-400' : 'font-bold text-slate-200')}`}>
+                                                                    {isFinished ? (match.homeScore ?? '-') : '-'}
+                                                                </span>
+                                                                <span className="text-slate-600 font-bold text-xl">-</span>
+                                                                <span className={`text-3xl sm:text-4xl ${awayWon ? 'font-black text-white' : (isFinished && homeWon ? 'font-bold text-slate-400' : 'font-bold text-slate-200')}`}>
+                                                                    {isFinished ? (match.awayScore ?? '-') : '-'}
+                                                                </span>
+                                                            </div>
+                                                            {hasShootout && (
+                                                                <div className="mt-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase shadow-xs whitespace-nowrap text-center">
+                                                                    {match.homePenaltyScore !== null && match.homePenaltyScore !== undefined && match.awayPenaltyScore !== null && match.awayPenaltyScore !== undefined
+                                                                        ? `(${match.homePenaltyScore}) PEN (${match.awayPenaltyScore})`
+                                                                        : 'Ganó en penales'}
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* Away Team */}

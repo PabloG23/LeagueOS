@@ -32,5 +32,6 @@ public class TeamStandingDTO {
     
     // Form and Points
     private int points;
+    private int extraPoints;
     private List<String> form;
 }
