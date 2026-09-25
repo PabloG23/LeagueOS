@@ -40,9 +40,18 @@ public class MediaController {
             return ResponseEntity.notFound().build();
         }
 
-        // Just return as JPEG for PDF rendering simplicity
+        String lower = key.trim().toLowerCase();
+        String contentType = "image/jpeg";
+        if (lower.endsWith(".png")) {
+            contentType = "image/png";
+        } else if (lower.endsWith(".webp")) {
+            contentType = "image/webp";
+        } else if (lower.endsWith(".svg")) {
+            contentType = "image/svg+xml";
+        }
+
         return ResponseEntity.ok()
-                .header("Content-Type", "image/jpeg")
+                .header("Content-Type", contentType)
                 .header("Cache-Control", "public, max-age=3600")
                 .body(bytes);
     }

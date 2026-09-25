@@ -16,18 +16,33 @@ interface FetchedImage {
 const extractR2Key = (urlOrKey: string): string | null => {
     if (!urlOrKey) return null;
     const clean = urlOrKey.trim();
+
+    // 1. Direct relative keys e.g. "prod/tenants/...", "dev/tenants/...", "tenants/..."
     if (clean.startsWith('dev/tenants/') || clean.startsWith('prod/tenants/') || clean.startsWith('tenants/')) {
-        return clean;
+        try {
+            return decodeURIComponent(clean);
+        } catch {
+            return clean;
+        }
     }
+
+    // 2. Any URL containing "/tenants/" (custom domain, R2 bucket domain, presigned URL, etc.)
+    const tenantsMatch = clean.match(/(?:dev\/|prod\/)?tenants\/[^\s?#]+/);
+    if (tenantsMatch) {
+        try {
+            return decodeURIComponent(tenantsMatch[0]);
+        } catch {
+            return tenantsMatch[0];
+        }
+    }
+
+    // 3. Fallback for r2.cloudflarestorage.com URLs
     if (clean.includes('r2.cloudflarestorage.com/')) {
         try {
             const parsed = new URL(clean);
-            // pathname is e.g. /leagueos-media/dev/tenants/...
             const parts = parsed.pathname.split('/').filter(Boolean);
-            if (parts.length > 1) {
-                return parts.slice(1).join('/');
-            }
-            return parts.join('/');
+            const result = parts.length > 1 ? parts.slice(1).join('/') : parts.join('/');
+            return decodeURIComponent(result);
         } catch (_) {
             return null;
         }
@@ -62,7 +77,7 @@ const resolveImageUrl = (srcKey?: string): string | undefined => {
     }
 };
 
-const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
+const fetchImageAsBase64 = async (url: string, rawFallbackUrl?: string): Promise<FetchedImage> => {
     const toPngDataUrl = (img: HTMLImageElement): FetchedImage => {
         const canvas = document.createElement('canvas');
         canvas.width = img.naturalWidth || img.width || 200;
@@ -83,20 +98,16 @@ const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
-                // WebP, SVG and other formats are not supported by jsPDF natively. Convert to PNG.
-                if (!url.startsWith('data:image/png') && !url.startsWith('data:image/jpeg')) {
-                    resolve(toPngDataUrl(img));
-                } else {
-                    resolve({ dataUrl: url, width: img.width, height: img.height });
-                }
+                // Always convert to PNG via canvas to guarantee 100% jsPDF compatibility
+                resolve(toPngDataUrl(img));
             };
             img.onerror = reject;
             img.src = url;
         });
     }
 
-    try {
-        const fetchUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
+    const tryFetch = async (targetUrl: string): Promise<FetchedImage> => {
+        const fetchUrl = targetUrl.includes('?') ? `${targetUrl}&_t=${Date.now()}` : `${targetUrl}?_t=${Date.now()}`;
         const response = await fetch(fetchUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
@@ -107,20 +118,32 @@ const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
             reader.readAsDataURL(blob);
         });
 
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
-                // If not standard PNG/JPEG (e.g. WebP from INE scanner or SVG), convert via canvas to PNG for jsPDF
-                if (!rawDataUrl.startsWith('data:image/png') && !rawDataUrl.startsWith('data:image/jpeg')) {
+                // ALWAYS convert via canvas to PNG so that jsPDF gets valid PNG bytes,
+                // regardless of whether the original image was WebP, JPEG, PNG or SVG.
+                try {
                     resolve(toPngDataUrl(img));
-                } else {
+                } catch {
                     resolve({ dataUrl: rawDataUrl, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
                 }
             };
-            img.onerror = () => resolve({ dataUrl: rawDataUrl, width: 1, height: 1 });
+            img.onerror = reject;
             img.src = rawDataUrl;
         });
+    };
+
+    try {
+        return await tryFetch(url);
     } catch (err) {
+        // If proxy or primary URL failed, and we have a raw original URL, attempt fetching rawFallbackUrl
+        if (rawFallbackUrl && rawFallbackUrl !== url) {
+            try {
+                return await tryFetch(rawFallbackUrl);
+            } catch (_) {}
+        }
+
         // Fallback using crossOrigin Image and Canvas
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -167,17 +190,18 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
     const resolvedLeagueLogo = resolveImageUrl(targetLeagueLogo);
     if (resolvedLeagueLogo) {
         try {
-            leagueLogoImg = await fetchImageAsBase64(resolvedLeagueLogo);
+            leagueLogoImg = await fetchImageAsBase64(resolvedLeagueLogo, targetLeagueLogo);
         } catch (e) {
             console.error('Failed to load league logo', e);
         }
     }
 
-    const teamLogoUrl = resolveImageUrl(team.signedLogoUrl || team.logoUrl);
+    const rawTeamLogo = team.signedLogoUrl || team.logoUrl;
+    const teamLogoUrl = resolveImageUrl(rawTeamLogo);
     let teamLogoImg: FetchedImage | undefined;
     if (teamLogoUrl) {
         try {
-            teamLogoImg = await fetchImageAsBase64(teamLogoUrl);
+            teamLogoImg = await fetchImageAsBase64(teamLogoUrl, rawTeamLogo);
         } catch (e) {
             console.error('Failed to load team logo', e);
         }
@@ -185,10 +209,11 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
     // 2. Pre-fetch player photos in parallel to speed up generation
     const playerPhotoPromises = players.map(async (player) => {
-        const photoUrl = resolveImageUrl(player.profilePhotoUrl);
+        const rawPhoto = player.profilePhotoUrl;
+        const photoUrl = resolveImageUrl(rawPhoto);
         if (photoUrl) {
             try {
-                return await fetchImageAsBase64(photoUrl);
+                return await fetchImageAsBase64(photoUrl, rawPhoto);
             } catch (e) {
                 console.warn(`Failed to fetch photo for player ${player.firstName} ${player.lastName}`, e);
                 return undefined;

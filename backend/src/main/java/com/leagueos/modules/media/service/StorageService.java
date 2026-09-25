@@ -106,13 +106,23 @@ public class StorageService {
     }
 
     public byte[] getFileBytes(String key) {
-        if (key == null || key.isEmpty()) return null;
+        if (key == null || key.isBlank()) return null;
+        String cleanKey = key.trim().startsWith("/") ? key.trim().substring(1) : key.trim();
         try {
             return s3Client.getObject(software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
                     .bucket(bucketName)
-                    .key(key)
+                    .key(cleanKey)
                     .build()).readAllBytes();
         } catch (Exception e) {
+            try {
+                String decoded = java.net.URLDecoder.decode(cleanKey, java.nio.charset.StandardCharsets.UTF_8);
+                if (!decoded.equals(cleanKey)) {
+                    return s3Client.getObject(software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
+                            .bucket(bucketName)
+                            .key(decoded)
+                            .build()).readAllBytes();
+                }
+            } catch (Exception ignored) {}
             return null;
         }
     }
