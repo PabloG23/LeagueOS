@@ -63,22 +63,32 @@ const resolveImageUrl = (srcKey?: string): string | undefined => {
 };
 
 const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
+    const toPngDataUrl = (img: HTMLImageElement): FetchedImage => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 200;
+        canvas.height = img.naturalHeight || img.height || 200;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            return {
+                dataUrl: canvas.toDataURL('image/png'),
+                width: canvas.width,
+                height: canvas.height
+            };
+        }
+        return { dataUrl: img.src, width: img.width, height: img.height };
+    };
+
     if (url.startsWith('data:')) {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
-                if (url.includes('image/svg')) {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width || 200;
-                    canvas.height = img.height || 200;
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
-                        return;
-                    }
+                // WebP, SVG and other formats are not supported by jsPDF natively. Convert to PNG.
+                if (!url.startsWith('data:image/png') && !url.startsWith('data:image/jpeg')) {
+                    resolve(toPngDataUrl(img));
+                } else {
+                    resolve({ dataUrl: url, width: img.width, height: img.height });
                 }
-                resolve({ dataUrl: url, width: img.width, height: img.height });
             };
             img.onerror = reject;
             img.src = url;
@@ -100,18 +110,12 @@ const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
-                if (rawDataUrl.includes('image/svg')) {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth || img.width || 200;
-                    canvas.height = img.naturalHeight || img.height || 200;
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
-                        return;
-                    }
+                // If not standard PNG/JPEG (e.g. WebP from INE scanner or SVG), convert via canvas to PNG for jsPDF
+                if (!rawDataUrl.startsWith('data:image/png') && !rawDataUrl.startsWith('data:image/jpeg')) {
+                    resolve(toPngDataUrl(img));
+                } else {
+                    resolve({ dataUrl: rawDataUrl, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
                 }
-                resolve({ dataUrl: rawDataUrl, width: img.width, height: img.height });
             };
             img.onerror = () => resolve({ dataUrl: rawDataUrl, width: 1, height: 1 });
             img.src = rawDataUrl;
@@ -122,20 +126,7 @@ const fetchImageAsBase64 = async (url: string): Promise<FetchedImage> => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth || img.width || 200;
-                canvas.height = img.naturalHeight || img.height || 200;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve({
-                        dataUrl: canvas.toDataURL('image/jpeg', 0.9),
-                        width: canvas.width,
-                        height: canvas.height
-                    });
-                } else {
-                    reject(new Error('Canvas context failed'));
-                }
+                resolve(toPngDataUrl(img));
             };
             img.onerror = reject;
             img.src = url;
@@ -230,18 +221,22 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
         // -- Dibujar Logo de la Liga (Centro Superior) --
         if (leagueLogoImg) {
-            const maxW = 28;
-            const maxH = 14;
-            const aspect = leagueLogoImg.width / leagueLogoImg.height;
-            let logoW = maxW;
-            let logoH = maxW / aspect;
-            if (logoH > maxH) {
-                logoH = maxH;
-                logoW = maxH * aspect;
+            try {
+                const maxW = 28;
+                const maxH = 14;
+                const aspect = leagueLogoImg.width / leagueLogoImg.height;
+                let logoW = maxW;
+                let logoH = maxW / aspect;
+                if (logoH > maxH) {
+                    logoH = maxH;
+                    logoW = maxH * aspect;
+                }
+                const logoX = x + (cardWidth - logoW) / 2;
+                const logoY = y + 4.5 + (maxH - logoH) / 2;
+                doc.addImage(leagueLogoImg.dataUrl, 'PNG', logoX, logoY, logoW, logoH);
+            } catch (err) {
+                console.warn('Failed to render league logo in credentials PDF:', err);
             }
-            const logoX = x + (cardWidth - logoW) / 2;
-            const logoY = y + 4.5 + (maxH - logoH) / 2;
-            doc.addImage(leagueLogoImg.dataUrl, logoX, logoY, logoW, logoH);
         } else {
             doc.setTextColor(15, 23, 42); // slate-900 legible sobre blanco
             doc.setFontSize(9);
@@ -254,14 +249,22 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
         const photoSize = 38;
         const photoX = x + (cardWidth - photoSize) / 2;
         const photoY = y + 21;
+        let photoDrawn = false;
 
         if (photoImg) {
-            doc.addImage(photoImg.dataUrl, photoX, photoY, photoSize, photoSize);
-            // Marco deportivo rojo alrededor de la foto
-            doc.setDrawColor(220, 38, 38); // red-600
-            doc.setLineWidth(1.2);
-            doc.rect(photoX, photoY, photoSize, photoSize);
-        } else {
+            try {
+                doc.addImage(photoImg.dataUrl, 'PNG', photoX, photoY, photoSize, photoSize);
+                // Marco deportivo rojo alrededor de la foto
+                doc.setDrawColor(220, 38, 38); // red-600
+                doc.setLineWidth(1.2);
+                doc.rect(photoX, photoY, photoSize, photoSize);
+                photoDrawn = true;
+            } catch (err) {
+                console.warn(`Failed to render photo for player ${player.firstName} ${player.lastName}:`, err);
+            }
+        }
+
+        if (!photoDrawn) {
             // Placeholder limpio sobre fondo blanco
             doc.setFillColor(241, 245, 249); // slate-100
             doc.rect(photoX, photoY, photoSize, photoSize, 'F');
@@ -326,14 +329,18 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
         // -- Logo del Equipo (Abajo a la izquierda) --
         if (teamLogoImg) {
-            const maxLogoH = bottomSectionH - 4;
-            let tLogoW = 14;
-            let tLogoH = 14 * (teamLogoImg.height / teamLogoImg.width);
-            if (tLogoH > maxLogoH) {
-                tLogoH = maxLogoH;
-                tLogoW = maxLogoH * (teamLogoImg.width / teamLogoImg.height);
+            try {
+                const maxLogoH = bottomSectionH - 4;
+                let tLogoW = 14;
+                let tLogoH = 14 * (teamLogoImg.height / teamLogoImg.width);
+                if (tLogoH > maxLogoH) {
+                    tLogoH = maxLogoH;
+                    tLogoW = maxLogoH * (teamLogoImg.width / teamLogoImg.height);
+                }
+                doc.addImage(teamLogoImg.dataUrl, 'PNG', x + 4, y + cardHeight - tLogoH - 3.5, tLogoW, tLogoH);
+            } catch (err) {
+                console.warn('Failed to render team logo in credentials PDF:', err);
             }
-            doc.addImage(teamLogoImg.dataUrl, x + 4, y + cardHeight - tLogoH - 3.5, tLogoW, tLogoH);
         }
 
         // -- Número de Dorsal (Abajo a la derecha en blanco) --
