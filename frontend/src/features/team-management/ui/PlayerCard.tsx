@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Power } from 'lucide-react';
+import { Trash2, Power, Check } from 'lucide-react';
 import { SecureImage } from './SecureImage';
 
 export interface Player {
@@ -25,22 +25,45 @@ interface PlayerCardProps {
     onDiscard?: (id: string, name: string) => void;
     onEdit?: (id: string) => void;
     requireJerseyNumbers?: boolean;
+    /** Selection mode props */
+    isSelected?: boolean;
+    onSelect?: (id: string) => void;
 }
 
-export const PlayerCard = ({ player, onToggleStatus, onDiscard, requireJerseyNumbers }: PlayerCardProps) => {
+export const PlayerCard = ({ player, onToggleStatus, onDiscard, requireJerseyNumbers, isSelected, onSelect }: PlayerCardProps) => {
+    const isSelectionMode = typeof onSelect === 'function';
 
     const isPending = player.status === 'PENDING_VERIFICATION';
     
     return (
-        <div className={`
-            relative p-4 rounded-xl border transition-all duration-300 group h-full flex flex-col
-            ${isPending 
-                ? 'bg-amber-50 border-amber-300 shadow-md ring-1 ring-amber-500/20'
-                : player.isActive
-                    ? 'bg-white border-green-500 shadow-md shadow-green-100/50 ring-1 ring-green-500/20'
-                    : 'bg-slate-50 border-slate-200 grayscale opacity-75 hover:grayscale-0 hover:opacity-100 hover:shadow-md'
-            }
-        `}>
+        <div
+            onClick={isSelectionMode ? (e) => { e.stopPropagation(); onSelect!(player.id); } : undefined}
+            className={`
+                relative p-4 rounded-xl border transition-all duration-300 group h-full flex flex-col
+                ${isSelectionMode ? 'cursor-pointer' : ''}
+                ${isSelectionMode && isSelected
+                    ? 'bg-blue-50 border-blue-500 shadow-md shadow-blue-100/50 ring-2 ring-blue-400/40'
+                    : isPending
+                        ? 'bg-amber-50 border-amber-300 shadow-md ring-1 ring-amber-500/20'
+                        : player.isActive
+                            ? 'bg-white border-green-500 shadow-md shadow-green-100/50 ring-1 ring-green-500/20'
+                            : 'bg-slate-50 border-slate-200 grayscale opacity-75 hover:grayscale-0 hover:opacity-100 hover:shadow-md'
+                }
+            `}
+        >
+
+            {/* Selection Checkbox Overlay */}
+            {isSelectionMode && (
+                <div className={`
+                    absolute top-2.5 left-2.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all z-10
+                    ${isSelected
+                        ? 'bg-blue-600 border-blue-600'
+                        : 'bg-white border-slate-300 group-hover:border-blue-400'
+                    }
+                `}>
+                    {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                </div>
+            )}
 
             {/* Action Menu (Removed for Players) */}
 

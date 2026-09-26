@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle, CheckCircle2, UserX, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle, CheckCircle2, UserX, Clock, ChevronDown, ChevronUp, FileCheck2, X } from 'lucide-react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { TeamDashboardLayout } from './TeamDashboardLayout';
 import { AdminDashboardLayout } from '../../admin/ui/AdminDashboardLayout';
@@ -64,8 +64,12 @@ export const RosterDashboard = () => {
     const { showToast, showConfirm } = useToast();
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [isInactiveCollapsed, setIsInactiveCollapsed] = useState(false);
+    const [isCredentialsMenuOpen, setIsCredentialsMenuOpen] = useState(false);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
+    const credentialsMenuRef = useRef<HTMLDivElement>(null);
 
-    const handleDownloadCredentials = async () => {
+    const handleDownloadCredentials = async (playerSubset?: string[]) => {
         const targetId = resolvedTeamId || teamId;
         if (!settings?.tenantId || !targetId) return;
 
@@ -73,10 +77,14 @@ export const RosterDashboard = () => {
             setIsGeneratingPdf(true);
             const { data: rawPlayers } = await leagueApi.getTeamPlayers(settings.tenantId, targetId);
 
-            const activePlayers = (rawPlayers || []).filter(p => p.status === 'ACTIVE');
+            let activePlayers = (rawPlayers || []).filter((p: any) => p.status === 'ACTIVE');
+
+            if (playerSubset && playerSubset.length > 0) {
+                activePlayers = activePlayers.filter((p: any) => playerSubset.includes(p.id));
+            }
 
             if (activePlayers.length === 0) {
-                showToast('El equipo no tiene jugadores activos para generar credenciales', 'warning');
+                showToast('No hay jugadores seleccionados para generar credenciales', 'warning');
                 return;
             }
             
@@ -104,6 +112,30 @@ export const RosterDashboard = () => {
         } finally {
             setIsGeneratingPdf(false);
         }
+    };
+
+    const handleTogglePlayerSelection = (id: string) => {
+        setSelectedPlayerIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const handleEnterSelectionMode = () => {
+        setIsSelectionMode(true);
+        setSelectedPlayerIds(new Set());
+        setIsCredentialsMenuOpen(false);
+    };
+
+    const handleCancelSelectionMode = () => {
+        setIsSelectionMode(false);
+        setSelectedPlayerIds(new Set());
+    };
+
+    const handleGenerateSelectedPdf = async () => {
+        await handleDownloadCredentials(Array.from(selectedPlayerIds));
+        handleCancelSelectionMode();
     };
 
     // Layout Selection
@@ -380,14 +412,53 @@ export const RosterDashboard = () => {
                     {canEdit && (
                         <div className="flex items-center flex-wrap justify-end gap-3">
                             {isAdminMode && (
-                                <button
-                                    onClick={handleDownloadCredentials}
-                                    disabled={isGeneratingPdf}
-                                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                                    <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'Descargar Credenciales'}</span>
-                                </button>
+                                <div className="relative" ref={credentialsMenuRef}>
+                                    {/* Split Button */}
+                                    <div className="flex items-stretch rounded-lg border border-slate-300 overflow-hidden shadow-sm">
+                                        <button
+                                            onClick={() => handleDownloadCredentials()}
+                                            disabled={isGeneratingPdf}
+                                            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-blue-50 hover:border-blue-400 text-slate-700 hover:text-blue-700 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                        >
+                                            {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                                            <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'Credenciales'}</span>
+                                        </button>
+                                        <div className="w-px bg-slate-200" />
+                                        <button
+                                            onClick={() => setIsCredentialsMenuOpen(v => !v)}
+                                            disabled={isGeneratingPdf}
+                                            className="px-2 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            aria-label="Opciones de descarga"
+                                        >
+                                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCredentialsMenuOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                    </div>
+
+                                    {/* Dropdown Menu */}
+                                    {isCredentialsMenuOpen && (
+                                        <>
+                                            {/* backdrop */}
+                                            <div className="fixed inset-0 z-10" onClick={() => setIsCredentialsMenuOpen(false)} />
+                                            <div className="absolute right-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden">
+                                                <button
+                                                    onClick={() => { handleDownloadCredentials(); setIsCredentialsMenuOpen(false); }}
+                                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                                >
+                                                    <Printer className="w-4 h-4 text-slate-400 shrink-0" />
+                                                    <span className="font-medium">Todos los activos</span>
+                                                </button>
+                                                <div className="h-px bg-slate-100 mx-3" />
+                                                <button
+                                                    onClick={handleEnterSelectionMode}
+                                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                                >
+                                                    <FileCheck2 className="w-4 h-4 text-blue-400 shrink-0" />
+                                                    <span className="font-medium">Seleccionar jugadores…</span>
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             )}
                             <button
                                 onClick={() => {
@@ -451,6 +522,40 @@ export const RosterDashboard = () => {
                     </div>
                 </div>
 
+                {/* Selection Mode Banner */}
+                {isSelectionMode && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
+                                <FileCheck2 className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <p className="text-sm font-semibold text-blue-800">
+                                {selectedPlayerIds.size === 0
+                                    ? 'Selecciona los jugadores para imprimir'
+                                    : `${selectedPlayerIds.size} ${selectedPlayerIds.size === 1 ? 'jugador seleccionado' : 'jugadores seleccionados'}`
+                                }
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                            <button
+                                onClick={handleCancelSelectionMode}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleGenerateSelectedPdf}
+                                disabled={selectedPlayerIds.size === 0 || isGeneratingPdf}
+                                className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                            >
+                                {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
+                                Generar PDF
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Content Sections */}
                 <div className="space-y-10">
                     {/* SECTION: ACTIVOS */}
@@ -464,7 +569,31 @@ export const RosterDashboard = () => {
 
                         {activeFilteredPlayers.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                                {activeFilteredPlayers.map(renderPlayerCard)}
+                                {activeFilteredPlayers.map(player => (
+                                    <div
+                                        key={player.id}
+                                        className="cursor-pointer"
+                                        onClick={() => {
+                                            // In selection mode, PlayerCard handles the click internally
+                                            if (isSelectionMode) return;
+                                            if (player.status === 'PENDING_VERIFICATION' && canEdit) {
+                                                setVerifyingPlayer(player);
+                                                setIsAddModalOpen(true);
+                                            } else if (player.status !== 'PENDING_VERIFICATION') {
+                                                setSelectedPlayer({ ...player, teamName });
+                                            }
+                                        }}
+                                    >
+                                        <PlayerCard
+                                            player={player}
+                                            onToggleStatus={!isSelectionMode && canEdit && player.status !== 'PENDING_VERIFICATION' ? handleToggleStatus : undefined}
+                                            onDiscard={!isSelectionMode && canEdit ? handleDiscardPendingPlayer : undefined}
+                                            requireJerseyNumbers={settings?.requireJerseyNumbers}
+                                            isSelected={isSelectionMode ? selectedPlayerIds.has(player.id) : undefined}
+                                            onSelect={isSelectionMode ? handleTogglePlayerSelection : undefined}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         ) : (
                             <div className="py-8 text-center text-slate-400 bg-slate-50 rounded-xl border-dashed border-2 border-slate-200 text-sm">
