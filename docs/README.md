@@ -1,5 +1,7 @@
 # Bienvenida a LeagueOS
 
+![LeagueOS](assets/logo.png)
+
 LeagueOS es la plataforma para gestionar tu liga deportiva de forma completa: equipos, jugadores, torneos, partidos y resultados, todo en un solo lugar.
 
 Este manual está dirigido a los tres tipos de usuarios de la plataforma:
