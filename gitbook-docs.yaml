@@ -1,0 +1,11 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+site:
+  title: LeagueOS Docs
+  structure:
+    - type: space
+      key: leagueos-user-manual
+      title: Manual de Usuario
+      path: docs
+      default: true
+      content:
+        directory: ./docs
