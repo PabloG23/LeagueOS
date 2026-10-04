@@ -47,6 +47,12 @@ public class StatsService {
     }
 
     @Transactional(readOnly = true)
+    public List<PlayerStatDTO> getTopYellowCardsByPlayerForSeason(List<UUID> seasonIds) {
+        return assignRanks(matchEventRepository.countYellowCardsByPlayerForSeason(seasonIds),
+                PlayerStatDTO::getRedCards, (dto, rank) -> dto.setRank(rank));
+    }
+
+    @Transactional(readOnly = true)
     public List<PlayerStatDTO> getTopRedCardsByPlayerForMatchday(List<UUID> seasonIds, Integer matchday) {
         if (matchday == null) return List.of();
         return assignRanks(matchEventRepository.countRedCardsByPlayerForMatchday(seasonIds, matchday),
@@ -135,6 +141,14 @@ public class StatsService {
 
         List<MatchResultSummaryDTO> matches = matchRepository.findFinishedMatchSummariesBySeasonId(seasonId);
 
+        // Check if any match has phaseGroup set (i.e. Season is currently in Phase 2)
+        boolean hasPhase2Matches = matches.stream().anyMatch(m -> m.getPhaseGroup() != null);
+
+        // If in Phase 2, only compute matches belonging to Phase 2 (clean slate for team standings)
+        List<MatchResultSummaryDTO> activeMatches = hasPhase2Matches
+                ? matches.stream().filter(m -> m.getPhaseGroup() != null).collect(Collectors.toList())
+                : matches;
+
         // Ensure all teams participating in season matches are present in standingsMap
         List<Match> allSeasonMatches = matchRepository.findBySeasonId(seasonId);
         for (Match m : allSeasonMatches) {
@@ -146,13 +160,35 @@ public class StatsService {
             }
         }
 
+        // Attach phase_group from registrations if present
+        for (TeamRegistration reg : registrations) {
+            TeamStandingDTO dto = standingsMap.get(reg.getTeam().getId());
+            if (dto != null) {
+                dto.setPhaseGroup(reg.getPhaseGroup());
+            }
+        }
+
+        // Calculate Fair Play cards per team for this season
+        List<Object[]> cardsPerTeam = matchEventRepository.countTotalCardsByTeamForSeason(seasonId);
+        Map<UUID, Integer> fairPlayMap = new HashMap<>();
+        for (Object[] row : cardsPerTeam) {
+            UUID teamId = (UUID) row[0];
+            Long count = (Long) row[1];
+            fairPlayMap.put(teamId, count != null ? count.intValue() : 0);
+        }
+        standingsMap.forEach((teamId, dto) -> {
+            dto.setFairPlayCards(fairPlayMap.getOrDefault(teamId, 0));
+        });
+
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
         int winPoints = settings.getWinPointsOnWin();
         boolean enableShootoutExtraPoint = settings.isEnableShootoutExtraPoint();
+        String tiebreakerOrder = settings.getTiebreakerOrder() != null ? settings.getTiebreakerOrder() : "PTS_GD_GF_NAME";
+
         SportRulesStrategy rulesStrategy = sportRulesService.getStrategy("SOCCER")
                 .orElseThrow(() -> new IllegalStateException("No se encontró una estrategia de reglas para el deporte SOCCER."));
 
-        for (MatchResultSummaryDTO match : matches) {
+        for (MatchResultSummaryDTO match : activeMatches) {
             if (match.getHomeTeamId() == null || match.getAwayTeamId() == null) continue;
             TeamStandingDTO home = standingsMap.get(match.getHomeTeamId());
             TeamStandingDTO away = standingsMap.get(match.getAwayTeamId());
@@ -174,13 +210,27 @@ public class StatsService {
             }
         });
 
-        // Sort and assign ranks (Points DESC -> GD DESC -> GF DESC -> Team Name ASC)
+        // Comparator based on tenant tiebreaker order:
+        Comparator<TeamStandingDTO> comparator;
+        if ("PTS_GD_GF_FP_NAME".equalsIgnoreCase(tiebreakerOrder)) {
+            // Option B for Metepec: Points DESC -> GD DESC -> GF DESC -> Fair Play (lower cards better) ASC -> Team Name ASC
+            comparator = Comparator
+                    .comparing(TeamStandingDTO::getPoints, Comparator.reverseOrder())
+                    .thenComparing(TeamStandingDTO::getGoalDifference, Comparator.reverseOrder())
+                    .thenComparing(TeamStandingDTO::getGoalsFor, Comparator.reverseOrder())
+                    .thenComparing(TeamStandingDTO::getFairPlayCards)
+                    .thenComparing(TeamStandingDTO::getTeam, String.CASE_INSENSITIVE_ORDER);
+        } else {
+            // Default backward-compatible for Nuestro Deporte & San Lucas: Points DESC -> GD DESC -> GF DESC -> Team Name ASC
+            comparator = Comparator
+                    .comparing(TeamStandingDTO::getPoints, Comparator.reverseOrder())
+                    .thenComparing(TeamStandingDTO::getGoalDifference, Comparator.reverseOrder())
+                    .thenComparing(TeamStandingDTO::getGoalsFor, Comparator.reverseOrder())
+                    .thenComparing(TeamStandingDTO::getTeam, String.CASE_INSENSITIVE_ORDER);
+        }
+
         List<TeamStandingDTO> sorted = standingsMap.values().stream()
-                .sorted(Comparator
-                        .comparing(TeamStandingDTO::getPoints, Comparator.reverseOrder())
-                        .thenComparing(TeamStandingDTO::getGoalDifference, Comparator.reverseOrder())
-                        .thenComparing(TeamStandingDTO::getGoalsFor, Comparator.reverseOrder())
-                        .thenComparing(TeamStandingDTO::getTeam, String.CASE_INSENSITIVE_ORDER))
+                .sorted(comparator)
                 .collect(Collectors.toList());
 
         for (int i = 0; i < sorted.size(); i++) {

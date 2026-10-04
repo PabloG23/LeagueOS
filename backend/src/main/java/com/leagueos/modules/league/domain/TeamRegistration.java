@@ -23,6 +23,12 @@ public class TeamRegistration extends BaseEntity {
     @Column(nullable = false)
     private RegistrationStatus status = RegistrationStatus.PENDING;
 
+    @Column(name = "phase_group")
+    private String phaseGroup;
+
+    @Column(name = "phase_seed")
+    private Integer phaseSeed;
+
     public enum RegistrationStatus {
         PENDING,
         APPROVED,

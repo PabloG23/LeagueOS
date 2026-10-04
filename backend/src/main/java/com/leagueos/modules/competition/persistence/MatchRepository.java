@@ -26,7 +26,7 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 
     @Query("SELECT new com.leagueos.modules.competition.api.dto.MatchResultSummaryDTO(" +
            "m.homeTeam.id, m.homeTeam.name, m.awayTeam.id, m.awayTeam.name, m.homeScore, m.awayScore, m.matchDate, m.isDoubleForfeit, " +
-           "pwt.id, m.homePenaltyScore, m.awayPenaltyScore) " +
+           "pwt.id, m.homePenaltyScore, m.awayPenaltyScore, m.phaseGroup) " +
            "FROM Match m " +
            "LEFT JOIN m.penaltyWinnerTeam pwt " +
            "WHERE m.season.id = :seasonId AND m.status = 'FINISHED' " +

@@ -3,8 +3,17 @@ import {
     createTenantSettings,
     TENANT_NUESTRO_DEPORTE,
     TENANT_SAN_LUCAS,
+    TENANT_METEPEC,
     TENANT_DEFAULT_PLATFORM,
 } from '@/test/helpers/tenantTestUtils';
+import {
+    resolveTenantBySlug,
+    resolveTenantByHostname,
+    resolveTenantById,
+    TENANT_ID_METEPEC,
+    TENANT_ID_NUESTRO_DEPORTE,
+    TENANT_ID_SAN_LUCAS,
+} from '@/features/tenant/config/tenantsRegistry';
 
 describe('TenantSettings — Tenant Isolation', () => {
     // =========================================================================
@@ -49,6 +58,13 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(TENANT_SAN_LUCAS.tenantId).toBe('22222222-2222-2222-2222-222222222222');
             expect(TENANT_SAN_LUCAS.name).toBe('Liga Ejidal de Futbol San Sebastian y San Lucas');
             expect(TENANT_SAN_LUCAS.themeClass).toBe('theme-san-lucas');
+        });
+
+        it('TENANT_METEPEC should have correct identity', () => {
+            expect(TENANT_METEPEC.tenantId).toBe('e39a6b17-5646-452d-929c-ca9a8dc4e44d');
+            expect(TENANT_METEPEC.name).toBe('LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.');
+            expect(TENANT_METEPEC.themeClass).toBe('theme-metepec');
+            expect(TENANT_METEPEC.logoUrl).toBe('/ligaMunicipalMetepec.jpeg');
         });
 
         it('TENANT_DEFAULT_PLATFORM should have neutral identity', () => {
@@ -143,4 +159,34 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(settings2.name).toBe('League 2'); // untouched
         });
     });
+
+    // =========================================================================
+    // Centralized Tenant Registry Resolution Tests
+    // =========================================================================
+
+    describe('Centralized Tenant Registry Resolution', () => {
+        it('should resolve tenants by slug', () => {
+            expect(resolveTenantBySlug('ligasanlucas')?.tenantId).toBe(TENANT_ID_SAN_LUCAS);
+            expect(resolveTenantBySlug('sanlucas')?.tenantId).toBe(TENANT_ID_SAN_LUCAS);
+            expect(resolveTenantBySlug('liganuestrodeporte')?.tenantId).toBe(TENANT_ID_NUESTRO_DEPORTE);
+            expect(resolveTenantBySlug('nuestrodeporte')?.tenantId).toBe(TENANT_ID_NUESTRO_DEPORTE);
+            expect(resolveTenantBySlug('ligametepec')?.tenantId).toBe(TENANT_ID_METEPEC);
+            expect(resolveTenantBySlug('metepec')?.tenantId).toBe(TENANT_ID_METEPEC);
+            expect(resolveTenantBySlug('unknown-league')).toBeUndefined();
+        });
+
+        it('should resolve tenants by hostname', () => {
+            expect(resolveTenantByHostname('nuestrodeporte.com')?.tenantId).toBe(TENANT_ID_NUESTRO_DEPORTE);
+            expect(resolveTenantByHostname('app.nuestrodeporte.mx')?.tenantId).toBe(TENANT_ID_NUESTRO_DEPORTE);
+            expect(resolveTenantByHostname('league-os-weld.vercel.app')).toBeUndefined();
+        });
+
+        it('should resolve tenants by tenantId', () => {
+            expect(resolveTenantById(TENANT_ID_SAN_LUCAS)?.primarySlug).toBe('ligaSanLucas');
+            expect(resolveTenantById(TENANT_ID_NUESTRO_DEPORTE)?.primarySlug).toBe('ligaNuestroDeporte');
+            expect(resolveTenantById(TENANT_ID_METEPEC)?.primarySlug).toBe('ligaMetepec');
+            expect(resolveTenantById('random-uuid')).toBeUndefined();
+        });
+    });
 });
+

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { Shield, Lock, User, AlertCircle, Clock, Info } from 'lucide-react';
 import api from '@/shared/api/league-api';
+import { resolveTenantById } from '@/features/tenant/config/tenantsRegistry';
 
 export const LoginPage = () => {
     const navigate = useNavigate();
@@ -69,29 +70,22 @@ export const LoginPage = () => {
 
             const isCustomHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('nuestrodeporte');
 
-            // If user belongs to San Lucas but logged in on nuestrodeporte.com domain, redirect to platform
-            if (data.tenantId === '22222222-2222-2222-2222-222222222222' && isCustomHost) {
+            // Determine slug from Tenant ID (Trust backend over URL)
+            const matchedTenant = data.tenantId ? resolveTenantById(data.tenantId) : undefined;
+            const targetSlug = matchedTenant?.primarySlug || (data.tenantId === '22222222-2222-2222-2222-222222222222' ? 'ligaSanLucas' : (data.tenantId === '11111111-1111-1111-1111-111111111111' ? 'ligaNuestroDeporte' : leagueSlug));
+
+            // If user belongs to another tenant (San Lucas, Metepec, etc.) but logged in on nuestrodeporte.com domain, redirect to platform
+            if (isCustomHost && data.tenantId && data.tenantId !== '11111111-1111-1111-1111-111111111111') {
                 if (data.role === 'ROLE_TEAM_REP') {
-                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/team-dashboard';
+                    window.location.href = `https://league-os-weld.vercel.app/${targetSlug}/team-dashboard`;
                 } else if (data.role === 'ROLE_LEAGUE_ADMIN') {
-                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/admin/teams';
+                    window.location.href = `https://league-os-weld.vercel.app/${targetSlug}/admin/teams`;
                 } else if (data.role === 'ROLE_REFEREE') {
-                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas/referee/dashboard';
+                    window.location.href = `https://league-os-weld.vercel.app/${targetSlug}/referee/dashboard`;
                 } else {
-                    window.location.href = 'https://league-os-weld.vercel.app/ligaSanLucas';
+                    window.location.href = `https://league-os-weld.vercel.app/${targetSlug}`;
                 }
                 return;
-            }
-
-            // Determine slug from Tenant ID (Trust backend over URL)
-            let targetSlug = 'ligaNuestroDeporte';
-            if (data.tenantId === '22222222-2222-2222-2222-222222222222') {
-                targetSlug = 'ligaSanLucas';
-            } else if (data.tenantId === '11111111-1111-1111-1111-111111111111') {
-                targetSlug = 'ligaNuestroDeporte';
-            } else {
-                // Fallback to URL or default
-                targetSlug = leagueSlug;
             }
 
             // Redirect based on role and current tenant

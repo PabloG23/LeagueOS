@@ -64,9 +64,15 @@ public class IneExtractionService {
             "  \"clave_elector\": \"clave de elector de 18 caracteres alfanuméricos\",\n" +
             "  \"sexo\": \"H o M\",\n" +
             "  \"fecha_nacimiento\": \"fecha en formato YYYY-MM-DD\",\n" +
+            "  \"vigencia_anio\": 2030,\n" +
             "  \"ine_rotation\": \"NORMAL\",\n" +
             "  \"face_box\": { \"x\": 0.1, \"y\": 0.1, \"w\": 0.2, \"h\": 0.2 }\n" +
             "}\n\n" +
+            "Reglas críticas para VIGENCIA / AÑO:\n" +
+            "- Extrae el año en que VENCE la credencial (año final de vigencia como entero de 4 dígitos):\n" +
+            "  * Si dice un rango como 'VIGENCIA 2025-2035' o '2025 - 2035' -> extrae 2035 (el año final/hasta cuándo es válida).\n" +
+            "  * Si dice 'VIGENCIA 2030' o 'DESDE 2020 HASTA 2030' -> extrae 2030.\n" +
+            "  * Si no es legible o no está visible, pon null.\n\n" +
             "Reglas críticas para CURP vs CLAVE DE ELECTOR:\n" +
             "- NO confundas la CLAVE DE ELECTOR con el CURP. Son dos códigos distintos en la credencial.\n" +
             "- El CURP siempre está explícitamente etiquetado como \"CURP\".\n" +

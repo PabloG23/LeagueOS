@@ -83,6 +83,31 @@ export const TENANT_SAN_LUCAS = createTenantSettings({
     ],
 });
 
+/** Liga Municipal de Futbol de Metepec A.C. — Pistache & Obsidiana */
+export const TENANT_METEPEC = createTenantSettings({
+    tenantId: 'e39a6b17-5646-452d-929c-ca9a8dc4e44d',
+    name: 'LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.',
+    logoUrl: '/ligaMunicipalMetepec.jpeg',
+    themeClass: 'theme-metepec',
+    enableAutoSuspensions: false,
+    allowTransfers: false,
+    enableShootoutExtraPoint: false,
+    showDisciplineWidget: true,
+    showOffenseDefenseWidgets: true,
+    footerAddress: 'Calle Josefa Ortiz de Domínguez 501, Coaxustenco, 52140 Metepec, Méx.',
+    footerPhone: '+52 722 960 9949',
+    footerBackgroundClass: 'bg-[#0E1210]',
+    slogan: 'Forjando el talento y la pasión deportiva en nuestra comunidad.',
+    matchTickerBackgroundClass: 'bg-[#0E1210]',
+    matchCardBackgroundClass: 'bg-[#1C261F]',
+    matchTickerTextClass: 'text-[#93C572]',
+    enableRoundRobinFixtures: true,
+    boardMembers: [
+        { role: 'Presidente', name: 'Luis Rendón' },
+        { role: 'Vicepresidente', name: 'Héctor Gómez' },
+    ],
+});
+
 /** Neutral LeagueOS platform (no specific tenant) */
 export const TENANT_DEFAULT_PLATFORM = createTenantSettings({
     tenantId: '00000000-0000-0000-0000-000000000000',
@@ -94,3 +119,4 @@ export const TENANT_DEFAULT_PLATFORM = createTenantSettings({
     allowTransfers: false,
     showDisciplineWidget: false,
 });
+

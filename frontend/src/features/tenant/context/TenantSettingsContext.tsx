@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useLocation, matchPath } from 'react-router-dom';
+import {
+    resolveTenantBySlug,
+    resolveTenantByHostname,
+    resolveTenantById,
+    TenantDefinition
+} from '../config/tenantsRegistry';
 
 export interface BoardMember {
     role: string;
@@ -84,7 +90,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
     // Effect to apply theme class, favicon and title dynamically
     useEffect(() => {
         // Remove any existing theme classes first
-        document.body.classList.remove('theme-san-lucas', 'theme-nuestro-deporte');
+        document.body.classList.remove('theme-san-lucas', 'theme-nuestro-deporte', 'theme-metepec');
 
         if (settings.themeClass) {
             document.body.classList.add(settings.themeClass);
@@ -148,113 +154,46 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 const normalizedSlug = slug?.toLowerCase();
                 const isSystemRoute = normalizedSlug === 'admin' || normalizedSlug === 'login' || normalizedSlug === 'team-dashboard' || normalizedSlug === 'referee';
 
-                if (!isSystemRoute && (normalizedSlug === 'ligasanlucas' || normalizedSlug === 'sanlucas')) {
-                    tenantId = '22222222-2222-2222-2222-222222222222';
-                    name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
-                    logoUrl = "/san_lucas_logo.png";
-                    themeClass = 'theme-san-lucas';
-                    allowTransfers = false; // Disable transfers for San Lucas
-                    footerAddress = "Zaragoza S/N, San Sebastián, Metepec C.P. 52146";
-                    footerPhone = "722 634 4082";
-                    footerBackgroundClass = "bg-emerald-800";
-                    slogan = "Uniendo tradición y pasión en cada encuentro deportivo.";
-                    facebookUrl = "https://www.facebook.com/share/1DrWt7euqW/?mibextid=wwXIfr";
-                    instagramUrl = undefined;
-                    twitterUrl = undefined;
+                // Dynamic Tenant Resolution using centralized registry
+                let matchedTenant: TenantDefinition | undefined;
 
-                    // New Match Ticker Styles for San Lucas
-                    matchTickerBackgroundClass = "bg-emerald-800";
-                    matchCardBackgroundClass = "bg-sidebar";
-                    matchTickerTextClass = "text-black";
+                if (!isSystemRoute && normalizedSlug) {
+                    matchedTenant = resolveTenantBySlug(normalizedSlug);
+                }
 
-                    boardMembers = [
-                        { role: "Presidente", name: "Alejo Reyes Mejía" },
-                        { role: "Secretario", name: "Eduardo García Díaz" },
-                        { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
-                        { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
-                    ];
-                } else if (isNuestroDeporteHost || (!isSystemRoute && (normalizedSlug === 'liganuestrodeporte' || normalizedSlug === 'nuestrodeporte'))) {
-                    tenantId = '11111111-1111-1111-1111-111111111111';
-                    name = "Liga Nuestro Deporte";
-                    logoUrl = "/nuestro_deporte_logo.png";
-                    themeClass = 'theme-nuestro-deporte';
-                    allowTransfers = true;
-                    footerAddress = "Liga Nuestro Deporte";
-                    footerPhone = "722 170 3324";
-                    footerBackgroundClass = "bg-[#060B1C]";
-                    slogan = "Tu pasión, nuestro deporte.";
-                    facebookUrl = "https://www.facebook.com/share/1LNGV1MDGz/?mibextid=wwXIfr";
-                    instagramUrl = "https://www.instagram.com/liga.nuestrodeporte?igsi=MTVzZ2FzbmNuN2szbg==";
-                    twitterUrl = "";
+                if (!matchedTenant && isNuestroDeporteHost) {
+                    matchedTenant = resolveTenantByHostname(hostname);
+                }
 
-                    matchTickerBackgroundClass = "bg-[#040812]";
-                    matchCardBackgroundClass = "bg-[#0D1A3C]";
-                    matchTickerTextClass = "text-white";
-
-                    boardMembers = [
-                        { role: "Presidente", name: "Mike Portocarrero" },
-                        { role: "Vicepresidente", name: "Carlos Mejía" },
-                        { role: "Secretario", name: "Rubén Hidalgo" },
-                        { role: "Tesorero", name: "Alberto Suárez" },
-                        { role: "Comisión Disciplinaria", name: "Igor Almaraz y Emmanuel Sánchez" },
-                        { role: "Marketing", name: "MGX Studio" },
-                        { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
-                    ];
-                    enableRoundRobinFixtures = true;
-                    enableShootoutExtraPoint = true;
-                } else {
-                    // Check if authenticated user has a stored tenant in localStorage
+                if (!matchedTenant) {
                     const storedTenantId = localStorage.getItem('tenantId');
-                    if (storedTenantId === '22222222-2222-2222-2222-222222222222') {
-                        tenantId = '22222222-2222-2222-2222-222222222222';
-                        name = "Liga Ejidal de Futbol San Sebastian y San Lucas";
-                        logoUrl = "/san_lucas_logo.png";
-                        themeClass = 'theme-san-lucas';
-                        allowTransfers = false;
-                        footerAddress = "Zaragoza S/N, San Sebastián, Metepec C.P. 52146";
-                        footerPhone = "722 634 4082";
-                        footerBackgroundClass = "bg-emerald-800";
-                        slogan = "Uniendo tradición y pasión en cada encuentro deportivo.";
-                        facebookUrl = "https://www.facebook.com/share/1DrWt7euqW/?mibextid=wwXIfr";
-                        matchTickerBackgroundClass = "bg-emerald-800";
-                        matchCardBackgroundClass = "bg-sidebar";
-                        matchTickerTextClass = "text-black";
-                        boardMembers = [
-                            { role: "Presidente", name: "Alejo Reyes Mejía" },
-                            { role: "Secretario", name: "Eduardo García Díaz" },
-                            { role: "Tesorero", name: "Ma. de Lourdes Inés Careaga Díaz" },
-                            { role: "Consejo de Vigilancia", name: "Bartolo Gerardo Ramos García" }
-                        ];
-                    } else if (storedTenantId === '11111111-1111-1111-1111-111111111111') {
-                        tenantId = '11111111-1111-1111-1111-111111111111';
-                        name = "Liga Nuestro Deporte";
-                        logoUrl = "/nuestro_deporte_logo.png";
-                        themeClass = 'theme-nuestro-deporte';
-                        allowTransfers = true;
-                        footerAddress = "Liga Nuestro Deporte";
-                        footerPhone = "722 170 3324";
-                        footerBackgroundClass = "bg-[#060B1C]";
-                        slogan = "Tu pasión, nuestro deporte.";
-                        facebookUrl = "https://www.facebook.com/share/1LNGV1MDGz/?mibextid=wwXIfr";
-                        instagramUrl = "https://www.instagram.com/liga.nuestrodeporte?igsi=MTVzZ2FzbmNuN2szbg==";
-                        twitterUrl = "";
-                        matchTickerBackgroundClass = "bg-[#040812]";
-                        matchCardBackgroundClass = "bg-[#0D1A3C]";
-                        matchTickerTextClass = "text-white";
-                        boardMembers = [
-                            { role: "Presidente", name: "Mike Portocarrero" },
-                            { role: "Vicepresidente", name: "Carlos Mejía" },
-                            { role: "Secretario", name: "Rubén Hidalgo" },
-                            { role: "Tesorero", name: "Alberto Suárez" },
-                            { role: "Comisión Disciplinaria", name: "Igor Almaraz y Emmanuel Sánchez" },
-                            { role: "Marketing", name: "MGX Studio" },
-                            { role: "Staff Mesa Directiva", name: "Oliver Tello y Mario Lagunas" }
-                        ];
-                        enableRoundRobinFixtures = true;
-                        enableShootoutExtraPoint = true;
-                    } else {
-                        console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
+                    if (storedTenantId) {
+                        matchedTenant = resolveTenantById(storedTenantId);
                     }
+                }
+
+                if (matchedTenant) {
+                    const s = matchedTenant.settings;
+                    tenantId = matchedTenant.tenantId;
+                    if (s.name) name = s.name;
+                    if (s.logoUrl) logoUrl = s.logoUrl;
+                    if (s.themeClass) themeClass = s.themeClass;
+                    if (s.allowTransfers !== undefined) allowTransfers = s.allowTransfers;
+                    if (s.footerAddress) footerAddress = s.footerAddress;
+                    if (s.footerPhone !== undefined) footerPhone = s.footerPhone;
+                    if (s.footerBackgroundClass) footerBackgroundClass = s.footerBackgroundClass;
+                    if (s.slogan) slogan = s.slogan;
+                    if (s.facebookUrl !== undefined) facebookUrl = s.facebookUrl;
+                    if (s.instagramUrl !== undefined) instagramUrl = s.instagramUrl;
+                    if (s.twitterUrl !== undefined) twitterUrl = s.twitterUrl;
+                    if (s.matchTickerBackgroundClass) matchTickerBackgroundClass = s.matchTickerBackgroundClass;
+                    if (s.matchCardBackgroundClass) matchCardBackgroundClass = s.matchCardBackgroundClass;
+                    if (s.matchTickerTextClass) matchTickerTextClass = s.matchTickerTextClass;
+                    if (s.enableRoundRobinFixtures !== undefined) enableRoundRobinFixtures = s.enableRoundRobinFixtures;
+                    if (s.enableShootoutExtraPoint !== undefined) enableShootoutExtraPoint = s.enableShootoutExtraPoint;
+                    if (s.boardMembers) boardMembers = s.boardMembers;
+                } else {
+                    console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
                 }
 
                 // Set Header via Interceptor (More reliable than defaults)

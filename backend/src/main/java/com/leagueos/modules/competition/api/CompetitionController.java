@@ -5,6 +5,7 @@ import com.leagueos.modules.competition.service.MatchSchedulerService;
 import com.leagueos.shared.context.TenantContext;
 import com.leagueos.shared.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,22 @@ public class CompetitionController {
 
     private final MatchSchedulerService schedulerService;
     private final com.leagueos.modules.media.service.StorageService storageService;
+    private final com.leagueos.modules.competition.service.CompetitionPhaseService phaseService;
+
+    @PostMapping("/seasons/{seasonId}/split-phase")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    public ResponseEntity<Void> splitSeasonIntoPhase2(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @PathVariable UUID seasonId) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            phaseService.splitSeasonIntoPhase2(seasonId);
+            return ResponseEntity.ok().build();
+        } finally {
+            TenantContext.clear();
+        }
+    }
 
     @PostMapping("/matches")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")

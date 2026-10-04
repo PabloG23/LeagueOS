@@ -88,6 +88,7 @@ class PlayerRegistrationServiceTest {
 
         defaultSettings = new TenantSettings();
         defaultSettings.setRequireCurp(true);
+        defaultSettings.setRequireJerseyNumbers(true);
         defaultSettings.setAllowMultipleTeamsPerPlayer(false);
     }
 

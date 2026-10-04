@@ -32,6 +32,7 @@ public class MatchService {
     private final TeamRepository teamRepository;
     private final TenantSettingsService tenantSettingsService;
     private final PlayoffService playoffService;
+    private final com.leagueos.modules.registration.persistence.PlayerTournamentSuspensionRepository playerTournamentSuspensionRepository;
 
     @Transactional
     public void submitMatchReport(UUID matchId, List<MatchEvent> events) {
@@ -68,6 +69,8 @@ public class MatchService {
 
                 if (event.getEventType() == MatchEvent.MatchEventType.RED_CARD) {
                     applyAutoSuspension(event, match);
+                } else if (event.getEventType() == MatchEvent.MatchEventType.YELLOW_CARD) {
+                    applyYellowCardDiscipline(event, match, settings);
                 }
             }
         }
@@ -235,5 +238,68 @@ public class MatchService {
         int currentMatchday = match.getMatchday() != null ? match.getMatchday() : 0;
         player.setSuspendedUntilMatchday(currentMatchday + suspensionDuration);
         playerRepository.save(player);
+
+        // Also record tournament-level suspension for isolated tournament tracking
+        if (match.getSeason() != null && playerTournamentSuspensionRepository != null) {
+            com.leagueos.modules.registration.domain.PlayerTournamentSuspension pts = new com.leagueos.modules.registration.domain.PlayerTournamentSuspension();
+            pts.setTenantId(match.getTenantId());
+            pts.setPlayer(player);
+            pts.setSeason(match.getSeason());
+            pts.setTotalMatchesAssigned(suspensionDuration);
+            pts.setRemainingMatches(suspensionDuration);
+            pts.setReason(event.getNotes() != null && !event.getNotes().isBlank() ? event.getNotes() : "Tarjeta Roja");
+            playerTournamentSuspensionRepository.save(pts);
+
+            check12MatchRule(player, match.getSeason().getId(), match.getTenantId());
+        }
+    }
+
+    private void applyYellowCardDiscipline(MatchEvent event, Match match, TenantSettings settings) {
+        if (event.getPlayer() == null || match.getSeason() == null || settings == null) return;
+        if (!settings.isEnableAccumulatedYellowSuspensions()) return;
+
+        int cardsPerSuspension = settings.getYellowCardsPerSuspension() > 0 ? settings.getYellowCardsPerSuspension() : 5;
+        int count = matchEventRepository.countYellowCardsByPlayerAndSeason(event.getPlayer().getId(), match.getSeason().getId()) + 1;
+
+        if (count % cardsPerSuspension == 0) {
+            Player player = playerRepository.findById(event.getPlayer().getId()).orElse(null);
+            if (player == null) return;
+
+            com.leagueos.modules.registration.domain.PlayerTournamentSuspension pts = new com.leagueos.modules.registration.domain.PlayerTournamentSuspension();
+            pts.setTenantId(match.getTenantId());
+            pts.setPlayer(player);
+            pts.setSeason(match.getSeason());
+            pts.setTotalMatchesAssigned(1);
+            pts.setRemainingMatches(1);
+            pts.setReason("Acumulación de " + count + " tarjetas amarillas");
+            playerTournamentSuspensionRepository.save(pts);
+
+            // Also increment matchday suspension for safety
+            int currentMatchday = match.getMatchday() != null ? match.getMatchday() : 0;
+            player.setSuspendedUntilMatchday(currentMatchday + 1);
+            playerRepository.save(player);
+
+            check12MatchRule(player, match.getSeason().getId(), match.getTenantId());
+        }
+    }
+
+    private void check12MatchRule(Player player, UUID seasonId, UUID tenantId) {
+        TenantSettings settings = tenantSettingsService.getCurrentSettings();
+        if (settings == null) return;
+        int maxAllowed = settings.getMaxAccumulatedSuspensionMatchdays() > 0 ? settings.getMaxAccumulatedSuspensionMatchdays() : 12;
+
+        Integer totalAssigned = playerTournamentSuspensionRepository.sumTotalMatchesAssignedByPlayerAndSeason(player.getId(), seasonId);
+        if (totalAssigned != null && totalAssigned >= maxAllowed) {
+            // Rule of 12 reached: automatically ban player for the rest of this tournament
+            com.leagueos.modules.registration.domain.PlayerTournamentSuspension ban = new com.leagueos.modules.registration.domain.PlayerTournamentSuspension();
+            ban.setTenantId(tenantId);
+            ban.setPlayer(player);
+            ban.setSeason(matchRepository.findById(seasonId).map(Match::getSeason).orElse(null));
+            ban.setRemainingMatches(999);
+            ban.setTotalMatchesAssigned(999);
+            ban.setReason("Suspendido el resto del torneo por acumular " + totalAssigned + " partidos de suspensión (Regla de 12)");
+            ban.setTournamentBanned(true);
+            playerTournamentSuspensionRepository.save(ban);
+        }
     }
 }

@@ -61,6 +61,21 @@ public class PublicStatsController {
         }
     }
 
+    @GetMapping("/discipline/yellow-cards")
+    public ResponseEntity<List<PlayerStatDTO>> getYellowCardsDisciplineStats(
+            @RequestHeader("X-Tenant-ID") UUID tenantId) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            List<Season> activeSeasons = getActiveSeasons(tenantId);
+            if (activeSeasons.isEmpty()) return ResponseEntity.ok(List.of());
+
+            List<UUID> seasonIds = activeSeasons.stream().map(Season::getId).collect(Collectors.toList());
+            return ResponseEntity.ok(statsService.getTopYellowCardsByPlayerForSeason(seasonIds));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     @GetMapping("/discipline/matchday")
     public ResponseEntity<List<PlayerStatDTO>> getMatchdayDisciplineStats(
             @RequestHeader("X-Tenant-ID") UUID tenantId) {

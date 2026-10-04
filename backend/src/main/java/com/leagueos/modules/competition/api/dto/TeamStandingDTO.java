@@ -34,4 +34,8 @@ public class TeamStandingDTO {
     private int points;
     private int extraPoints;
     private List<String> form;
+
+    // Fair Play & Phase
+    private int fairPlayCards;
+    private String phaseGroup;
 }

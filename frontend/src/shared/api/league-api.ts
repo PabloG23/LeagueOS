@@ -247,6 +247,16 @@ export interface MatchPreviewDTO {
     matchDate: string | null;
 }
 
+export interface PlayerYellowCardsDTO {
+    playerId: string;
+    playerName: string;
+    teamId: string;
+    teamName: string;
+    yellowCards: number;
+    matchesSuspended: number;
+    profilePhotoUrl?: string;
+}
+
 export const leagueApi = {
     // Leagues & Teams
     getTenants: () => api.get<Tenant[]>('/leagues/tenants'),
@@ -416,6 +426,11 @@ export const leagueApi = {
     // Statistics
     getTopScorers: (tenantId: string) =>
         api.get<PlayerScorerDTO[]>('/public/stats/scorers/top', { headers: { 'X-Tenant-ID': tenantId } }),
+    getTopYellowCards: (tenantId: string, seasonId?: string) =>
+        api.get<PlayerYellowCardsDTO[]>('/public/stats/discipline/yellow-cards', {
+            headers: { 'X-Tenant-ID': tenantId },
+            params: seasonId ? { seasonId } : {}
+        }),
     getGeneralRedCards: (tenantId: string) =>
         api.get<any[]>('/public/stats/discipline/general', { headers: { 'X-Tenant-ID': tenantId } }),
     getMatchdayRedCards: (tenantId: string) =>

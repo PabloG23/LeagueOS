@@ -28,6 +28,8 @@ export type TeamStanding = {
     goalDifference: number;
     points: number;
     extraPoints?: number;
+    fairPlayCards?: number;
+    phaseGroup?: 'CAMPEONATO' | 'PERMANENCIA';
     form: ('W' | 'D' | 'L')[];
 };
 
@@ -80,6 +82,20 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
     }, [data, activeTab]);
 
     const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+    const isMetepec = settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
+
+    const hasPhaseGroups = useMemo(() => {
+        return currentData.some(item => !!item.phaseGroup);
+    }, [currentData]);
+
+    const [phaseFilter, setPhaseFilter] = useState<'ALL' | 'CAMPEONATO' | 'PERMANENCIA'>('ALL');
+
+    const filteredData = useMemo(() => {
+        if (!hasPhaseGroups || phaseFilter === 'ALL') return currentData;
+        return currentData.filter(item => item.phaseGroup === phaseFilter);
+    }, [currentData, hasPhaseGroups, phaseFilter]);
+
+    const hasFairPlay = isMetepec;
 
     const columns = useMemo<ColumnDef<TeamStanding>[]>(
         () => [
@@ -91,10 +107,14 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                         <span className={cn(
                             "w-7 h-7 flex items-center justify-center rounded-lg font-black text-sm",
                             info.getValue<number>() === 1
-                                ? isNuestroDeporte ? "bg-red-600 text-white shadow-md shadow-red-500/30" : "bg-amber-100 text-amber-900 border border-amber-300"
-                                : info.getValue<number>() <= 8
-                                    ? isNuestroDeporte ? "bg-blue-950/60 text-blue-300 border border-blue-800/50" : "bg-slate-100 text-slate-700"
-                                    : isNuestroDeporte ? "text-slate-500" : "text-slate-400"
+                                ? isMetepec
+                                    ? "bg-[#93C572] text-[#0E1210] shadow-sm font-black"
+                                    : isNuestroDeporte ? "bg-red-600 text-white shadow-md shadow-red-500/30" : "bg-amber-100 text-amber-900 border border-amber-300"
+                                : isMetepec && (phaseFilter === 'PERMANENCIA' || !hasPhaseGroups) && filteredData.length >= 4 && info.getValue<number>() > filteredData.length - 3
+                                    ? "bg-rose-100 text-rose-800 border border-rose-300 font-bold"
+                                    : info.getValue<number>() <= 8
+                                        ? isNuestroDeporte ? "bg-blue-950/60 text-blue-300 border border-blue-800/50" : "bg-slate-100 text-slate-700"
+                                        : isNuestroDeporte ? "text-slate-500" : "text-slate-400"
                         )}>
                             {info.getValue<number>()}
                         </span>
@@ -167,6 +187,15 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                     );
                 },
             },
+            ...(hasFairPlay ? [{
+                accessorKey: 'fairPlayCards' as const,
+                header: () => <div className="text-center" title="Fair Play (Menos tarjetas recibidas)">FP</div>,
+                cell: (info: any) => (
+                    <div className={cn("text-center font-semibold text-xs whitespace-nowrap", isNuestroDeporte ? "text-slate-400" : "text-slate-600")}>
+                        {info.getValue() ?? 0}
+                    </div>
+                ),
+            }] : []),
             {
                 accessorKey: 'points',
                 header: ({ column }) => {
@@ -188,11 +217,11 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 cell: (info) => <RecentFormCell form={info.getValue<('W' | 'D' | 'L')[]>()} />,
             },
         ],
-        [leagueSlug, isNuestroDeporte]
+        [leagueSlug, isNuestroDeporte, isMetepec, hasFairPlay, filteredData.length, phaseFilter, hasPhaseGroups]
     );
 
     const table = useReactTable({
-        data: currentData,
+        data: filteredData,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -215,9 +244,36 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                         "font-bold text-lg flex items-center gap-2 whitespace-nowrap",
                         isNuestroDeporte ? "text-white font-['Bebas_Neue'] tracking-wider text-xl" : "text-slate-800"
                     )}>
-                        <Trophy className={cn("w-5 h-5 drop-shadow-sm", isNuestroDeporte ? "text-red-400" : "text-amber-500")} fill="currentColor" />
+                        <Trophy className={cn("w-5 h-5 drop-shadow-sm", isMetepec ? "text-[#93C572]" : (isNuestroDeporte ? "text-red-400" : "text-amber-500"))} fill="currentColor" />
                         Tabla General
                     </h3>
+
+                    {/* Phase group filter (Fase 2) */}
+                    {hasPhaseGroups && (
+                        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+                            <button
+                                type="button"
+                                onClick={() => setPhaseFilter('ALL')}
+                                className={cn("px-2.5 py-1 rounded-md transition-all", phaseFilter === 'ALL' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900")}
+                            >
+                                Todos
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPhaseFilter('CAMPEONATO')}
+                                className={cn("px-2.5 py-1 rounded-md transition-all", phaseFilter === 'CAMPEONATO' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900")}
+                            >
+                                🏆 Campeonato
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPhaseFilter('PERMANENCIA')}
+                                className={cn("px-2.5 py-1 rounded-md transition-all", phaseFilter === 'PERMANENCIA' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900")}
+                            >
+                                ⚠️ Permanencia
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className={cn(
@@ -227,6 +283,9 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-emerald-500" /> Ganado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-slate-400" /> Empatado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-500" /> Perdido</span>
+                    {isMetepec && (
+                        <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-400" /> Descenso</span>
+                    )}
                 </div>
             </div>
 
@@ -307,10 +366,16 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                                         "border-blue-900/15 hover:bg-blue-950/30",
                                                         i < 8 && "bg-blue-950/20"
                                                     )
-                                                    : cn(
-                                                        "border-slate-50 hover:bg-slate-50",
-                                                        i < 8 && "bg-emerald-100"
-                                                    )
+                                                    : isMetepec
+                                                        ? cn(
+                                                            "border-slate-100 hover:bg-[#93C572]/5",
+                                                            i === 0 && "bg-[#93C572]/10",
+                                                            (phaseFilter === 'PERMANENCIA' || !hasPhaseGroups) && filteredData.length >= 4 && i >= filteredData.length - 3 && "bg-rose-50/50"
+                                                        )
+                                                        : cn(
+                                                            "border-slate-50 hover:bg-slate-50",
+                                                            i < 8 && "bg-emerald-100"
+                                                        )
                                             )}
                                         >
                                             {row.getVisibleCells().map((cell) => (

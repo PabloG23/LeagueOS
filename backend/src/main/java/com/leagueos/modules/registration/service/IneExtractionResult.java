@@ -19,6 +19,8 @@ public class IneExtractionResult {
     private LocalDate fechaNacimiento;
     @JsonProperty("face_box")
     private FaceBox faceBox;
+    @JsonProperty("vigencia_anio")
+    private Integer vigenciaAnio;
     /** How the INE text is oriented in the image: NORMAL | ROTATED_90_CW | UPSIDE_DOWN | ROTATED_90_CCW */
     @JsonProperty("ine_rotation")
     private String ineRotation = "NORMAL";

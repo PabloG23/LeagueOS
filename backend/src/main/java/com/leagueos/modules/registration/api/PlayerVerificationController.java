@@ -34,6 +34,7 @@ public class PlayerVerificationController {
     private final PlayerRegistrationService playerRegistrationService;
     private final com.leagueos.modules.league.persistence.TeamRepository teamRepository;
     private final com.leagueos.modules.registration.persistence.SeasonRosterRepository seasonRosterRepository;
+    private final com.leagueos.modules.tenant.service.TenantSettingsService tenantSettingsService;
 
     private UUID resolveAndValidateTeamId(CustomUserDetails userDetails, UUID requestedTeamId) {
         if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
@@ -126,6 +127,22 @@ public class PlayerVerificationController {
         request.setTeamId(effectiveTeamId);
         request.setJerseyNumber(jerseyNumber);
         request.setIsForeign(false);
+
+        // Check INE validity if tenant enforces it
+        com.leagueos.modules.tenant.domain.TenantSettings settings = tenantSettingsService.getCurrentSettings();
+        boolean forcePendingVerification = false;
+        if (settings != null && settings.isRejectExpiredIne()) {
+            Integer vigencia = extractedData.getVigenciaAnio();
+            int currentYear = LocalDate.now().getYear();
+            if (vigencia != null) {
+                if (vigencia < currentYear) {
+                    throw new BusinessRuleException("La credencial INE se encuentra vencida (Vigencia: " + vigencia + ").");
+                }
+            } else {
+                log.warn("No se pudo detectar el año de vigencia del INE para el jugador '{}'. Pasará a PENDING_VERIFICATION.", extractedData.getNombre());
+                forcePendingVerification = true;
+            }
+        }
 
         playerRegistrationService.validateRegistrationPreconditions(request, effectiveTeamId, tenantId);
 

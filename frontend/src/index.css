@@ -124,6 +124,40 @@
     --sidebar: 228 72% 10%;           /* #091030 — Navy para sidebar */
     --sidebar-foreground: 0 0% 100%;
   }
+
+  /* Theme: Liga Municipal de Futbol de Metepec A.C. (Pistache & Obsidiana) */
+  .theme-metepec {
+    --background: 80 15% 97%;          /* #F7F9F5 Blanco hueso */
+    --foreground: 140 10% 8%;           /* #0E1210 Obsidiana suave */
+
+    --card: 0 0% 100%;
+    --card-foreground: 140 10% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 140 10% 8%;
+
+    --primary: 96 44% 61%;             /* #93C572 Pistache principal */
+    --primary-foreground: 140 10% 6%;
+
+    --secondary: 140 10% 93%;
+    --secondary-foreground: 140 10% 10%;
+
+    --muted: 80 10% 92%;
+    --muted-foreground: 140 10% 35%;
+
+    --accent: 43 55% 54%;              /* #C9A54A Dorado Metepec */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 96 20% 85%;
+    --input: 96 20% 85%;
+    --ring: 96 44% 61%;
+
+    --sidebar: 140 10% 6%;             /* #0E1210 Obsidiana profunda */
+    --sidebar-foreground: 0 0% 100%;
+  }
 }
 
 @layer base {

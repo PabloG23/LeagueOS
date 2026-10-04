@@ -90,6 +90,9 @@ public class Match extends BaseEntity {
     @JoinColumn(name = "penalty_winner_team_id")
     private Team penaltyWinnerTeam;
 
+    @Column(name = "phase_group")
+    private String phaseGroup;
+
     @jakarta.persistence.Transient
     private String reportPhotoSignedUrl;
 

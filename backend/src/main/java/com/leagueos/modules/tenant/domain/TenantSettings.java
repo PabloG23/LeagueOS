@@ -42,4 +42,22 @@ public class TenantSettings extends BaseEntity {
 
     @Column(name = "enable_shootout_extra_point")
     private boolean enableShootoutExtraPoint = false;
+
+    @Column(name = "tiebreaker_order")
+    private String tiebreakerOrder = "PTS_GD_GF_NAME";
+
+    @Column(name = "allow_admin_exceed_roster_limit")
+    private boolean allowAdminExceedRosterLimit = false;
+
+    @Column(name = "reject_expired_ine")
+    private boolean rejectExpiredIne = false;
+
+    @Column(name = "enable_accumulated_yellow_suspensions")
+    private boolean enableAccumulatedYellowSuspensions = false;
+
+    @Column(name = "yellow_cards_per_suspension")
+    private int yellowCardsPerSuspension = 5;
+
+    @Column(name = "max_accumulated_suspension_matchdays")
+    private int maxAccumulatedSuspensionMatchdays = 12;
 }

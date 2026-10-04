@@ -64,10 +64,12 @@ public class PlayerRegistrationService {
                 PlayerStatus.ACTIVE
         );
 
-        if (currentActivePlayers >= activeSeason.getMaxActivePlayersPerTeam()) {
-            throw new BusinessRuleException(
-                    "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
-            );
+        if (!canCurrentUserExceedLimit()) {
+            if (currentActivePlayers >= activeSeason.getMaxActivePlayersPerTeam()) {
+                throw new BusinessRuleException(
+                        "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
+                );
+            }
         }
 
         roster.setStatus(PlayerStatus.ACTIVE);
@@ -211,12 +213,19 @@ public class PlayerRegistrationService {
                     .count();
             validateActivePlayerLimit(activeSeason, teamId, (int) currentActiveCount, 1);
 
-            if (request.getJerseyNumber() == null) {
-                throw new BusinessRuleException("El número de playera/dorsal es obligatorio.");
-            }
-            Set<Integer> existingJerseys = extractActiveJerseySet(existingRosters);
-            if (existingJerseys.contains(request.getJerseyNumber())) {
-                throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
+            if (settings.isRequireJerseyNumbers()) {
+                if (request.getJerseyNumber() == null) {
+                    throw new BusinessRuleException("El número de playera/dorsal es obligatorio.");
+                }
+                Set<Integer> existingJerseys = extractActiveJerseySet(existingRosters);
+                if (existingJerseys.contains(request.getJerseyNumber())) {
+                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
+                }
+            } else if (request.getJerseyNumber() != null) {
+                Set<Integer> existingJerseys = extractActiveJerseySet(existingRosters);
+                if (existingJerseys.contains(request.getJerseyNumber())) {
+                    throw new BusinessRuleException("El dorsal " + request.getJerseyNumber() + " ya está ocupado por otro jugador en el equipo.");
+                }
             }
         }
     }
@@ -292,10 +301,12 @@ public class PlayerRegistrationService {
         }
 
         long currentActiveCount = existingRosters.stream().filter(r -> r.getStatus() == PlayerStatus.ACTIVE).count();
-        if (currentActiveCount + validRequests.size() > activeSeason.getMaxActivePlayersPerTeam()) {
-            throw new BusinessRuleException(
-                    "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
-            );
+        if (!canCurrentUserExceedLimit()) {
+            if (currentActiveCount + validRequests.size() > activeSeason.getMaxActivePlayersPerTeam()) {
+                throw new BusinessRuleException(
+                        "El equipo ya ha alcanzado el límite máximo de " + activeSeason.getMaxActivePlayersPerTeam() + " jugadores activos."
+                );
+            }
         }
 
         // Sets for O(1) duplicate checks instead of repeating Stream.concat
@@ -564,11 +575,29 @@ public class PlayerRegistrationService {
     }
 
     private void validateActivePlayerLimit(Season season, UUID teamId, int current, int incoming) {
-        if (current + incoming > season.getMaxActivePlayersPerTeam()) {
-            throw new BusinessRuleException(
-                    "El equipo ya ha alcanzado el límite máximo de " + season.getMaxActivePlayersPerTeam() + " jugadores activos."
-            );
+        if (!canCurrentUserExceedLimit()) {
+            if (current + incoming > season.getMaxActivePlayersPerTeam()) {
+                throw new BusinessRuleException(
+                        "El equipo ya ha alcanzado el límite máximo de " + season.getMaxActivePlayersPerTeam() + " jugadores activos."
+                );
+            }
         }
+    }
+
+    private boolean canCurrentUserExceedLimit() {
+        try {
+            TenantSettings settings = tenantSettingsService.getCurrentSettings();
+            if (settings == null || !settings.isAllowAdminExceedRosterLimit()) {
+                return false;
+            }
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getAuthorities() != null) {
+                return auth.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_LEAGUE_ADMIN"));
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     private Person buildAndSavePerson(String firstName, String lastName, String curp, java.time.LocalDate birthDate, String photoUrl, UUID tenantId) {

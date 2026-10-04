@@ -30,11 +30,52 @@ public class DataInitializer implements CommandLineRunner {
         log.info("====== STARTING DEV DATA INITIALIZATION ======");
         UUID tenantNuestroDeporte = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID tenantSanLucas = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        UUID tenantMetepec = UUID.fromString("e39a6b17-5646-452d-929c-ca9a8dc4e44d");
 
         createTenantSettingsAndAdmin(tenantNuestroDeporte, "admin_liga", "Administrador Nuestro Deporte", true, null);
         createTenantSettingsAndAdmin(tenantSanLucas, "admin_sanlucas", "Administrador San Lucas", false, "theme-san-lucas");
+        createMetepecTenantSettingsAndAdmin(tenantMetepec, "admin_metepec", "Luis Rendon", "luisMetepec2026", "theme-metepec");
 
         log.info("====== DONE SEEDING DEV DATA ======");
+    }
+
+    private void createMetepecTenantSettingsAndAdmin(UUID tenantId, String adminUsername,
+                                                     String representativeName, String rawPassword, String theme) {
+        if (tenantSettingsRepository.findByTenantId(tenantId).isEmpty()) {
+            TenantSettings s = new TenantSettings();
+            s.setTenantId(tenantId);
+            s.setThemeClass(theme);
+            s.setShowDisciplineWidget(true);
+            s.setShowOffenseDefenseWidgets(true);
+            s.setRequireJerseyNumbers(false);
+            s.setMinMatchesForPlayoffs(0);
+            s.setEnableShootoutExtraPoint(false);
+            s.setTiebreakerOrder("PTS_GD_GF_FP_NAME");
+            s.setAllowAdminExceedRosterLimit(true);
+            s.setRejectExpiredIne(true);
+            s.setEnableAccumulatedYellowSuspensions(true);
+            s.setYellowCardsPerSuspension(5);
+            s.setMaxAccumulatedSuspensionMatchdays(12);
+            tenantSettingsRepository.save(s);
+        }
+
+        if (userRepository.findByUsername(adminUsername).isEmpty()) {
+            Person adminPerson = new Person();
+            adminPerson.setFirstName(representativeName);
+            adminPerson.setLastName("");
+            adminPerson.setTenantId(tenantId);
+            adminPerson = personRepository.save(adminPerson);
+
+            User admin = new User();
+            admin.setUsername(adminUsername);
+            admin.setPassword(passwordEncoder.encode(rawPassword));
+            admin.setRawPassword(rawPassword);
+            admin.setName(representativeName);
+            admin.setRole(Role.ROLE_LEAGUE_ADMIN);
+            admin.setTenantId(tenantId.toString());
+            admin.setPersonId(adminPerson.getId());
+            userRepository.save(admin);
+        }
     }
 
     private void createTenantSettingsAndAdmin(UUID tenantId, String adminUsername,

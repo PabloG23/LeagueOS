@@ -103,7 +103,8 @@ export const RosterDashboard = () => {
             await generateCredentialsPdf({
                 team: { id: targetId, name: teamName, logoUrl: teamLogo } as any,
                 players: activePlayers,
-                leagueLogoUrl: settings.logoUrl
+                leagueLogoUrl: settings.logoUrl,
+                requireJerseyNumbers: settings.requireJerseyNumbers
             });
             showToast('Credenciales generadas con éxito', 'success');
         } catch (error: any) {
@@ -216,8 +217,11 @@ export const RosterDashboard = () => {
     }, [teamId, isTeamRepMode, settings?.tenantId]);
 
 
+    const isMetepec = settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
     const isSanLucas = settings?.tenantId === '22222222-2222-2222-2222-222222222222';
-    const maxActivePlayers = isSanLucas ? 25 : 30;
+    const isTeamRepRestricted = isMetepec && isTeamRepMode;
+    const METEPEC_REP_LIMIT_MSG = 'Has alcanzado el límite de 20 jugadores. Para registrar más, contacta al administrador de la liga.';
+    const maxActivePlayers = isMetepec ? (isTeamRepMode ? 20 : 999) : (isSanLucas ? 25 : 30);
     const activePlayersCount = players.filter(p => p.isActive).length;
     const inactivePlayersCount = players.filter(p => !p.isActive && p.status !== 'PENDING_VERIFICATION').length;
     const pendingPlayersCount = players.filter(p => p.status === 'PENDING_VERIFICATION').length;
@@ -229,7 +233,7 @@ export const RosterDashboard = () => {
         if (!player) return;
 
         if (!player.isActive && activePlayersCount >= maxActivePlayers) {
-            showToast('¡Límite de jugadores activos alcanzado!', 'error');
+            showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : '¡Límite de jugadores activos alcanzado!', 'error');
             return;
         }
 
@@ -284,7 +288,7 @@ export const RosterDashboard = () => {
         if (!settings?.tenantId || !targetId) return;
 
         if (activePlayersCount >= maxActivePlayers) {
-            showToast(`¡Límite de jugadores alcanzado! Máximo ${maxActivePlayers} activos.`, 'error');
+            showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : `¡Límite de jugadores alcanzado! Máximo ${maxActivePlayers} activos.`, 'error');
             return;
         }
 
@@ -309,7 +313,9 @@ export const RosterDashboard = () => {
         if (!settings?.tenantId || !targetId) return;
 
         if (activePlayersCount + parsedPlayers.length > maxActivePlayers) {
-            const errorMsg = `No se pueden registrar ${parsedPlayers.length} jugadores. El equipo tiene ${activePlayersCount} activos y el límite es ${maxActivePlayers}.`;
+            const errorMsg = isTeamRepRestricted
+                ? METEPEC_REP_LIMIT_MSG
+                : `No se pueden registrar ${parsedPlayers.length} jugadores. El equipo tiene ${activePlayersCount} activos y el límite es ${maxActivePlayers}.`;
             showToast(errorMsg, 'error');
             throw new Error(errorMsg);
         }
@@ -454,7 +460,7 @@ export const RosterDashboard = () => {
                             <button
                                 onClick={() => {
                                     if (activePlayersCount >= maxActivePlayers) {
-                                        showToast(`El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de importar más.`, 'error');
+                                        showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : `El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de importar más.`, 'error');
                                         return;
                                     }
                                     setIsMassUploadModalOpen(true);
@@ -467,7 +473,7 @@ export const RosterDashboard = () => {
                             <button
                                 onClick={() => {
                                     if (activePlayersCount >= maxActivePlayers) {
-                                        showToast(`El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de registrar otro.`, 'error');
+                                        showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : `El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de registrar otro.`, 'error');
                                         return;
                                     }
                                     setIsAddModalOpen(true);
@@ -480,6 +486,16 @@ export const RosterDashboard = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Banner de alerta de límite alcanzado para delegados en Metepec */}
+                {isTeamRepRestricted && activePlayersCount >= 20 && (
+                    <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-3 text-amber-800 dark:text-amber-300 shadow-sm animate-fadeIn">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600" />
+                        <span className="text-sm font-medium">
+                            {METEPEC_REP_LIMIT_MSG}
+                        </span>
+                    </div>
+                )}
 
                 {/* Combined Overview Widget */}
                 {/* Integrates both Roster Stats and Rep Info */}

@@ -1,19 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { MatchdayCarousel } from './MatchdayCarousel';
 import { StandingsTable, TeamStanding } from './StandingsTable';
 import { TopScorersWidget } from './TopScorersWidget';
+import { TopDefenseWidget } from './TopDefenseWidget';
+import { TopYellowCardsWidget } from './TopYellowCardsWidget';
 import { LeadershipSection } from './LeadershipSection';
 import { GlobalFooter } from './GlobalFooter';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { FullCalendarModal } from './FullCalendarModal';
 import { SponsorsCarousel } from './SponsorsCarousel';
-import { leagueApi, Season, Match, PlayerScorerDTO } from '@/shared/api/league-api';
+import { leagueApi, Season, Match, PlayerScorerDTO, PlayerYellowCardsDTO } from '@/shared/api/league-api';
 
 export const LeagueDashboard = () => {
     const { settings } = useTenantSettings();
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
+    const isMetepec = settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
 
     const [finalStandingsData, setStandingsData] = useState<TeamStanding[] | Record<string, TeamStanding[]>>([]);
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
@@ -24,6 +27,8 @@ export const LeagueDashboard = () => {
 
     const [topScorers, setTopScorers] = useState<PlayerScorerDTO[]>([]);
     const [loadingScorers, setLoadingScorers] = useState(true);
+    const [yellowCardsData, setYellowCardsData] = useState<PlayerYellowCardsDTO[]>([]);
+    const [loadingYellowCards, setLoadingYellowCards] = useState(true);
 
     useEffect(() => {
         if (!settings?.tenantId) return;
@@ -52,7 +57,25 @@ export const LeagueDashboard = () => {
                 console.error("Error fetching top scorers", err);
             })
             .finally(() => setLoadingScorers(false));
-    }, [settings?.tenantId]);
+
+        // Fetch yellow cards leaderboard (Metepec only)
+        if (settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d') {
+            leagueApi.getTopYellowCards(settings.tenantId)
+                .then(res => setYellowCardsData(res.data || []))
+                .catch(err => console.error("Error fetching yellow cards", err))
+                .finally(() => setLoadingYellowCards(false));
+        }
+    }, [settings?.tenantId, settings?.themeClass]);
+
+    const defenseData = useMemo(() => {
+        const standingsList = Array.isArray(finalStandingsData)
+            ? finalStandingsData
+            : Object.values(finalStandingsData).flat();
+        return standingsList.map(s => ({
+            team: s.team,
+            goalsAgainst: s.goalsAgainst
+        }));
+    }, [finalStandingsData]);
 
     useEffect(() => {
         const fetchStandings = async () => {
@@ -121,6 +144,12 @@ export const LeagueDashboard = () => {
 
                     <div className="lg:col-span-3 flex flex-col gap-6">
                         <TopScorersWidget scorers={topScorers} loading={loadingScorers} />
+                        {isMetepec && defenseData.length > 0 && (
+                            <TopDefenseWidget data={defenseData} />
+                        )}
+                        {isMetepec && (
+                            <TopYellowCardsWidget data={yellowCardsData} loading={loadingYellowCards} />
+                        )}
                     </div>
                 </div>
 

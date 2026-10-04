@@ -58,4 +58,20 @@ public interface MatchEventRepository extends JpaRepository<MatchEvent, UUID> {
 
     @Query("SELECT e.player.id, COUNT(DISTINCT e.match.id) FROM MatchEvent e WHERE e.player.tenantId = :tenantId GROUP BY e.player.id")
     List<Object[]> countMatchesGroupedByPlayer(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT t.id, COUNT(e) FROM MatchEvent e JOIN e.match m JOIN e.team t " +
+           "WHERE (e.eventType = 'YELLOW_CARD' OR e.eventType = 'RED_CARD') AND m.season.id = :seasonId " +
+           "GROUP BY t.id")
+    List<Object[]> countTotalCardsByTeamForSeason(@Param("seasonId") UUID seasonId);
+
+    @Query("SELECT new com.leagueos.modules.competition.api.dto.PlayerStatDTO(p.id, CONCAT(per.firstName, ' ', per.lastName), t.name, t.id, COUNT(e), 0) " +
+           "FROM MatchEvent e JOIN e.match m JOIN e.player p JOIN p.person per JOIN e.team t " +
+           "WHERE e.eventType = 'YELLOW_CARD' AND m.season.id IN :seasonIds " +
+           "GROUP BY p.id, per.firstName, per.lastName, t.name, t.id " +
+           "ORDER BY COUNT(e) DESC")
+    List<PlayerStatDTO> countYellowCardsByPlayerForSeason(@Param("seasonIds") List<UUID> seasonIds);
+
+    @Query("SELECT COUNT(e) FROM MatchEvent e JOIN e.match m " +
+           "WHERE e.player.id = :playerId AND e.eventType = 'YELLOW_CARD' AND m.season.id = :seasonId")
+    int countYellowCardsByPlayerAndSeason(@Param("playerId") UUID playerId, @Param("seasonId") UUID seasonId);
 }
