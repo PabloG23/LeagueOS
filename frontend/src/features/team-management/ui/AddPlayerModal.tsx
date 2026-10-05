@@ -388,18 +388,18 @@ export const AddPlayerModal = ({ isOpen, onClose, teamId, tenantId, requireJerse
                                 </div>
                             )}
 
-                            {requireJerseyNumbers && (
-                                <div className="space-y-1 mt-4">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase">Dorsal / Playera *</label>
-                                    <input
-                                        type="number"
-                                        value={jerseyNumber}
-                                        onChange={e => setJerseyNumber(e.target.value)}
-                                        className="w-full px-3 py-2 bg-slate-50 text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
-                                        placeholder="Ej. 10"
-                                    />
-                                </div>
-                            )}
+                            <div className="space-y-1 mt-4">
+                                <label className="text-xs font-semibold text-slate-500 uppercase">
+                                    Dorsal / Playera {requireJerseyNumbers ? '*' : '(Opcional)'}
+                                </label>
+                                <input
+                                    type="number"
+                                    value={jerseyNumber}
+                                    onChange={e => setJerseyNumber(e.target.value)}
+                                    className="w-full px-3 py-2 bg-slate-50 text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
+                                    placeholder={requireJerseyNumbers ? "Ej. 10" : "Ej. 10 (opcional)"}
+                                />
+                            </div>
                         </form>
                     )}
                 </div>

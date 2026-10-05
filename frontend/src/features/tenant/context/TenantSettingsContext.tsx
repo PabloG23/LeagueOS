@@ -139,6 +139,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 let matchTickerTextClass = "text-primary";
                 let enableRoundRobinFixtures = true;
                 let enableShootoutExtraPoint = false;
+                let requireJerseyNumbers = false;
 
                 console.log(`[TenantContext] Analyzing URL: ${location.pathname}, Hostname: ${window.location.hostname}`);
 
@@ -191,6 +192,7 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     if (s.matchTickerTextClass) matchTickerTextClass = s.matchTickerTextClass;
                     if (s.enableRoundRobinFixtures !== undefined) enableRoundRobinFixtures = s.enableRoundRobinFixtures;
                     if (s.enableShootoutExtraPoint !== undefined) enableShootoutExtraPoint = s.enableShootoutExtraPoint;
+                    if (s.requireJerseyNumbers !== undefined) requireJerseyNumbers = s.requireJerseyNumbers;
                     if (s.boardMembers) boardMembers = s.boardMembers;
                 } else {
                     console.log(`[TenantContext] No slug or custom domain detected, using neutral LeagueOS platform settings`);
@@ -235,6 +237,9 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     matchCardBackgroundClass,
                     matchTickerTextClass,
                     enableRoundRobinFixtures,
+                    requireJerseyNumbers: matchedTenant?.settings?.requireJerseyNumbers !== undefined 
+                        ? matchedTenant.settings.requireJerseyNumbers 
+                        : ((responseData as any)?.requireJerseyNumbers ?? requireJerseyNumbers),
                     tenantId // <--- CRUCIAL: explicitly set tenantId
                 });
             } catch (error) {

@@ -38,6 +38,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             enableShootoutExtraPoint: false,
             showDisciplineWidget: true,
             showOffenseDefenseWidgets: false,
+            requireJerseyNumbers: true,
             boardMembers: [
                 { role: "Presidente", name: "Alejo Reyes Mejía" },
                 { role: "Secretario", name: "Eduardo García Díaz" },
@@ -57,6 +58,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             logoUrl: "/nuestro_deporte_logo.png",
             themeClass: 'theme-nuestro-deporte',
             allowTransfers: true,
+            requireJerseyNumbers: true,
             footerAddress: "Liga Nuestro Deporte",
             footerPhone: "722 170 3324",
             footerBackgroundClass: "bg-[#060B1C]",
@@ -92,6 +94,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             logoUrl: "/ligaMunicipalMetepec.jpeg",
             themeClass: 'theme-metepec',
             allowTransfers: false,
+            requireJerseyNumbers: false,
             footerAddress: "Calle Josefa Ortiz de Domínguez 501, Coaxustenco, 52140 Metepec, Méx.",
             footerPhone: "+52 722 960 9949",
             footerBackgroundClass: "bg-[#0E1210]",

@@ -371,7 +371,7 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
         }
 
         // -- Número de Dorsal (Abajo a la derecha en blanco) --
-        if (options.requireJerseyNumbers !== false && player.jerseyNumber !== undefined && player.jerseyNumber !== null) {
+        if (player.jerseyNumber !== undefined && player.jerseyNumber !== null) {
             doc.setFontSize(32);
             doc.setFont("helvetica", "bolditalic");
             doc.setTextColor(255, 255, 255); // white

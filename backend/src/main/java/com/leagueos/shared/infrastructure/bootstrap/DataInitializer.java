@@ -86,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
             s.setThemeClass(theme);
             s.setShowDisciplineWidget(isPrimary);
             s.setShowOffenseDefenseWidgets(isPrimary);
-            s.setRequireJerseyNumbers(!isPrimary);
+            s.setRequireJerseyNumbers(true); // Mandatory for Nuestro Deporte & San Lucas
             s.setMinMatchesForPlayoffs(5);
             s.setEnableShootoutExtraPoint(isPrimary);
             tenantSettingsRepository.save(s);
