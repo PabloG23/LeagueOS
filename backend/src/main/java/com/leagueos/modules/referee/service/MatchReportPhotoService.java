@@ -61,6 +61,22 @@ public class MatchReportPhotoService {
             throw new IllegalArgumentException("You are not assigned as the referee for this match");
         }
 
+        return saveAndUploadPhoto(match, imageBytes, contentType, tenantId);
+    }
+
+    @Transactional
+    public RefereeMatchDTO uploadMatchReportPhotoByAdmin(UUID matchId, byte[] imageBytes, String contentType, UUID tenantId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found: " + matchId));
+
+        if (!match.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Unauthorized tenant access");
+        }
+
+        return saveAndUploadPhoto(match, imageBytes, contentType, tenantId);
+    }
+
+    private RefereeMatchDTO saveAndUploadPhoto(Match match, byte[] imageBytes, String contentType, UUID tenantId) {
         String extension = ".jpg";
         if (contentType != null) {
             if (contentType.contains("png")) extension = ".png";

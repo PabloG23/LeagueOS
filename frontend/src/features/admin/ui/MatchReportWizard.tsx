@@ -1,7 +1,23 @@
-import { useState, useMemo, useEffect } from 'react';
-import { X, Shirt, Square, Save, ArrowRight, ArrowLeft, Search, Shield } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { 
+    X, 
+    Shirt, 
+    Square, 
+    Save, 
+    ArrowRight, 
+    ArrowLeft, 
+    Search, 
+    Shield,
+    FileText,
+    UploadCloud,
+    CheckCircle2,
+    Eye,
+    RefreshCw,
+    Loader2
+} from 'lucide-react';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Player } from '@/shared/api/league-api';
+import { MatchReportPhotoModal } from '@/shared/components/MatchReportPhotoModal';
 
 const SoccerBall = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -59,6 +75,46 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
     const [penaltyWinnerTeamId, setPenaltyWinnerTeamId] = useState<string | null>(
         match.penaltyWinnerTeamId || (match as any).penaltyWinnerTeam?.id || null
     );
+
+    // Photo Report State & Handlers (Admin Upload)
+    const [currentMatch, setCurrentMatch] = useState<Match>(match);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const [isViewingPhoto, setIsViewingPhoto] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const hasPhoto = Boolean(currentMatch.hasReportPhoto || currentMatch.reportPhotoUrl);
+
+    const handleTriggerUpload = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+            fileInputRef.current.click();
+        }
+    };
+
+    const handlePhotoFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !settings?.tenantId) return;
+
+        if (file.size > 15 * 1024 * 1024) {
+            showToast('La imagen es demasiado pesada (máximo 15MB).', 'error');
+            return;
+        }
+
+        setIsUploadingPhoto(true);
+        try {
+            const res = await leagueApi.uploadAdminMatchReportPhoto(settings.tenantId, currentMatch.id, file);
+            showToast('Foto de la cédula subida exitosamente.', 'success');
+            setCurrentMatch(prev => ({
+                ...prev,
+                hasReportPhoto: true,
+                reportPhotoUrl: res.data.reportPhotoUrl,
+            }));
+        } catch (err: any) {
+            console.error('Error uploading match report photo:', err);
+            showToast(err.response?.data?.message || 'Error al subir la foto de la cédula.', 'error');
+        } finally {
+            setIsUploadingPhoto(false);
+        }
+    };
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -500,22 +556,75 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
                 {/* Header */}
-                <div className="p-5 px-6 border-b border-slate-100 flex items-center justify-between bg-white z-10 shrink-0">
-                    <div>
-                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
-                            Cédula Digital
-                            <span className="text-xs font-black text-indigo-700 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 uppercase tracking-wider">
+                <div className="p-4 sm:p-5 px-4 sm:px-6 border-b border-slate-100 flex items-center justify-between bg-white z-10 shrink-0 gap-3">
+                    <div className="min-w-0">
+                        <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                            <span className="truncate">Cédula Digital</span>
+                            <span className="text-[10px] sm:text-xs font-black text-indigo-700 px-2.5 sm:px-3 py-0.5 sm:py-1 bg-indigo-50 rounded-full border border-indigo-100 uppercase tracking-wider shrink-0">
                                 Paso {step} de 2
                             </span>
                         </h2>
-                        <p className="text-xs font-bold text-slate-500 mt-0.5">
+                        <p className="text-[11px] sm:text-xs font-bold text-slate-500 mt-0.5 truncate">
                             {step === 1 && "Registra asistencia, goles y tarjetas de cada plantel."}
                             {step === 2 && "Confirma y valida el resultado final del encuentro."}
                         </p>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
+
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        {/* Header Photo Actions */}
+                        {hasPhoto ? (
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsViewingPhoto(true)}
+                                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all shadow-2xs hover:scale-102"
+                                    title="Ver foto de la cédula arbitral oficial"
+                                >
+                                    <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span className="hidden sm:inline">Ver Cédula</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleTriggerUpload}
+                                    disabled={isUploadingPhoto}
+                                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors disabled:opacity-50"
+                                    title="Reemplazar foto de la cédula"
+                                >
+                                    {isUploadingPhoto ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
+                                    ) : (
+                                        <RefreshCw className="w-3.5 h-3.5 text-slate-600" />
+                                    )}
+                                    <span className="hidden sm:inline">Cambiar</span>
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleTriggerUpload}
+                                disabled={isUploadingPhoto}
+                                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all shadow-2xs hover:scale-102 disabled:opacity-50"
+                                title="Adjuntar foto de la cédula física"
+                            >
+                                {isUploadingPhoto ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Subiendo...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UploadCloud className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">+ Adjuntar Cédula</span>
+                                        <span className="sm:hidden">+ Cédula</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
+
+                        <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -556,6 +665,75 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                                     />
                                     <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                                 </label>
+                            </div>
+
+                            {/* Physical Match Report Upload Banner (Admin Cédula Upload) */}
+                            <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-2xs">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                        hasPhoto ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-blue-50 text-blue-600 border border-blue-200'
+                                    }`}>
+                                        {hasPhoto ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider truncate">
+                                                Foto de Cédula Arbitral
+                                            </h4>
+                                            {hasPhoto && (
+                                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.2 rounded-full shrink-0">
+                                                    Adjunta
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                                            {hasPhoto 
+                                                ? "Acta oficial registrada para este partido." 
+                                                : "Sube el acta física firmada por el árbitro para respaldo oficial y transparencia."}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {hasPhoto && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsViewingPhoto(true)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-colors border border-emerald-200"
+                                        >
+                                            <Eye className="w-3.5 h-3.5" />
+                                            <span>Ver Cédula</span>
+                                        </button>
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={handleTriggerUpload}
+                                        disabled={isUploadingPhoto}
+                                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-2xs disabled:opacity-50 ${
+                                            hasPhoto
+                                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                                                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'
+                                        }`}
+                                    >
+                                        {isUploadingPhoto ? (
+                                            <>
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                <span>Subiendo...</span>
+                                            </>
+                                        ) : hasPhoto ? (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                <span>Cambiar Imagen</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <UploadCloud className="w-3.5 h-3.5" />
+                                                <span>Subir Archivo</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1 min-h-0">
@@ -902,6 +1080,23 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                     }
                 </div>
             </div>
+
+            {/* Hidden File Picker for Cédula Upload (Normal Image Picker, no camera capture) */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handlePhotoFileSelected}
+                accept="image/*"
+                className="hidden"
+            />
+
+            {/* Match Report Photo Modal Viewer with Zoom & Rotate */}
+            <MatchReportPhotoModal
+                isOpen={isViewingPhoto}
+                onClose={() => setIsViewingPhoto(false)}
+                tenantId={settings?.tenantId}
+                match={currentMatch}
+            />
         </div>
     );
 };

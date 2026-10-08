@@ -198,4 +198,24 @@ public class RefereeController {
             TenantContext.clear();
         }
     }
+
+    @PostMapping("/api/admin/matches/{matchId}/report-photo")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    public ResponseEntity<RefereeMatchDTO> uploadAdminMatchReportPhoto(
+            @RequestHeader("X-Tenant-ID") UUID tenantId,
+            @PathVariable UUID matchId,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        FileValidationUtils.validateImageFile(file);
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(matchReportPhotoService.uploadMatchReportPhotoByAdmin(
+                    matchId,
+                    file.getBytes(),
+                    file.getContentType(),
+                    tenantId
+            ));
+        } finally {
+            TenantContext.clear();
+        }
+    }
 }

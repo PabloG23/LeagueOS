@@ -168,6 +168,25 @@ class MatchReportPhotoServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("You are not assigned as the referee");
         }
+
+        @Test
+        @DisplayName("admin should successfully upload report photo even without referee entity")
+        void adminUploadSuccess() {
+            match.setReportPhotoUrl("tenant/referees/matchReport/old_admin.jpg");
+
+            when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+            when(storageService.buildTenantKey(eq(TENANT_A), eq("referees/matchReport"), anyString()))
+                    .thenReturn("tenant/referees/matchReport/admin_key.jpg");
+            when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            byte[] imageBytes = new byte[]{4, 5, 6};
+            RefereeMatchDTO dto = matchReportPhotoService.uploadMatchReportPhotoByAdmin(matchId, imageBytes, "image/webp", TENANT_A);
+
+            verify(storageService).deleteFile("tenant/referees/matchReport/old_admin.jpg");
+            verify(storageService).uploadFile(eq("tenant/referees/matchReport/admin_key.jpg"), eq(imageBytes), eq("image/webp"));
+            assertThat(dto).isNotNull();
+            assertThat(match.getReportPhotoUrl()).isEqualTo("tenant/referees/matchReport/admin_key.jpg");
+        }
     }
 
     // =========================================================================

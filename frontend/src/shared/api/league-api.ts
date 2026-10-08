@@ -370,6 +370,16 @@ export const leagueApi = {
             }
         });
     },
+    uploadAdminMatchReportPhoto: (tenantId: string, matchId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<RefereeMatch>(`/admin/matches/${matchId}/report-photo`, formData, {
+            headers: {
+                'X-Tenant-ID': tenantId,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
 
     // Registration
     registerPlayer: (tenantId: string, player: any) =>
