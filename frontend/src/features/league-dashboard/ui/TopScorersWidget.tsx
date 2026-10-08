@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { User, Trophy, ChevronLeft, ChevronRight, Crown, Shield } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Trophy, ChevronLeft, ChevronRight, Crown } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { cn } from '@/shared/lib/utils';
 import { PlayerScorerDTO, leagueApi } from '@/shared/api/league-api';
+import {
+    ContainedPhoto,
+    GoalsCounter,
+    LeaderBadge,
+    LeaderName,
+    LeaderTeam,
+    LeaderVariant,
+    PlayerAvatar,
+} from './top-scorers/LeaderParts';
+import { ShareLeaderButton, ShareScorerDialog } from './top-scorers/ShareScorerDialog';
+import type { ScorerShareCardData } from './top-scorers/scorerShareCard';
 
 interface TopScorer {
     id: string;
@@ -16,19 +27,44 @@ interface TopScorer {
     profilePhotoUrl?: string;
 }
 
+type Scorer = TopScorer | PlayerScorerDTO;
+
 interface TopScorersWidgetProps {
-    scorers: (TopScorer | PlayerScorerDTO)[];
+    scorers: Scorer[];
     loading?: boolean;
 }
 
-export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWidgetProps) => {
+const resolvePhotoUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+        return url;
+    }
+    return leagueApi.getProxyUrl(url);
+};
+
+/** League logos may be public assets (e.g. "/nuestro_deporte_logo.png") or storage keys. */
+const resolveLogoUrl = (url?: string) => (url?.startsWith('/') ? url : resolvePhotoUrl(url));
+
+const getScorerPhoto = (scorer?: Scorer) =>
+    resolvePhotoUrl(scorer?.profilePhotoUrl || (scorer as TopScorer | undefined)?.image);
+
+export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: TopScorersWidgetProps) => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const { settings } = useTenantSettings();
-    const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
+
+    // Layout is decided exclusively by the tenant theme (no hardcoded tenant IDs)
+    const variant: LeaderVariant = settings?.themeClass === 'theme-nuestro-deporte' ? 'fut' : 'classic';
+    const isFut = variant === 'fut';
 
     const [activeLeaderIdx, setActiveLeaderIdx] = useState(0);
-    const [imgErrorMap, setImgErrorMap] = useState<Record<string, boolean>>({});
     const [isAutoCycling, setIsAutoCycling] = useState(true);
+    const [shareData, setShareData] = useState<ScorerShareCardData | null>(null);
+
+    // Defensive ordering: never rely on the backend sending the list sorted
+    const scorers = useMemo(
+        () => [...rawScorers].sort((a, b) => (b.goals ?? 0) - (a.goals ?? 0)),
+        [rawScorers]
+    );
 
     // Identify Co-Leaders (players sharing the maximum goals)
     const maxGoals = scorers[0]?.goals;
@@ -40,20 +76,24 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
 
     // Auto-cycle through co-leaders every 5 seconds so each gets their moment of glory
     useEffect(() => {
-        if (!hasMultipleLeaders || !isAutoCycling) return;
+        if (!hasMultipleLeaders || !isAutoCycling || shareData) return;
         const interval = setInterval(() => {
             setActiveLeaderIdx(prev => (prev + 1) % coLeaders.length);
         }, 5000);
         return () => clearInterval(interval);
-    }, [hasMultipleLeaders, isAutoCycling, coLeaders.length]);
+    }, [hasMultipleLeaders, isAutoCycling, coLeaders.length, shareData]);
 
     // Runners up list: players that are not the currently shown leader (up to 9 items)
     const otherScorers = scorers.filter(s => s.id !== currentLeader?.id).slice(0, 9);
 
-    const getDenseRank = (scorer: TopScorer | PlayerScorerDTO, defaultIdx: number) => {
+    const uniqueGoals = useMemo(
+        () => Array.from(new Set(scorers.map(s => s.goals))).sort((a, b) => (b ?? 0) - (a ?? 0)),
+        [scorers]
+    );
+
+    const getDenseRank = (scorer: Scorer, defaultIdx: number) => {
         if (scorer.rank != null && scorer.rank > 0) return scorer.rank;
         if (scorer.goals === maxGoals) return 1;
-        const uniqueGoals = Array.from(new Set(scorers.map(s => s.goals))).sort((a, b) => (b ?? 0) - (a ?? 0));
         const tier = uniqueGoals.indexOf(scorer.goals);
         return tier >= 0 ? tier + 1 : defaultIdx + 2;
     };
@@ -63,16 +103,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
         return `/${leagueSlug || 'ligaNuestroDeporte'}/team/${teamId}`;
     };
 
-    const resolvePhotoUrl = (url?: string) => {
-        if (!url) return undefined;
-        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-            return url;
-        }
-        return leagueApi.getProxyUrl(url);
-    };
-
-    const leaderPhoto = resolvePhotoUrl(currentLeader?.profilePhotoUrl || (currentLeader as any)?.image);
-    const hasImgError = currentLeader ? !!imgErrorMap[currentLeader.id] : false;
+    const leaderPhoto = getScorerPhoto(currentLeader);
 
     const handlePrevLeader = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -86,11 +117,55 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
         setActiveLeaderIdx(prev => (prev < coLeaders.length - 1 ? prev + 1 : 0));
     };
 
+    const getCleanDisplayUrl = (slug?: string, themeClass?: string) => {
+        const hostname = window.location.hostname.toLowerCase();
+        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+        if (isLocal) {
+            if (themeClass === 'theme-nuestro-deporte') return 'nuestrodeporte.com';
+            if (slug === 'sanlucas' || slug === 'ligasanlucas') return 'ligasanlucas.com';
+            return slug ? `${slug}.leagueos.app` : 'leagueos.app';
+        }
+        return hostname.replace(/^www\./, '');
+    };
+
+    const openShare = () => {
+        if (!currentLeader) return;
+        setIsAutoCycling(false);
+        setShareData({
+            playerName: currentLeader.name,
+            teamName: currentLeader.team,
+            goals: currentLeader.goals,
+            isCoLeader: hasMultipleLeaders,
+            photoUrl: leaderPhoto,
+            leagueName: settings?.name || 'Liga',
+            leagueLogoUrl: resolveLogoUrl(settings?.logoUrl),
+            leagueUrl: getCleanDisplayUrl(leagueSlug, settings?.themeClass),
+            variant,
+        });
+    };
+
+    const closeShare = useCallback(() => setShareData(null), []);
+
+    /* Shared leader info block (badge, name, team, goals, share) */
+    const leaderInfo = currentLeader && (
+        <>
+            <LeaderBadge
+                variant={variant}
+                coLeaderIndex={safeIndex}
+                coLeaderCount={coLeaders.length}
+            />
+            <LeaderName name={currentLeader.name} />
+            <LeaderTeam variant={variant} team={currentLeader.team} to={getTeamLink(currentLeader.teamId)} />
+            <GoalsCounter variant={variant} goals={currentLeader.goals} />
+            <ShareLeaderButton variant={variant} onClick={openShare} />
+        </>
+    );
+
     return (
         <div 
             className={cn(
                 "rounded-2xl border shadow-xl overflow-hidden flex flex-col transition-all duration-300",
-                isNuestroDeporte
+                isFut
                     ? "border-blue-900/40 bg-[#0D1A3C] text-white shadow-blue-950/50"
                     : "border-slate-200 bg-white text-slate-900 shadow-slate-200/40"
             )}
@@ -100,20 +175,20 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
             {/* Widget Header */}
             <div className={cn(
                 "flex items-center justify-between px-4 py-3.5 border-b",
-                isNuestroDeporte ? "bg-[#091030]/95 border-red-900/30" : "bg-slate-50/80 border-slate-100"
+                isFut ? "bg-[#091030]/95 border-red-900/30" : "bg-slate-50/80 border-slate-100"
             )}>
                 <h3 className={cn(
                     "tracking-tight text-base font-bold flex items-center gap-2",
-                    isNuestroDeporte ? "font-['Bebas_Neue'] tracking-wider text-xl text-white" : ""
+                    isFut ? "font-['Bebas_Neue'] tracking-wider text-xl text-white" : ""
                 )}>
-                    <Trophy className={cn("w-5 h-5", isNuestroDeporte ? "text-amber-400" : "text-amber-500")} />
+                    <Trophy className={cn("w-5 h-5", isFut ? "text-amber-400" : "text-amber-500")} />
                     Goleo Individual
                 </h3>
 
                 {hasMultipleLeaders && (
                     <span className={cn(
                         "text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full",
-                        isNuestroDeporte 
+                        isFut 
                             ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-sm" 
                             : "bg-amber-100 text-amber-800"
                     )}>
@@ -131,11 +206,11 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                     <div className="p-8 text-center flex flex-col items-center justify-center">
                         <div className={cn(
                             "w-12 h-12 rounded-full flex items-center justify-center mb-3",
-                            isNuestroDeporte ? "bg-blue-950/50 text-blue-400 border border-blue-800/30" : "bg-slate-100 text-slate-400"
+                            isFut ? "bg-blue-950/50 text-blue-400 border border-blue-800/30" : "bg-slate-100 text-slate-400"
                         )}>
                             <Trophy className="w-6 h-6 opacity-60" />
                         </div>
-                        <p className={cn("text-xs font-bold", isNuestroDeporte ? "text-slate-300" : "text-slate-600")}>
+                        <p className={cn("text-xs font-bold", isFut ? "text-slate-300" : "text-slate-600")}>
                             Sin goles registrados aún
                         </p>
                         <p className="text-[11px] text-slate-500 mt-1">
@@ -147,12 +222,12 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                         {/* Hero Leader Section (Podio Dorado & Rojo Copa) */}
                         <div className={cn(
                             "relative px-3 sm:px-5 pt-4 sm:pt-5 pb-4 text-center overflow-hidden transition-all",
-                            isNuestroDeporte
+                            isFut
                                 ? "bg-gradient-to-br from-red-950/90 via-[#0D1A3C] to-[#091030] text-white border-b border-red-600/30"
                                 : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-b border-slate-700"
                         )}>
                             {/* Watermark / Ambient Lighting */}
-                            {isNuestroDeporte ? (
+                            {isFut ? (
                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
                             ) : (
                                 <div className="absolute top-2 right-2 p-1 opacity-10 pointer-events-none">
@@ -164,7 +239,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                             {hasMultipleLeaders && (
                                 <div className={cn(
                                     "absolute inset-x-1.5 sm:inset-x-3 flex items-center justify-between z-30 pointer-events-none",
-                                    isNuestroDeporte ? "top-[40%] -translate-y-1/2" : "top-4"
+                                    isFut ? "top-[40%] -translate-y-1/2" : "top-4"
                                 )}>
                                     <button
                                         onClick={handlePrevLeader}
@@ -184,8 +259,8 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                             )}
 
                             <div className="relative z-10 flex flex-col items-center">
-                                {isNuestroDeporte ? (
-                                    /* FUT / Trading Card Hero presentation for Nuestro Deporte */
+                                {isFut ? (
+                                    /* FUT / Trading Card Hero presentation (theme-nuestro-deporte) */
                                     <div className="relative w-full max-w-[240px] sm:max-w-[260px] mx-auto rounded-2xl p-[2px] bg-gradient-to-b from-amber-400 via-red-500/80 to-amber-500/40 shadow-[0_0_30px_rgba(232,35,26,0.35)] transition-all duration-300 hover:shadow-[0_0_40px_rgba(251,191,36,0.45)] mb-3">
                                         <div className="relative w-full rounded-[14px] overflow-hidden bg-gradient-to-b from-[#141f48] via-[#0d163a] to-[#080d24] flex flex-col items-center p-3 text-center border border-white/10">
                                             {/* Diagonal glass sheen */}
@@ -196,85 +271,30 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                 <Crown className="w-3.5 h-3.5 fill-current" />
                                             </div>
 
-                                            {/* Photo Container */}
+                                            {/* Photo Container: full photo over a blurred copy (no crop, no white bars) */}
                                             <div className="relative w-full h-52 sm:h-56 rounded-xl overflow-hidden mb-2.5 bg-[#060a1a] flex items-center justify-center">
-                                                {/* Stadium light aura behind player */}
-                                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-400/25 via-blue-500/10 to-transparent pointer-events-none" />
-
-                                                {leaderPhoto && !hasImgError ? (
-                                                    <img
-                                                        src={leaderPhoto}
-                                                        alt={currentLeader.name}
-                                                        className="w-full h-full object-cover object-center"
-                                                        onError={() => {
-                                                            if (currentLeader?.id) {
-                                                                setImgErrorMap(prev => ({ ...prev, [currentLeader.id]: true }));
-                                                            }
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <User className="w-16 h-16 text-slate-400" />
-                                                )}
+                                                <ContainedPhoto key={currentLeader.id} src={leaderPhoto} alt={currentLeader.name} />
 
                                                 {/* Dark gradient fade-out at bottom only (borde inferior / cuello) */}
-                                                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#080d24] to-transparent pointer-events-none" />
+                                                <div className="absolute inset-x-0 bottom-0 h-8 z-10 bg-gradient-to-t from-[#080d24] to-transparent pointer-events-none" />
                                             </div>
 
-                                            {/* Prestige Badge */}
-                                            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-sm bg-amber-400/25 border border-amber-400/50 text-amber-300">
-                                                <Crown className="w-3 h-3 text-amber-300" />
-                                                {hasMultipleLeaders 
-                                                    ? `#1 Co-Líder (${safeIndex + 1} de ${coLeaders.length})`
-                                                    : '#1 Líder de Goleo'}
-                                            </div>
-
-                                            {/* Player Name */}
-                                            <h4 className="text-base sm:text-lg font-black tracking-tight mb-1 leading-tight text-white uppercase drop-shadow-sm px-1 text-center line-clamp-2">
-                                                {currentLeader.name}
-                                            </h4>
-
-                                            {/* Team */}
-                                            <Link 
-                                                to={getTeamLink(currentLeader.teamId) || '#'} 
-                                                className="text-xs font-semibold mb-2.5 transition-colors block uppercase tracking-wider text-slate-300 hover:text-red-400 flex items-center justify-center gap-1.5 max-w-full"
-                                            >
-                                                <Shield className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                                                <span className="truncate">{currentLeader.team}</span>
-                                            </Link>
-
-                                            {/* Goles Counter */}
-                                            <div className="flex items-baseline justify-center gap-1.5 bg-black/40 px-4 py-1 rounded-full border border-white/10 shadow-inner">
-                                                <span className="font-['Bebas_Neue'] text-3xl text-red-400 tracking-wider leading-none drop-shadow-md">
-                                                    {currentLeader.goals}
-                                                </span>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                                                    {currentLeader.goals === 1 ? 'Gol' : 'Goles'}
-                                                </span>
-                                            </div>
+                                            {leaderInfo}
                                         </div>
                                     </div>
                                 ) : (
                                     /* Standard Layout for other tenants */
                                     <>
-                                        {/* Leader Photo with Gold/Red Ring & Crown Badge */}
+                                        {/* Leader Photo with Gold Ring & Crown Badge */}
                                         <div className="relative mb-2">
                                             <div className="w-24 h-24 rounded-full p-[3px] shadow-2xl transition-transform duration-300 group-hover:scale-105 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 shadow-[0_0_25px_rgba(245,158,11,0.35)]">
-                                                <div className="w-full h-full rounded-full overflow-hidden bg-[#091030] flex items-center justify-center">
-                                                    {leaderPhoto && !hasImgError ? (
-                                                        <img
-                                                            src={leaderPhoto}
-                                                            alt={currentLeader.name}
-                                                            className="w-full h-full object-cover"
-                                                            onError={() => {
-                                                                if (currentLeader?.id) {
-                                                                    setImgErrorMap(prev => ({ ...prev, [currentLeader.id]: true }));
-                                                                }
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <User className="w-10 h-10 text-white/80" />
-                                                    )}
-                                                </div>
+                                                <PlayerAvatar
+                                                    key={currentLeader.id}
+                                                    src={leaderPhoto}
+                                                    alt={currentLeader.name}
+                                                    className="w-full h-full rounded-full bg-[#091030]"
+                                                    fallbackIconClassName="w-10 h-10 text-white/80"
+                                                />
                                             </div>
                                             
                                             {/* Floating Crown */}
@@ -283,33 +303,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                             </div>
                                         </div>
 
-                                        {/* Prestige Badge */}
-                                        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-sm bg-yellow-400/25 border border-yellow-400/50 text-yellow-300">
-                                            <Crown className="w-3 h-3 text-amber-300" />
-                                            {hasMultipleLeaders 
-                                                ? `#1 Co-Líder (${safeIndex + 1} de ${coLeaders.length})`
-                                                : '#1 Líder de Goleo'}
-                                        </div>
-
-                                        <h4 className="text-base sm:text-lg font-black tracking-tight mb-1 leading-tight text-white uppercase drop-shadow-sm px-2 text-center text-balance line-clamp-2">
-                                            {currentLeader.name}
-                                        </h4>
-                                        <Link 
-                                            to={getTeamLink(currentLeader.teamId) || '#'} 
-                                            className="text-xs font-semibold mb-2 transition-colors block uppercase tracking-wider text-white/70 hover:text-white"
-                                        >
-                                            {currentLeader.team}
-                                        </Link>
-
-                                        {/* Goles Counter */}
-                                        <div className="flex items-baseline justify-center gap-1.5">
-                                            <span className="font-black tracking-tight leading-none drop-shadow-md text-3xl text-amber-400">
-                                                {currentLeader.goals}
-                                            </span>
-                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-300">
-                                                {currentLeader.goals === 1 ? 'Gol' : 'Goles'}
-                                            </span>
-                                        </div>
+                                        {leaderInfo}
                                     </>
                                 )}
 
@@ -318,7 +312,6 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                     <div className="mt-3 pt-2.5 border-t border-white/10 w-full flex flex-col items-center">
                                         <div className="flex items-center justify-center gap-2 flex-wrap px-2">
                                             {coLeaders.map((leader, idx) => {
-                                                const photo = resolvePhotoUrl(leader.profilePhotoUrl || (leader as any)?.image);
                                                 const isSelected = idx === safeIndex;
                                                 return (
                                                     <button
@@ -330,25 +323,19 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                         className={cn(
                                                             "relative rounded-full transition-all duration-200 p-[2px] group",
                                                             isSelected
-                                                                ? isNuestroDeporte 
+                                                                ? isFut 
                                                                     ? "ring-2 ring-amber-400 scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]" 
                                                                     : "ring-2 ring-amber-400 scale-110 shadow-lg"
                                                                 : "opacity-60 hover:opacity-100 hover:scale-105"
                                                         )}
                                                         title={`${leader.name} (${leader.team})`}
                                                     >
-                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-900 border border-white/20 flex items-center justify-center">
-                                                            {photo && !imgErrorMap[leader.id] ? (
-                                                                <img
-                                                                    src={photo}
-                                                                    alt={leader.name}
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={() => setImgErrorMap(prev => ({ ...prev, [leader.id]: true }))}
-                                                                />
-                                                            ) : (
-                                                                <User className="w-4 h-4 text-white" />
-                                                            )}
-                                                        </div>
+                                                        <PlayerAvatar
+                                                            src={getScorerPhoto(leader)}
+                                                            alt={leader.name}
+                                                            className="w-8 h-8 rounded-full bg-slate-900 border border-white/20"
+                                                            fallbackIconClassName="w-4 h-4 text-white"
+                                                        />
                                                         {isSelected && (
                                                             <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400" />
                                                         )}
@@ -365,13 +352,11 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                         {otherScorers.length > 0 && (
                             <div className={cn(
                                 "p-2.5 space-y-1",
-                                isNuestroDeporte ? "bg-[#0D1A3C]" : "bg-white"
+                                isFut ? "bg-[#0D1A3C]" : "bg-white"
                             )}>
                                 {otherScorers.map((scorer, idx) => {
                                     const rank = getDenseRank(scorer, idx);
                                     const isLeaderRank = rank === 1;
-                                    const photo = resolvePhotoUrl(scorer.profilePhotoUrl || (scorer as any)?.image);
-                                    const hasScorerImgError = !!imgErrorMap[scorer.id];
 
                                     return (
                                         <div 
@@ -379,10 +364,10 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                             className={cn(
                                                 "flex items-center justify-between px-2.5 py-2 rounded-xl transition-all group",
                                                 isLeaderRank
-                                                    ? isNuestroDeporte 
+                                                    ? isFut 
                                                         ? "bg-amber-400/10 border border-amber-400/30 hover:bg-amber-400/15" 
                                                         : "bg-amber-50/80 border border-amber-200"
-                                                    : isNuestroDeporte
+                                                    : isFut
                                                         ? "hover:bg-blue-950/50 border border-transparent hover:border-blue-900/30"
                                                         : "hover:bg-slate-50 border border-transparent"
                                             )}
@@ -393,7 +378,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                     "font-mono text-xs font-black w-4 text-center shrink-0",
                                                     isLeaderRank
                                                         ? "text-amber-400"
-                                                        : isNuestroDeporte 
+                                                        : isFut 
                                                             ? "text-slate-400 group-hover:text-red-400" 
                                                             : "text-slate-400 group-hover:text-primary"
                                                 )}>
@@ -401,28 +386,22 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                 </span>
 
                                                 {/* Player Mini Avatar */}
-                                                <div className={cn(
-                                                    "w-7 h-7 rounded-full overflow-hidden shrink-0 flex items-center justify-center border",
-                                                    isLeaderRank
-                                                        ? "border-amber-400/60 shadow-[0_0_8px_rgba(251,191,36,0.3)] bg-slate-900"
-                                                        : isNuestroDeporte
-                                                            ? "border-blue-800/40 bg-blue-950/60"
-                                                            : "border-slate-200 bg-slate-100"
-                                                )}>
-                                                    {photo && !hasScorerImgError ? (
-                                                        <img
-                                                            src={photo}
-                                                            alt={scorer.name}
-                                                            className="w-full h-full object-cover"
-                                                            onError={() => setImgErrorMap(prev => ({ ...prev, [scorer.id]: true }))}
-                                                        />
-                                                    ) : (
-                                                        <User className={cn(
-                                                            "w-3.5 h-3.5",
-                                                            isLeaderRank ? "text-amber-300" : "text-slate-400"
-                                                        )} />
+                                                <PlayerAvatar
+                                                    src={getScorerPhoto(scorer)}
+                                                    alt={scorer.name}
+                                                    className={cn(
+                                                        "w-7 h-7 rounded-full shrink-0 border",
+                                                        isLeaderRank
+                                                            ? "border-amber-400/60 shadow-[0_0_8px_rgba(251,191,36,0.3)] bg-slate-900"
+                                                            : isFut
+                                                                ? "border-blue-800/40 bg-blue-950/60"
+                                                                : "border-slate-200 bg-slate-100"
                                                     )}
-                                                </div>
+                                                    fallbackIconClassName={cn(
+                                                        "w-3.5 h-3.5",
+                                                        isLeaderRank ? "text-amber-300" : "text-slate-400"
+                                                    )}
+                                                />
 
                                                 {/* Name & Team */}
                                                 <div className="min-w-0 flex-1 pr-2">
@@ -430,7 +409,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                         "text-xs font-bold leading-tight line-clamp-2 break-words",
                                                         isLeaderRank 
                                                             ? "text-amber-200 font-extrabold" 
-                                                            : isNuestroDeporte ? "text-slate-200 group-hover:text-white" : "text-slate-700 group-hover:text-slate-900"
+                                                            : isFut ? "text-slate-200 group-hover:text-white" : "text-slate-700 group-hover:text-slate-900"
                                                     )}>
                                                         {scorer.name}
                                                     </p>
@@ -438,7 +417,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                         to={getTeamLink(scorer.teamId) || '#'} 
                                                         className={cn(
                                                             "text-[11px] font-medium truncate hover:underline block",
-                                                            isNuestroDeporte ? "text-slate-400 group-hover:text-blue-300" : "text-slate-500 group-hover:text-primary"
+                                                            isFut ? "text-slate-400 group-hover:text-blue-300" : "text-slate-500 group-hover:text-primary"
                                                         )}
                                                     >
                                                         {scorer.team}
@@ -451,7 +430,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                                                 "font-black px-2.5 py-0.5 rounded-lg text-xs shrink-0 transition-colors",
                                                 isLeaderRank
                                                     ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 font-black"
-                                                    : isNuestroDeporte
+                                                    : isFut
                                                         ? "bg-red-950/90 text-red-300 border border-red-800/40 group-hover:bg-red-600 group-hover:text-white"
                                                         : "bg-slate-100 text-slate-900 group-hover:bg-primary/10 group-hover:text-primary"
                                             )}>
@@ -465,6 +444,8 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
                     </>
                 )}
             </div>
+
+            <ShareScorerDialog data={shareData} onClose={closeShare} />
         </div>
     );
 };
