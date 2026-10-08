@@ -570,61 +570,9 @@ export const MatchReportWizard = ({ match, homeRoster, awayRoster, homeTeamName,
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        {/* Header Photo Actions */}
-                        {hasPhoto ? (
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsViewingPhoto(true)}
-                                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all shadow-2xs hover:scale-102"
-                                    title="Ver foto de la cédula arbitral oficial"
-                                >
-                                    <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span className="hidden sm:inline">Ver Cédula</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleTriggerUpload}
-                                    disabled={isUploadingPhoto}
-                                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors disabled:opacity-50"
-                                    title="Reemplazar foto de la cédula"
-                                >
-                                    {isUploadingPhoto ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
-                                    ) : (
-                                        <RefreshCw className="w-3.5 h-3.5 text-slate-600" />
-                                    )}
-                                    <span className="hidden sm:inline">Cambiar</span>
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={handleTriggerUpload}
-                                disabled={isUploadingPhoto}
-                                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all shadow-2xs hover:scale-102 disabled:opacity-50"
-                                title="Adjuntar foto de la cédula física"
-                            >
-                                {isUploadingPhoto ? (
-                                    <>
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        <span>Subiendo...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <UploadCloud className="w-3.5 h-3.5" />
-                                        <span className="hidden sm:inline">+ Adjuntar Cédula</span>
-                                        <span className="sm:hidden">+ Cédula</span>
-                                    </>
-                                )}
-                            </button>
-                        )}
-
-                        <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors shrink-0">
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Content */}
