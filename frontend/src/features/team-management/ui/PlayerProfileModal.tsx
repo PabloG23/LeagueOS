@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     X, 
     Shield, 
@@ -202,28 +203,28 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
     const fallbackPhoto = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(player.name)}&backgroundColor=0284c7,1e40af,312e81`;
     const teamLogoSrc = !logoError ? resolveMediaUrl(player.teamLogo) : undefined;
 
-    return (
+    const modalContent = (
         <div 
-            className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div
-                className="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden relative animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
+                className="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[92vh] flex flex-col overflow-hidden relative animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Botón de Cierre Táctil */}
                 <button
                     onClick={onClose}
                     aria-label="Cerrar ficha de jugador"
-                    className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 bg-slate-950/60 hover:bg-slate-950/90 text-slate-300 hover:text-white rounded-full z-20 flex items-center justify-center backdrop-blur-md border border-white/10 transition-transform active:scale-90"
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-slate-950/70 hover:bg-slate-950/90 text-slate-300 hover:text-white rounded-full z-20 flex items-center justify-center backdrop-blur-md border border-white/15 transition-transform active:scale-90 shadow-md"
                 >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 {/* =========================================================================
                     HERO HEADER REDISEÑADO: Escudo, Dorsal estilizado y Foto Retrato
                    ========================================================================= */}
-                <div className="relative bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 pt-5 sm:pt-6 px-4 sm:px-6 pb-4 border-b border-white/10 shrink-0">
+                <div className="relative bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 pt-5 sm:pt-6 px-4 sm:px-6 pb-4 border-b border-white/10 shrink-0 overflow-hidden">
                     {/* Dorsal Gigante en marca de agua */}
                     {player.jerseyNumber != null && player.jerseyNumber !== '' && (
                         <div className="absolute right-4 top-1 text-8xl sm:text-9xl font-black text-white/[0.04] select-none pointer-events-none font-mono">
@@ -312,9 +313,9 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
                 </div>
 
                 {/* =========================================================================
-                    CUERPO SCROLLEABLE (Optimizado para Celular y Desktop)
+                    CUERPO SCROLLEABLE (Optimizado para Celular y Desktop con Safe Area)
                    ========================================================================= */}
-                <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 bg-slate-900/90 text-slate-100">
+                <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 pb-8 sm:pb-6 space-y-4 sm:space-y-5 bg-slate-900/90 text-slate-100">
                     {/* Grilla de Métricas Principales (KPIs) */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -328,22 +329,22 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
-                            <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-2.5 text-center transition-colors hover:border-slate-600">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase block tracking-wider">Juegos</span>
-                                <span className="text-lg sm:text-2xl font-black text-white font-mono">{actualMatchesCount}</span>
+                        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                            <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-2 sm:p-2.5 text-center transition-colors hover:border-slate-600">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase block tracking-wider truncate">Juegos</span>
+                                <span className="text-base sm:text-2xl font-black text-white font-mono">{actualMatchesCount}</span>
                             </div>
-                            <div className="bg-blue-950/40 border border-blue-800/40 rounded-xl p-2.5 text-center transition-colors hover:border-blue-700/60">
-                                <span className="text-[10px] font-bold text-blue-300 uppercase block tracking-wider">Goles</span>
-                                <span className="text-lg sm:text-2xl font-black text-blue-400 font-mono">{stats.goals ?? 0}</span>
+                            <div className="bg-blue-950/40 border border-blue-800/40 rounded-xl p-2 sm:p-2.5 text-center transition-colors hover:border-blue-700/60">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-blue-300 uppercase block tracking-wider truncate">Goles</span>
+                                <span className="text-base sm:text-2xl font-black text-blue-400 font-mono">{stats.goals ?? 0}</span>
                             </div>
-                            <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl p-2.5 text-center transition-colors hover:border-amber-700/60">
-                                <span className="text-[10px] font-bold text-amber-300 uppercase block tracking-wider">Amarillas</span>
-                                <span className="text-lg sm:text-2xl font-black text-amber-400 font-mono">{stats.yellowCards ?? 0}</span>
+                            <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl p-2 sm:p-2.5 text-center transition-colors hover:border-amber-700/60">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-amber-300 uppercase block tracking-wider truncate">Amarillas</span>
+                                <span className="text-base sm:text-2xl font-black text-amber-400 font-mono">{stats.yellowCards ?? 0}</span>
                             </div>
-                            <div className="bg-rose-950/30 border border-rose-800/40 rounded-xl p-2.5 text-center transition-colors hover:border-rose-700/60">
-                                <span className="text-[10px] font-bold text-rose-300 uppercase block tracking-wider">Rojas</span>
-                                <span className="text-lg sm:text-2xl font-black text-rose-400 font-mono">{stats.redCards ?? 0}</span>
+                            <div className="bg-rose-950/30 border border-rose-800/40 rounded-xl p-2 sm:p-2.5 text-center transition-colors hover:border-rose-700/60">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-rose-300 uppercase block tracking-wider truncate">Rojas</span>
+                                <span className="text-base sm:text-2xl font-black text-rose-400 font-mono">{stats.redCards ?? 0}</span>
                             </div>
                         </div>
                     </div>
@@ -478,5 +479,11 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
             </div>
         </div>
     );
+
+    if (typeof document !== 'undefined') {
+        return createPortal(modalContent, document.body);
+    }
+
+    return modalContent;
 };
 export default PlayerProfileModal;
