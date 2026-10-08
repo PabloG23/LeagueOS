@@ -34,7 +34,7 @@ public class DataInitializer implements CommandLineRunner {
 
         createTenantSettingsAndAdmin(tenantNuestroDeporte, "admin_liga", "Administrador Nuestro Deporte", true, null);
         createTenantSettingsAndAdmin(tenantSanLucas, "admin_sanlucas", "Administrador San Lucas", false, "theme-san-lucas");
-        createMetepecTenantSettingsAndAdmin(tenantMetepec, "admin_metepec", "Luis Rendon", "luisMetepec2026", "theme-metepec");
+        createMetepecTenantSettingsAndAdmin(tenantMetepec, "admin_metepec", "Luis Rendon", "password123", "theme-metepec");
 
         log.info("====== DONE SEEDING DEV DATA ======");
     }

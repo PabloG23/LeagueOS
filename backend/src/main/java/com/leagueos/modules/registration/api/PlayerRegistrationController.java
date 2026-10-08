@@ -74,7 +74,8 @@ public class PlayerRegistrationController {
     @PreAuthorize("hasAnyRole('ROLE_LEAGUE_ADMIN', 'ROLE_TEAM_REP')")
     public ResponseEntity<Void> activatePlayer(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id) {
+            @PathVariable UUID id,
+            @RequestParam(value = "jersey_number", required = false) Integer jerseyNumber) {
         UUID teamConstraint = null;
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_LEAGUE_ADMIN"))) {
             if (userDetails.getTeamId() == null) {
@@ -82,7 +83,7 @@ public class PlayerRegistrationController {
             }
             teamConstraint = userDetails.getTeamId();
         }
-        playerRegistrationService.activatePlayer(id, teamConstraint);
+        playerRegistrationService.activatePlayer(id, teamConstraint, jerseyNumber);
         return ResponseEntity.ok().build();
     }
 

@@ -248,12 +248,16 @@ export interface MatchPreviewDTO {
 }
 
 export interface PlayerYellowCardsDTO {
-    playerId: string;
-    playerName: string;
-    teamId: string;
-    teamName: string;
-    yellowCards: number;
-    matchesSuspended: number;
+    playerId?: string;
+    id?: string;
+    playerName?: string;
+    name?: string;
+    teamId?: string;
+    teamName?: string;
+    team?: string;
+    yellowCards?: number;
+    redCards?: number;
+    matchesSuspended?: number;
     profilePhotoUrl?: string;
 }
 
@@ -370,7 +374,8 @@ export const leagueApi = {
         api.post<Player>(`/players/${playerId}/verify-foreign`, formData, { headers: { 'X-Tenant-ID': tenantId } }),
     batchCreatePlayers: (tenantId: string, teamId: string, players: any[]) =>
         api.post<Player[]>(`/teams/${teamId}/players/batch`, players, { headers: { 'X-Tenant-ID': tenantId } }),
-    activatePlayer: (tenantId: string, playerId: string) => api.patch(`/players/${playerId}/activate`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
+    activatePlayer: (tenantId: string, playerId: string, jerseyNumber?: number) => 
+        api.patch(`/players/${playerId}/activate${jerseyNumber !== undefined ? `?jersey_number=${jerseyNumber}` : ''}`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
     deactivatePlayer: (tenantId: string, playerId: string) => api.patch(`/players/${playerId}/deactivate`, {}, { headers: { 'X-Tenant-ID': tenantId } }),
     discardPlayerRoster: (tenantId: string, playerId: string) => api.delete(`/players/${playerId}/roster`, { headers: { 'X-Tenant-ID': tenantId } }),
     getTeamPlayers: (tenantId: string, teamId: string) =>

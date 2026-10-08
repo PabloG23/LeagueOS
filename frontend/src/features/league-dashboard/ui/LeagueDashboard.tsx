@@ -16,7 +16,6 @@ import { leagueApi, Season, Match, PlayerScorerDTO, PlayerYellowCardsDTO } from 
 export const LeagueDashboard = () => {
     const { settings } = useTenantSettings();
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
-    const isMetepec = settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
 
     const [finalStandingsData, setStandingsData] = useState<TeamStanding[] | Record<string, TeamStanding[]>>([]);
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
@@ -58,14 +57,14 @@ export const LeagueDashboard = () => {
             })
             .finally(() => setLoadingScorers(false));
 
-        // Fetch yellow cards leaderboard (Metepec only)
-        if (settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d') {
+        // Fetch yellow cards leaderboard when enabled by tenant
+        if (settings?.tenantId && settings?.enableAccumulatedYellowSuspensions) {
             leagueApi.getTopYellowCards(settings.tenantId)
                 .then(res => setYellowCardsData(res.data || []))
                 .catch(err => console.error("Error fetching yellow cards", err))
                 .finally(() => setLoadingYellowCards(false));
         }
-    }, [settings?.tenantId, settings?.themeClass]);
+    }, [settings?.tenantId, settings?.enableAccumulatedYellowSuspensions]);
 
     const defenseData = useMemo(() => {
         const standingsList = Array.isArray(finalStandingsData)
@@ -142,12 +141,12 @@ export const LeagueDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="lg:col-span-3 flex flex-col gap-6">
+                    <div className="lg:col-span-3 flex flex-col gap-6 self-start">
                         <TopScorersWidget scorers={topScorers} loading={loadingScorers} />
-                        {isMetepec && defenseData.length > 0 && (
+                        {settings?.showOffenseDefenseWidgets && defenseData.length > 0 && (
                             <TopDefenseWidget data={defenseData} />
                         )}
-                        {isMetepec && (
+                        {settings?.enableAccumulatedYellowSuspensions && (
                             <TopYellowCardsWidget data={yellowCardsData} loading={loadingYellowCards} />
                         )}
                     </div>

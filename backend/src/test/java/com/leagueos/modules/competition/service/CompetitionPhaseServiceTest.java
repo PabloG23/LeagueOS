@@ -138,4 +138,21 @@ class CompetitionPhaseServiceTest {
         assertEquals(3, campeonatoCount, "Campeonato must have 3 teams");
         assertEquals(3, permanenciaCount, "Permanencia must have 3 teams");
     }
+
+    @Test
+    @DisplayName("Should throw BusinessRuleException when season is already split into Phase 2")
+    void throwsWhenSeasonAlreadySplit() {
+        when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
+
+        Match phase2Match = new Match();
+        phase2Match.setPhaseGroup("CAMPEONATO");
+        when(matchRepository.findBySeasonId(seasonId)).thenReturn(List.of(phase2Match));
+
+        com.leagueos.shared.domain.exception.BusinessRuleException ex = assertThrows(
+                com.leagueos.shared.domain.exception.BusinessRuleException.class,
+                () -> competitionPhaseService.splitSeasonIntoPhase2(seasonId)
+        );
+
+        assertTrue(ex.getMessage().contains("previamente"));
+    }
 }

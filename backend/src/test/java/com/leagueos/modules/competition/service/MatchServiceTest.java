@@ -5,6 +5,8 @@ import com.leagueos.modules.competition.api.dto.UpdateMatchScheduleRequest;
 import com.leagueos.modules.competition.domain.Match;
 import com.leagueos.modules.competition.domain.MatchEvent;
 import com.leagueos.modules.competition.domain.MatchStage;
+import com.leagueos.modules.league.domain.Season;
+import com.leagueos.modules.registration.persistence.PlayerTournamentSuspensionRepository;
 import com.leagueos.modules.competition.domain.PlayoffTie;
 import com.leagueos.modules.competition.persistence.MatchEventRepository;
 import com.leagueos.modules.competition.persistence.MatchRepository;
@@ -45,6 +47,7 @@ class MatchServiceTest {
     @Mock private PlayoffService playoffService;
     @Mock private SoccerFieldRepository soccerFieldRepository;
     @Mock private RefereeRepository refereeRepository;
+    @Mock private PlayerTournamentSuspensionRepository playerTournamentSuspensionRepository;
 
     @InjectMocks
     private MatchService matchService;
@@ -158,6 +161,87 @@ class MatchServiceTest {
                 assertThat(savedPlayer.getSuspendedUntilMatchday()).isEqualTo(5);
                 return true;
             }));
+        }
+
+        @Test
+        @DisplayName("should NOT create tournament suspensions nor trigger 12-match rule for other leagues (Nuestro Deporte / San Lucas)")
+        void doesNotCreateTournamentSuspensionForOtherLeagues() {
+            Season season = new Season();
+            season.setId(UUID.randomUUID());
+            match.setSeason(season);
+
+            TenantSettings settings = new TenantSettings();
+            settings.setEnableAccumulatedYellowSuspensions(false); // default for standard leagues
+
+            when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(settings);
+            when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Player player = createPlayer();
+            UUID playerId = player.getId();
+
+            when(playerRepository.findById(playerId)).thenReturn(Optional.of(player));
+            when(teamRepository.findById(homeTeam.getId())).thenReturn(Optional.of(homeTeam));
+
+            MatchEvent redCard = new MatchEvent();
+            redCard.setEventType(MatchEvent.MatchEventType.RED_CARD);
+            redCard.setPlayer(player);
+            redCard.setTeam(homeTeam);
+            redCard.setSuspensionMatchdays(3);
+
+            matchService.submitMatchReport(matchId, List.of(redCard));
+
+            // Verify standard suspension is set
+            verify(playerRepository).save(argThat(savedPlayer -> {
+                assertThat(savedPlayer.getSuspendedUntilMatchday()).isEqualTo(6);
+                return true;
+            }));
+
+            // CRITICAL GUARD: verify player_tournament_suspensions is NEVER called for other leagues
+            verify(playerTournamentSuspensionRepository, never()).save(any());
+            verify(playerTournamentSuspensionRepository, never()).sumTotalMatchesAssignedByPlayerAndSeason(any(), any());
+        }
+
+        @Test
+        @DisplayName("should create tournament suspension and enforce 12-match rule ONLY when tenant enables accumulated suspensions (Metepec)")
+        void createsTournamentSuspensionWhenTenantEnablesAccumulatedDiscipline() {
+            Season season = new Season();
+            season.setId(UUID.randomUUID());
+            match.setSeason(season);
+
+            TenantSettings settings = new TenantSettings();
+            settings.setEnableAccumulatedYellowSuspensions(true);
+            settings.setMaxAccumulatedSuspensionMatchdays(12);
+
+            when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(settings);
+            when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Player player = createPlayer();
+            UUID playerId = player.getId();
+
+            when(playerRepository.findById(playerId)).thenReturn(Optional.of(player));
+            when(teamRepository.findById(homeTeam.getId())).thenReturn(Optional.of(homeTeam));
+            when(playerTournamentSuspensionRepository.sumTotalMatchesAssignedByPlayerAndSeason(playerId, season.getId()))
+                    .thenReturn(12);
+
+            MatchEvent redCard = new MatchEvent();
+            redCard.setEventType(MatchEvent.MatchEventType.RED_CARD);
+            redCard.setPlayer(player);
+            redCard.setTeam(homeTeam);
+            redCard.setSuspensionMatchdays(2);
+
+            matchService.submitMatchReport(matchId, List.of(redCard));
+
+            // Verify initial tournament suspension was saved
+            verify(playerTournamentSuspensionRepository).save(argThat(pts ->
+                pts.getPlayer().equals(player) && pts.getTotalMatchesAssigned() == 2 && !pts.isTournamentBanned()
+            ));
+
+            // Verify 12-match ban was also recorded as a tournament-level ban
+            verify(playerTournamentSuspensionRepository).save(argThat(pts -> 
+                pts.isTournamentBanned() && pts.getRemainingMatches() == 999 && pts.getTotalMatchesAssigned() == 999
+            ));
         }
 
         @Test

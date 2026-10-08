@@ -9,6 +9,7 @@ import com.leagueos.modules.league.domain.Team;
 import com.leagueos.modules.league.domain.TeamRegistration;
 import com.leagueos.modules.league.persistence.SeasonRepository;
 import com.leagueos.modules.league.persistence.TeamRegistrationRepository;
+import com.leagueos.shared.domain.exception.BusinessRuleException;
 import com.leagueos.shared.domain.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,12 @@ public class CompetitionPhaseService {
     public void splitSeasonIntoPhase2(UUID seasonId) {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Season not found: " + seasonId));
+
+        List<Match> existingMatches = matchRepository.findBySeasonId(seasonId);
+        boolean alreadySplit = existingMatches.stream().anyMatch(m -> m.getPhaseGroup() != null);
+        if (alreadySplit) {
+            throw new BusinessRuleException("La temporada ya ha sido dividida en Fase 2 previamente.");
+        }
 
         List<TeamStandingDTO> standings = statsService.calculateStandings(seasonId);
         int totalTeams = standings.size();
@@ -74,7 +81,6 @@ public class CompetitionPhaseService {
         }
 
         // Get max matchday used so far to continue matchday numbers consecutively
-        List<Match> existingMatches = matchRepository.findBySeasonId(seasonId);
         int maxMatchday = existingMatches.stream()
                 .map(Match::getMatchday)
                 .filter(m -> m != null)

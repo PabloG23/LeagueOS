@@ -272,6 +272,105 @@ class StatsServiceTest {
                 assertThat(standing.getDrawn()).isEqualTo(1);
             }
         }
+
+        @Test
+        @DisplayName("should award 2 points per win when tenant configures winPointsOnWin = 2 (e.g. Liga San Lucas)")
+        void calculatesStandingsWithTwoPointsPerWin() {
+            List<TeamRegistration> registrations = List.of(
+                    createRegistration(teamA),
+                    createRegistration(teamB)
+            );
+
+            when(teamRegistrationRepository.findBySeasonIdAndStatus(seasonId, TeamRegistration.RegistrationStatus.APPROVED))
+                    .thenReturn(registrations);
+            when(matchRepository.findBySeasonId(seasonId)).thenReturn(Collections.emptyList());
+
+            // Match: Atlas 2 - 0 Pumas (Atlas wins)
+            MatchResultSummaryDTO match = new MatchResultSummaryDTO(
+                    teamA.getId(), "Atlas", teamB.getId(), "Pumas",
+                    2, 0, LocalDateTime.now(), false
+            );
+
+            when(matchRepository.findFinishedMatchSummariesBySeasonId(seasonId)).thenReturn(List.of(match));
+
+            // San Lucas configuration: 2 points per win
+            TenantSettings sanLucasSettings = new TenantSettings();
+            sanLucasSettings.setWinPointsOnWin(2);
+            sanLucasSettings.setEnableShootoutExtraPoint(false);
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(sanLucasSettings);
+            when(sportRulesService.getStrategy("SOCCER")).thenReturn(Optional.of(new SoccerRulesStrategy()));
+
+            List<TeamStandingDTO> standings = statsService.calculateStandings(seasonId);
+
+            assertThat(standings).hasSize(2);
+            // Atlas wins: gets exactly 2 points (NOT 3 points)
+            TeamStandingDTO winner = standings.get(0);
+            assertThat(winner.getTeam()).isEqualTo("Atlas");
+            assertThat(winner.getPoints()).isEqualTo(2);
+            assertThat(winner.getWon()).isEqualTo(1);
+
+            // Pumas loses: gets 0 points
+            TeamStandingDTO loser = standings.get(1);
+            assertThat(loser.getTeam()).isEqualTo("Pumas");
+            assertThat(loser.getPoints()).isEqualTo(0);
+            assertThat(loser.getLost()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("should prioritize Fair Play cards in tiebreaker when tiebreakerOrder is PTS_GD_GF_FP_NAME (Liga Metepec)")
+        void calculatesStandingsWithFairPlayTiebreakerMetepec() {
+            List<TeamRegistration> registrations = List.of(
+                    createRegistration(teamA), // Atlas
+                    createRegistration(teamB)  // Pumas
+            );
+
+            when(teamRegistrationRepository.findBySeasonIdAndStatus(seasonId, TeamRegistration.RegistrationStatus.APPROVED))
+                    .thenReturn(registrations);
+            when(matchRepository.findBySeasonId(seasonId)).thenReturn(Collections.emptyList());
+
+            // Both teams win with exact same score against a dummy team or both have same stats:
+            // Atlas 2 - 1 Opponent, Pumas 2 - 1 Opponent -> Both have 3 pts, 2 GF, 1 GA, +1 GD
+            Team dummyOpponent = new Team();
+            dummyOpponent.setId(UUID.randomUUID());
+            dummyOpponent.setName("Z-Opponent");
+
+            MatchResultSummaryDTO m1 = new MatchResultSummaryDTO(
+                    teamA.getId(), "Atlas", dummyOpponent.getId(), "Z-Opponent",
+                    2, 1, LocalDateTime.now(), false
+            );
+            MatchResultSummaryDTO m2 = new MatchResultSummaryDTO(
+                    teamB.getId(), "Pumas", dummyOpponent.getId(), "Z-Opponent",
+                    2, 1, LocalDateTime.now(), false
+            );
+
+            when(matchRepository.findFinishedMatchSummariesBySeasonId(seasonId)).thenReturn(List.of(m1, m2));
+
+            // Atlas has 4 fair play cards (worse), Pumas has 1 card (better)
+            List<Object[]> cardsData = List.of(
+                    new Object[]{teamA.getId(), 4L},
+                    new Object[]{teamB.getId(), 1L}
+            );
+            when(matchEventRepository.countTotalCardsByTeamForSeason(seasonId)).thenReturn(cardsData);
+
+            // Metepec Settings
+            TenantSettings metepecSettings = new TenantSettings();
+            metepecSettings.setWinPointsOnWin(3);
+            metepecSettings.setTiebreakerOrder("PTS_GD_GF_FP_NAME");
+            when(tenantSettingsService.getCurrentSettings()).thenReturn(metepecSettings);
+            when(sportRulesService.getStrategy("SOCCER")).thenReturn(Optional.of(new SoccerRulesStrategy()));
+
+            List<TeamStandingDTO> standings = statsService.calculateStandings(seasonId);
+
+            // Even though "Atlas" comes before "Pumas" alphabetically, Pumas has fewer Fair Play cards (1 vs 4)
+            // So Pumas must be Rank 1 and Atlas Rank 2
+            assertThat(standings.get(0).getTeam()).isEqualTo("Pumas");
+            assertThat(standings.get(0).getFairPlayCards()).isEqualTo(1);
+            assertThat(standings.get(0).getRank()).isEqualTo(1);
+
+            assertThat(standings.get(1).getTeam()).isEqualTo("Atlas");
+            assertThat(standings.get(1).getFairPlayCards()).isEqualTo(4);
+            assertThat(standings.get(1).getRank()).isEqualTo(2);
+        }
     }
 
     // =========================================================================
@@ -371,6 +470,32 @@ class StatsServiceTest {
             List<TeamStatDTO> teamStats = statsService.getTopRedCardsByTeamForSeason(List.of(seasonId));
             assertThat(teamStats).hasSize(1);
             assertThat(teamStats.get(0).getRank()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("should return ranked player yellow cards populating both yellowCards and redCards fields for cross-tenant compatibility")
+        void returnsRankedYellowCardsWithCrossCompatibility() {
+            // PlayerStatDTO constructor populates both redCards and yellowCards with the count
+            PlayerStatDTO y1 = new PlayerStatDTO(UUID.randomUUID(), "Gattuso", "Milan", UUID.randomUUID(), 5L, 0);
+            PlayerStatDTO y2 = new PlayerStatDTO(UUID.randomUUID(), "Keane", "ManUtd", UUID.randomUUID(), 3L, 0);
+
+            when(matchEventRepository.countYellowCardsByPlayerForSeason(List.of(seasonId)))
+                    .thenReturn(List.of(y1, y2));
+
+            List<PlayerStatDTO> result = statsService.getTopYellowCardsByPlayerForSeason(List.of(seasonId));
+
+            assertThat(result).hasSize(2);
+            // Rank 1
+            assertThat(result.get(0).getName()).isEqualTo("Gattuso");
+            assertThat(result.get(0).getRank()).isEqualTo(1);
+            assertThat(result.get(0).getYellowCards()).isEqualTo(5L);
+            assertThat(result.get(0).getRedCards()).isEqualTo(5L);
+
+            // Rank 2
+            assertThat(result.get(1).getName()).isEqualTo("Keane");
+            assertThat(result.get(1).getRank()).isEqualTo(2);
+            assertThat(result.get(1).getYellowCards()).isEqualTo(3L);
+            assertThat(result.get(1).getRedCards()).isEqualTo(3L);
         }
     }
 

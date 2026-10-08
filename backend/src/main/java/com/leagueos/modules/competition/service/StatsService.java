@@ -49,7 +49,7 @@ public class StatsService {
     @Transactional(readOnly = true)
     public List<PlayerStatDTO> getTopYellowCardsByPlayerForSeason(List<UUID> seasonIds) {
         return assignRanks(matchEventRepository.countYellowCardsByPlayerForSeason(seasonIds),
-                PlayerStatDTO::getRedCards, (dto, rank) -> dto.setRank(rank));
+                PlayerStatDTO::getYellowCards, (dto, rank) -> dto.setRank(rank));
     }
 
     @Transactional(readOnly = true)
@@ -141,11 +141,13 @@ public class StatsService {
 
         List<MatchResultSummaryDTO> matches = matchRepository.findFinishedMatchSummariesBySeasonId(seasonId);
 
-        // Check if any match has phaseGroup set (i.e. Season is currently in Phase 2)
-        boolean hasPhase2Matches = matches.stream().anyMatch(m -> m.getPhaseGroup() != null);
+        // Check if any match has Phase 2 split group set (CAMPEONATO / PERMANENCIA)
+        boolean hasPhase2SplitMatches = matches.stream().anyMatch(m -> 
+                "CAMPEONATO".equalsIgnoreCase(m.getPhaseGroup()) || "PERMANENCIA".equalsIgnoreCase(m.getPhaseGroup())
+        );
 
-        // If in Phase 2, only compute matches belonging to Phase 2 (clean slate for team standings)
-        List<MatchResultSummaryDTO> activeMatches = hasPhase2Matches
+        // If in Phase 2 split, compute matches belonging to Phase 2 (clean slate for team standings)
+        List<MatchResultSummaryDTO> activeMatches = hasPhase2SplitMatches
                 ? matches.stream().filter(m -> m.getPhaseGroup() != null).collect(Collectors.toList())
                 : matches;
 

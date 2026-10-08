@@ -89,7 +89,7 @@ export const TopScorersWidget = ({ scorers = [], loading = false }: TopScorersWi
     return (
         <div 
             className={cn(
-                "rounded-2xl border shadow-xl overflow-hidden flex flex-col transition-all duration-300",
+                "rounded-2xl border shadow-xl overflow-hidden flex flex-col transition-all duration-300 w-full shrink-0",
                 isNuestroDeporte
                     ? "border-blue-900/40 bg-[#0D1A3C] text-white shadow-blue-950/50"
                     : "border-slate-200 bg-white text-slate-900 shadow-slate-200/40"

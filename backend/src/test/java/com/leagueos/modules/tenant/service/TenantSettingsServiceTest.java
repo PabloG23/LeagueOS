@@ -101,7 +101,8 @@ class TenantSettingsServiceTest {
 
             // Should return a default TenantSettings object
             assertThat(result).isNotNull();
-            assertThat(result.isShowOffenseDefenseWidgets()).isTrue(); // default value
+            assertThat(result.isShowOffenseDefenseWidgets()).isFalse(); // opt-in default value
+            assertThat(result.isAllowMultipleTeamsPerPlayer()).isFalse(); // opt-in default value
             assertThat(result.isEnableAutoSuspensions()).isFalse(); // default value
         }
 

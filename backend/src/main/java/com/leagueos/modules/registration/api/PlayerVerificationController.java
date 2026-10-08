@@ -198,6 +198,16 @@ public class PlayerVerificationController {
         request.setCurp(extractedData.getCurp());
         request.setJerseyNumber(jerseyNumber);
 
+        // Check INE validity if tenant enforces it
+        com.leagueos.modules.tenant.domain.TenantSettings settings = tenantSettingsService.getCurrentSettings();
+        if (settings != null && settings.isRejectExpiredIne()) {
+            Integer vigencia = extractedData.getVigenciaAnio();
+            int currentYear = LocalDate.now().getYear();
+            if (vigencia != null && vigencia < currentYear) {
+                throw new BusinessRuleException("La credencial INE se encuentra vencida (Vigencia: " + vigencia + ").");
+            }
+        }
+
         // Pre-validate before uploading to R2
         playerRegistrationService.validateVerificationPreconditions(id, request, tenantId);
 

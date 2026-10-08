@@ -57,12 +57,16 @@ export const TopYellowCardsWidget = ({ data = [], loading = false }: TopYellowCa
                 ) : (
                     <div className="space-y-4">
                         {topList.map((item, index) => {
-                            const cycleCount = item.yellowCards % 5 === 0 && item.yellowCards > 0 ? 5 : item.yellowCards % 5;
+                            const playerName = item.playerName || item.name || '';
+                            const teamName = item.teamName || item.team || '';
+                            const count = item.yellowCards ?? item.redCards ?? 0;
+                            const matchesSuspended = item.matchesSuspended ?? 0;
+                            const cycleCount = count % 5 === 0 && count > 0 ? 5 : count % 5;
                             const progressPct = Math.min((cycleCount / 5) * 100, 100);
                             const isAtLimit = cycleCount >= 4;
 
                             return (
-                                <div key={item.playerId || index} className="space-y-1.5">
+                                <div key={item.playerId || item.id || index} className="space-y-1.5">
                                     <div className="flex items-center justify-between text-sm">
                                         <div className="flex items-center gap-2.5 min-w-0">
                                             <span className={cn(
@@ -76,19 +80,19 @@ export const TopYellowCardsWidget = ({ data = [], loading = false }: TopYellowCa
                                                     "font-bold text-sm truncate",
                                                     isNuestroDeporte ? "text-slate-200" : "text-slate-800"
                                                 )}>
-                                                    {item.playerName}
+                                                    {playerName}
                                                 </div>
                                                 <div className={cn(
                                                     "text-[11px] truncate",
                                                     isNuestroDeporte ? "text-slate-400" : "text-slate-500"
                                                 )}>
-                                                    {item.teamName}
+                                                    {teamName}
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">
-                                            {item.matchesSuspended > 0 && (
+                                            {matchesSuspended > 0 && (
                                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
                                                     <ShieldAlert className="w-3 h-3" /> Suspendido
                                                 </span>
@@ -99,7 +103,7 @@ export const TopYellowCardsWidget = ({ data = [], loading = false }: TopYellowCa
                                                     ? "bg-amber-100 text-amber-900 border-amber-300"
                                                     : "bg-slate-100 text-slate-800 border-slate-200"
                                             )}>
-                                                {item.yellowCards} 🟨
+                                                {count} 🟨
                                             </span>
                                         </div>
                                     </div>

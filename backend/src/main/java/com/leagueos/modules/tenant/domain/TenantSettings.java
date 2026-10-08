@@ -14,7 +14,7 @@ import lombok.Setter;
 public class TenantSettings extends BaseEntity {
 
     @Column(name = "show_offense_defense_widgets")
-    private boolean showOffenseDefenseWidgets = true;
+    private boolean showOffenseDefenseWidgets = false;
 
     @Column(name = "show_discipline_widget")
     private boolean showDisciplineWidget = false;
@@ -35,7 +35,7 @@ public class TenantSettings extends BaseEntity {
     private int winPointsOnWin = 3;
 
     @Column(name = "allow_multiple_teams_per_player")
-    private boolean allowMultipleTeamsPerPlayer = true;
+    private boolean allowMultipleTeamsPerPlayer = false;
 
     @Column(name = "require_curp")
     private boolean requireCurp = false;

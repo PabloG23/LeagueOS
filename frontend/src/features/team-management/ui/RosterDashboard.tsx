@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle, CheckCircle2, UserX, Clock, ChevronDown, ChevronUp, FileCheck2, X } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Upload, Printer, Loader2, AlertCircle, CheckCircle2, UserX, Clock, ChevronDown, ChevronUp, FileCheck2, X, Shirt } from 'lucide-react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { TeamDashboardLayout } from './TeamDashboardLayout';
 import { AdminDashboardLayout } from '../../admin/ui/AdminDashboardLayout';
@@ -68,6 +68,14 @@ export const RosterDashboard = () => {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
     const credentialsMenuRef = useRef<HTMLDivElement>(null);
+
+    // Reactivation Jersey Conflict Modal State
+    const [reactivatingPlayer, setReactivatingPlayer] = useState<Player | null>(null);
+    const [conflictJersey, setConflictJersey] = useState<number | null>(null);
+    const [conflictActivePlayerName, setConflictActivePlayerName] = useState<string | null>(null);
+    const [newJerseyInput, setNewJerseyInput] = useState<string>('');
+    const [reactivationError, setReactivationError] = useState<string | null>(null);
+    const [isReactivatingSubmitting, setIsReactivatingSubmitting] = useState(false);
 
     const handleDownloadCredentials = async (playerSubset?: string[]) => {
         const targetId = resolvedTeamId || teamId;
@@ -217,11 +225,11 @@ export const RosterDashboard = () => {
     }, [teamId, isTeamRepMode, settings?.tenantId]);
 
 
-    const isMetepec = settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
-    const isSanLucas = settings?.tenantId === '22222222-2222-2222-2222-222222222222';
-    const isTeamRepRestricted = isMetepec && isTeamRepMode;
-    const METEPEC_REP_LIMIT_MSG = 'Has alcanzado el límite de 20 jugadores. Para registrar más, contacta al administrador de la liga.';
-    const maxActivePlayers = isMetepec ? (isTeamRepMode ? 20 : 999) : (isSanLucas ? 25 : 30);
+    const isTeamRepRestricted = Boolean(settings?.allowAdminExceedRosterLimit && isTeamRepMode);
+    const REP_LIMIT_MSG = 'Has alcanzado el límite de 20 jugadores. Para registrar más, contacta al administrador de la liga.';
+    const maxActivePlayers = isTeamRepRestricted 
+        ? 20 
+        : (settings?.allowAdminExceedRosterLimit ? 999 : (settings?.themeClass === 'theme-san-lucas' ? 25 : 30));
     const activePlayersCount = players.filter(p => p.isActive).length;
     const inactivePlayersCount = players.filter(p => !p.isActive && p.status !== 'PENDING_VERIFICATION').length;
     const pendingPlayersCount = players.filter(p => p.status === 'PENDING_VERIFICATION').length;
@@ -233,8 +241,23 @@ export const RosterDashboard = () => {
         if (!player) return;
 
         if (!player.isActive && activePlayersCount >= maxActivePlayers) {
-            showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : '¡Límite de jugadores activos alcanzado!', 'error');
+            showToast(isTeamRepRestricted ? REP_LIMIT_MSG : '¡Límite de jugadores activos alcanzado!', 'error');
             return;
+        }
+
+        // Pre-validation for occupied jersey when reactivating an inactive player
+        if (!player.isActive && player.jerseyNumber != null) {
+            const conflictingPlayer = players.find(
+                p => p.isActive && p.id !== player.id && p.jerseyNumber === player.jerseyNumber
+            );
+            if (conflictingPlayer) {
+                setReactivatingPlayer(player);
+                setConflictJersey(player.jerseyNumber);
+                setConflictActivePlayerName(conflictingPlayer.name);
+                setNewJerseyInput('');
+                setReactivationError(`El dorsal #${player.jerseyNumber} ya está ocupado por ${conflictingPlayer.name}. Por favor, asigna otro número disponible.`);
+                return;
+            }
         }
 
         try {
@@ -250,8 +273,66 @@ export const RosterDashboard = () => {
             setPlayers(prev => prev.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p));
         } catch (error: any) {
             const errorMsg = error.response?.data?.message || 'Error al cambiar estado del jugador.';
+            if (!player.isActive && errorMsg.toLowerCase().includes('dorsal') && errorMsg.toLowerCase().includes('ocupado')) {
+                setReactivatingPlayer(player);
+                setConflictJersey(player.jerseyNumber ?? null);
+                setConflictActivePlayerName(null);
+                setNewJerseyInput('');
+                setReactivationError(errorMsg);
+                return;
+            }
             showToast(errorMsg, 'error');
         }
+    };
+
+    const handleConfirmReactivateWithNewJersey = async (e?: React.FormEvent) => {
+        if (!reactivatingPlayer || !settings?.tenantId) return;
+
+        const trimmed = newJerseyInput.trim();
+        if (!trimmed) {
+            setReactivationError('Por favor ingresa un número de dorsal.');
+            return;
+        }
+
+        const parsedJersey = parseInt(trimmed, 10);
+        if (isNaN(parsedJersey) || parsedJersey < 0 || parsedJersey > 99) {
+            setReactivationError('Ingresa un número de dorsal válido entre 0 y 99.');
+            return;
+        }
+
+        // Validate if the newly entered jersey is also occupied by another active teammate
+        const activeOccupant = players.find(
+            p => p.isActive && p.id !== reactivatingPlayer.id && p.jerseyNumber === parsedJersey
+        );
+        if (activeOccupant) {
+            setReactivationError(`¡El dorsal #${parsedJersey} también está ocupado por ${activeOccupant.name}! Por favor elige otro número que no esté ocupado.`);
+            return;
+        }
+
+        try {
+            setIsReactivatingSubmitting(true);
+            setReactivationError(null);
+            await leagueApi.activatePlayer(settings.tenantId, reactivatingPlayer.id, parsedJersey);
+            showToast(`Jugador reactivado exitosamente con el dorsal #${parsedJersey}.`, 'success');
+            setReactivatingPlayer(null);
+            setNewJerseyInput('');
+            setConflictJersey(null);
+            setConflictActivePlayerName(null);
+            await fetchRoster(false);
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || 'Error al reactivar jugador con el nuevo dorsal.';
+            setReactivationError(errorMsg);
+        } finally {
+            setIsReactivatingSubmitting(false);
+        }
+    };
+
+    const handleCancelReactivation = () => {
+        setReactivatingPlayer(null);
+        setNewJerseyInput('');
+        setConflictJersey(null);
+        setConflictActivePlayerName(null);
+        setReactivationError(null);
     };
 
     const handleDelete = (id: string) => {
@@ -288,7 +369,7 @@ export const RosterDashboard = () => {
         if (!settings?.tenantId || !targetId) return;
 
         if (activePlayersCount >= maxActivePlayers) {
-            showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : `¡Límite de jugadores alcanzado! Máximo ${maxActivePlayers} activos.`, 'error');
+            showToast(isTeamRepRestricted ? REP_LIMIT_MSG : `¡Límite de jugadores alcanzado! Máximo ${maxActivePlayers} activos.`, 'error');
             return;
         }
 
@@ -314,7 +395,7 @@ export const RosterDashboard = () => {
 
         if (activePlayersCount + parsedPlayers.length > maxActivePlayers) {
             const errorMsg = isTeamRepRestricted
-                ? METEPEC_REP_LIMIT_MSG
+                ? REP_LIMIT_MSG
                 : `No se pueden registrar ${parsedPlayers.length} jugadores. El equipo tiene ${activePlayersCount} activos y el límite es ${maxActivePlayers}.`;
             showToast(errorMsg, 'error');
             throw new Error(errorMsg);
@@ -460,7 +541,7 @@ export const RosterDashboard = () => {
                             <button
                                 onClick={() => {
                                     if (activePlayersCount >= maxActivePlayers) {
-                                        showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : `El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de importar más.`, 'error');
+                                        showToast(isTeamRepRestricted ? REP_LIMIT_MSG : `El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de importar más.`, 'error');
                                         return;
                                     }
                                     setIsMassUploadModalOpen(true);
@@ -473,7 +554,7 @@ export const RosterDashboard = () => {
                             <button
                                 onClick={() => {
                                     if (activePlayersCount >= maxActivePlayers) {
-                                        showToast(isTeamRepRestricted ? METEPEC_REP_LIMIT_MSG : `El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de registrar otro.`, 'error');
+                                        showToast(isTeamRepRestricted ? REP_LIMIT_MSG : `El equipo ya alcanzó el límite máximo de ${maxActivePlayers} jugadores activos. Debes dar de baja a un jugador antes de registrar otro.`, 'error');
                                         return;
                                     }
                                     setIsAddModalOpen(true);
@@ -492,7 +573,7 @@ export const RosterDashboard = () => {
                     <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-3 text-amber-800 dark:text-amber-300 shadow-sm animate-fadeIn">
                         <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600" />
                         <span className="text-sm font-medium">
-                            {METEPEC_REP_LIMIT_MSG}
+                            {REP_LIMIT_MSG}
                         </span>
                     </div>
                 )}
@@ -710,6 +791,110 @@ export const RosterDashboard = () => {
                     onClose={() => setSelectedPlayer(null)}
                     player={selectedPlayer as any}
                 />
+
+                {/* Reactivation Jersey Conflict Modal */}
+                {reactivatingPlayer && (
+                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div
+                            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative animate-in zoom-in-95 duration-200 border border-slate-100"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Modal Header */}
+                            <div className="p-6 pb-4 border-b border-slate-100 flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                                        <Shirt className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">Dorsal Ocupado</h3>
+                                        <p className="text-xs text-slate-500">Reactivación de {reactivatingPlayer.name}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleCancelReactivation}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <form onSubmit={handleConfirmReactivateWithNewJersey} className="p-6 space-y-4">
+                                <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2.5">
+                                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                    <div className="leading-relaxed">
+                                        {conflictJersey != null ? (
+                                            <>
+                                                El dorsal <strong className="font-bold font-mono">#{conflictJersey}</strong> que tenía este jugador ya está ocupado por <strong className="font-bold">{conflictActivePlayerName || 'otro jugador activo'}</strong>.
+                                            </>
+                                        ) : (
+                                            <>El dorsal previo de este jugador se encuentra ocupado por otro jugador activo.</>
+                                        )}
+                                        <div className="mt-1 text-amber-800">
+                                            Por favor, ingresa un número de dorsal que no esté ocupado para reactivarlo en la plantilla.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                        Nuevo Número de Dorsal
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="99"
+                                            autoFocus
+                                            value={newJerseyInput}
+                                            onChange={(e) => {
+                                                setNewJerseyInput(e.target.value);
+                                                if (reactivationError) setReactivationError(null);
+                                            }}
+                                            placeholder="Ingresa otro dorsal (ej. 17)"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+                                        />
+                                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                            #
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {reactivationError && (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-700 animate-in fade-in duration-150">
+                                        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                        <span className="font-medium leading-relaxed">{reactivationError}</span>
+                                    </div>
+                                )}
+
+                                <div className="pt-2 flex items-center justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelReactivation}
+                                        disabled={isReactivatingSubmitting}
+                                        className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isReactivatingSubmitting}
+                                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center gap-2"
+                                    >
+                                        {isReactivatingSubmitting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                <span>Verificando...</span>
+                                            </>
+                                        ) : (
+                                            <span>Asignar y Reactivar</span>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </Layout>
     );

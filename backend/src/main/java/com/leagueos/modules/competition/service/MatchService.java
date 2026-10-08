@@ -239,8 +239,9 @@ public class MatchService {
         player.setSuspendedUntilMatchday(currentMatchday + suspensionDuration);
         playerRepository.save(player);
 
-        // Also record tournament-level suspension for isolated tournament tracking
-        if (match.getSeason() != null && playerTournamentSuspensionRepository != null) {
+        // Also record tournament-level suspension for isolated tournament tracking (Metepec / leagues with accumulated discipline)
+        TenantSettings settings = tenantSettingsService.getCurrentSettings();
+        if (match.getSeason() != null && playerTournamentSuspensionRepository != null && settings != null && settings.isEnableAccumulatedYellowSuspensions()) {
             com.leagueos.modules.registration.domain.PlayerTournamentSuspension pts = new com.leagueos.modules.registration.domain.PlayerTournamentSuspension();
             pts.setTenantId(match.getTenantId());
             pts.setPlayer(player);
@@ -285,7 +286,7 @@ public class MatchService {
 
     private void check12MatchRule(Player player, UUID seasonId, UUID tenantId) {
         TenantSettings settings = tenantSettingsService.getCurrentSettings();
-        if (settings == null) return;
+        if (settings == null || !settings.isEnableAccumulatedYellowSuspensions()) return;
         int maxAllowed = settings.getMaxAccumulatedSuspensionMatchdays() > 0 ? settings.getMaxAccumulatedSuspensionMatchdays() : 12;
 
         Integer totalAssigned = playerTournamentSuspensionRepository.sumTotalMatchesAssignedByPlayerAndSeason(player.getId(), seasonId);

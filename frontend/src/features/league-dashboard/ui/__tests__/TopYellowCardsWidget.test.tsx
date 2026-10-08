@@ -55,4 +55,20 @@ describe('TopYellowCardsWidget — UI Component Tests', () => {
 
         expect(screen.getByText('Sin tarjetas amarillas registradas.')).toBeInTheDocument();
     });
+
+    it('should correctly render generic backend PlayerStatDTO format (name, team, redCards) without undefined or errors', () => {
+        const legacyData: any[] = [
+            {
+                id: 'player-legacy-1',
+                name: 'Oribe Peralta',
+                team: 'Santos Laguna',
+                redCards: 3
+            }
+        ];
+        renderWithProviders(<TopYellowCardsWidget data={legacyData} />);
+
+        expect(screen.getByText('Oribe Peralta')).toBeInTheDocument();
+        expect(screen.getByText('Santos Laguna')).toBeInTheDocument();
+        expect(screen.getByText('3 🟨')).toBeInTheDocument();
+    });
 });

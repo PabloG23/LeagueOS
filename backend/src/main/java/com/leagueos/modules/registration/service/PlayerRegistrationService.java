@@ -48,7 +48,7 @@ public class PlayerRegistrationService {
     private final com.leagueos.modules.media.service.StorageService storageService;
 
     @Transactional
-    public void activatePlayer(UUID playerId, UUID expectedTeamId) {
+    public void activatePlayer(UUID playerId, UUID expectedTeamId, Integer newJerseyNumber) {
         Season activeSeason = getActiveSeason();
 
         SeasonRoster roster = seasonRosterRepository.findByPlayerIdAndSeasonId(playerId, activeSeason.getId())
@@ -72,13 +72,39 @@ public class PlayerRegistrationService {
             }
         }
 
+        // Validate and assign jersey number
+        Integer targetJersey = newJerseyNumber != null ? newJerseyNumber : roster.getJerseyNumber();
+        TenantSettings settings = tenantSettingsService.getCurrentSettings();
+
+        if (settings != null && settings.isRequireJerseyNumbers() && targetJersey == null) {
+            throw new BusinessRuleException("El número de playera/dorsal es obligatorio para reactivar al jugador.");
+        }
+
+        if (targetJersey != null) {
+            List<SeasonRoster> teamRosters = seasonRosterRepository.findByTeamIdAndSeasonId(roster.getTeam().getId(), activeSeason.getId());
+            boolean jerseyConflict = teamRosters.stream()
+                    .filter(r -> !r.getId().equals(roster.getId()))
+                    .filter(r -> r.getStatus() == PlayerStatus.ACTIVE)
+                    .anyMatch(r -> targetJersey.equals(r.getJerseyNumber()));
+
+            if (jerseyConflict) {
+                throw new BusinessRuleException("El dorsal " + targetJersey + " ya está ocupado por otro jugador activo en el equipo. Por favor, asigna otro número.");
+            }
+            roster.setJerseyNumber(targetJersey);
+        }
+
         roster.setStatus(PlayerStatus.ACTIVE);
         seasonRosterRepository.save(roster);
     }
 
     @Transactional
+    public void activatePlayer(UUID playerId, UUID expectedTeamId) {
+        activatePlayer(playerId, expectedTeamId, null);
+    }
+
+    @Transactional
     public void activatePlayer(UUID playerId) {
-        activatePlayer(playerId, null);
+        activatePlayer(playerId, null, null);
     }
 
     @Transactional
@@ -182,8 +208,11 @@ public class PlayerRegistrationService {
 
             if (existingRosterOpt.isPresent()) {
                 SeasonRoster existingRoster = existingRosterOpt.get();
+                String fullName = firstName + (lastName != null && !lastName.isBlank() ? " " + lastName : "");
                 if (existingRoster.getStatus() == PlayerStatus.ACTIVE) {
-                    throw new BusinessRuleException("El jugador '" + firstName + (lastName != null && !lastName.isBlank() ? " " + lastName : "") + "' ya se encuentra registrado y activo en este equipo.");
+                    throw new BusinessRuleException("El jugador '" + fullName + "' ya se encuentra registrado y activo en este equipo.");
+                } else if (existingRoster.getStatus() == PlayerStatus.INACTIVE) {
+                    throw new BusinessRuleException("El jugador '" + fullName + "' ya existe en la plantilla de este equipo (actualmente Inactivo). Puedes reactivarlo directamente desde la lista de jugadores.");
                 }
             }
 

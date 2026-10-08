@@ -27,7 +27,8 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(settings.name).toBe('Test League');
             expect(settings.enableAutoSuspensions).toBe(false);
             expect(settings.allowTransfers).toBe(false);
-            expect(settings.showOffenseDefenseWidgets).toBe(true);
+            expect(settings.showOffenseDefenseWidgets).toBe(false);
+            expect(settings.allowMultipleTeamsPerPlayer).toBe(false);
         });
 
         it('should allow overriding specific fields', () => {
@@ -40,6 +41,8 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(settings.enableAutoSuspensions).toBe(true);
             // Non-overridden fields retain defaults
             expect(settings.allowTransfers).toBe(false);
+            expect(settings.showOffenseDefenseWidgets).toBe(false);
+            expect(settings.allowMultipleTeamsPerPlayer).toBe(false);
         });
     });
 
@@ -89,9 +92,22 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(TENANT_SAN_LUCAS.allowTransfers).toBe(false);
         });
 
-        it('showDisciplineWidget: Nuestro Deporte = false, San Lucas = true', () => {
+        it('showDisciplineWidget: Nuestro Deporte = false, San Lucas = true, Metepec = true', () => {
             expect(TENANT_NUESTRO_DEPORTE.showDisciplineWidget).toBe(false);
             expect(TENANT_SAN_LUCAS.showDisciplineWidget).toBe(true);
+            expect(TENANT_METEPEC.showDisciplineWidget).toBe(true);
+        });
+
+        it('showOffenseDefenseWidgets: Metepec = true, Nuestro Deporte = false, San Lucas = false', () => {
+            expect(TENANT_METEPEC.showOffenseDefenseWidgets).toBe(true);
+            expect(TENANT_NUESTRO_DEPORTE.showOffenseDefenseWidgets).toBe(false);
+            expect(TENANT_SAN_LUCAS.showOffenseDefenseWidgets).toBe(false);
+        });
+
+        it('allowMultipleTeamsPerPlayer: false across all tenants', () => {
+            expect(TENANT_METEPEC.allowMultipleTeamsPerPlayer).toBe(false);
+            expect(TENANT_NUESTRO_DEPORTE.allowMultipleTeamsPerPlayer).toBe(false);
+            expect(TENANT_SAN_LUCAS.allowMultipleTeamsPerPlayer).toBe(false);
         });
 
         it('themeClass should be unique per tenant', () => {

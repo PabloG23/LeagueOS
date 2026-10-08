@@ -62,6 +62,7 @@ const RecentFormCell = ({ form }: { form: ('W' | 'D' | 'L')[] }) => (
 export const StandingsTable = ({ data }: StandingsTableProps) => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const { settings } = useTenantSettings();
+    const effectiveLeagueSlug = leagueSlug || (settings?.themeClass === 'theme-san-lucas' ? 'ligaSanLucas' : (settings?.themeClass === 'theme-metepec' ? 'ligaMetepec' : 'ligaNuestroDeporte'));
     const primaryColorClass = settings?.matchTickerBackgroundClass || 'bg-slate-900';
 
     // Normalize Data
@@ -95,7 +96,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
         return currentData.filter(item => item.phaseGroup === phaseFilter);
     }, [currentData, hasPhaseGroups, phaseFilter]);
 
-    const hasFairPlay = isMetepec;
+    const hasFairPlay = Boolean(settings?.tiebreakerOrder?.includes('FP') || isMetepec);
 
     const columns = useMemo<ColumnDef<TeamStanding>[]>(
         () => [
@@ -133,7 +134,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                 fallbackClass={cn("text-xs font-bold", isNuestroDeporte ? "text-white" : "text-slate-500")}
                             />
                         </div>
-                        <Link to={`/${leagueSlug || 'default'}/team/${info.row.original.id}`} className={cn(
+                        <Link to={`/${effectiveLeagueSlug}/team/${info.row.original.id}`} className={cn(
                             "font-bold hover:underline transition-colors text-base whitespace-nowrap block truncate",
                             isNuestroDeporte ? "text-white hover:text-blue-400" : "text-slate-800 hover:text-blue-600"
                         )}>
@@ -217,7 +218,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 cell: (info) => <RecentFormCell form={info.getValue<('W' | 'D' | 'L')[]>()} />,
             },
         ],
-        [leagueSlug, isNuestroDeporte, isMetepec, hasFairPlay, filteredData.length, phaseFilter, hasPhaseGroups]
+        [effectiveLeagueSlug, isNuestroDeporte, isMetepec, hasFairPlay, filteredData.length, phaseFilter, hasPhaseGroups]
     );
 
     const table = useReactTable({

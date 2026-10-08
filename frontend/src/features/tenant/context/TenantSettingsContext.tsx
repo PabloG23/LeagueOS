@@ -41,13 +41,18 @@ export interface TenantSettings {
     // Feature flags
     enableRoundRobinFixtures: boolean;
     enableShootoutExtraPoint?: boolean;
+    tiebreakerOrder?: string;
+    allowAdminExceedRosterLimit?: boolean;
+    rejectExpiredIne?: boolean;
+    enableAccumulatedYellowSuspensions?: boolean;
+    allowMultipleTeamsPerPlayer?: boolean;
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
     name: "LeagueOS",
     logoUrl: "/league_logo_new.png",
     boardMembers: [],
-    showOffenseDefenseWidgets: true,
+    showOffenseDefenseWidgets: false,
     showDisciplineWidget: false,
     enableAutoSuspensions: false,
     minMatchesForPlayoffs: 0,
@@ -68,6 +73,11 @@ const DEFAULT_SETTINGS: TenantSettings = {
 
     enableRoundRobinFixtures: true,
     enableShootoutExtraPoint: false,
+    allowMultipleTeamsPerPlayer: false,
+    allowAdminExceedRosterLimit: false,
+    rejectExpiredIne: false,
+    enableAccumulatedYellowSuspensions: false,
+    tiebreakerOrder: 'PTS_GD_GF_NAME',
 };
 
 interface TenantSettingsContextType {
@@ -219,27 +229,33 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 // Merge backend settings with frontend branding REGARDLESS of API failure
                 setSettings({
                     ...DEFAULT_SETTINGS, // The default interface base
+                    ...(matchedTenant ? matchedTenant.settings : {}), // Tenant registry definitions
                     enableShootoutExtraPoint,
-                    ...(typeof responseData === 'object' ? responseData : {}),     // Overrides from backend (if any)
-                    name,
-                    logoUrl,
-                    themeClass,
-                    boardMembers,
-                    allowTransfers,
-                    footerAddress,
-                    footerPhone,
-                    footerBackgroundClass,
-                    slogan,
-                    facebookUrl,
-                    instagramUrl,
-                    twitterUrl,
-                    matchTickerBackgroundClass,
-                    matchCardBackgroundClass,
-                    matchTickerTextClass,
-                    enableRoundRobinFixtures,
-                    requireJerseyNumbers: matchedTenant?.settings?.requireJerseyNumbers !== undefined 
-                        ? matchedTenant.settings.requireJerseyNumbers 
-                        : ((responseData as any)?.requireJerseyNumbers ?? requireJerseyNumbers),
+                    ...(typeof responseData === 'object' ? responseData : {}), // Overrides from backend (if any)
+                    name: (responseData as any)?.name ?? matchedTenant?.settings?.name ?? name,
+                    logoUrl: (responseData as any)?.logoUrl ?? matchedTenant?.settings?.logoUrl ?? logoUrl,
+                    themeClass: matchedTenant?.settings?.themeClass ?? themeClass,
+                    boardMembers: (responseData as any)?.boardMembers ?? matchedTenant?.settings?.boardMembers ?? boardMembers,
+                    allowTransfers: (responseData as any)?.allowTransfers ?? matchedTenant?.settings?.allowTransfers ?? allowTransfers,
+                    footerAddress: (responseData as any)?.footerAddress ?? matchedTenant?.settings?.footerAddress ?? footerAddress,
+                    footerPhone: (responseData as any)?.footerPhone ?? matchedTenant?.settings?.footerPhone ?? footerPhone,
+                    footerBackgroundClass: (responseData as any)?.footerBackgroundClass ?? matchedTenant?.settings?.footerBackgroundClass ?? footerBackgroundClass,
+                    slogan: (responseData as any)?.slogan ?? matchedTenant?.settings?.slogan ?? slogan,
+                    facebookUrl: (responseData as any)?.facebookUrl ?? matchedTenant?.settings?.facebookUrl ?? facebookUrl,
+                    instagramUrl: (responseData as any)?.instagramUrl ?? matchedTenant?.settings?.instagramUrl ?? instagramUrl,
+                    twitterUrl: (responseData as any)?.twitterUrl ?? matchedTenant?.settings?.twitterUrl ?? twitterUrl,
+                    matchTickerBackgroundClass: (responseData as any)?.matchTickerBackgroundClass ?? matchedTenant?.settings?.matchTickerBackgroundClass ?? matchTickerBackgroundClass,
+                    matchCardBackgroundClass: (responseData as any)?.matchCardBackgroundClass ?? matchedTenant?.settings?.matchCardBackgroundClass ?? matchCardBackgroundClass,
+                    matchTickerTextClass: (responseData as any)?.matchTickerTextClass ?? matchedTenant?.settings?.matchTickerTextClass ?? matchTickerTextClass,
+                    enableRoundRobinFixtures: (responseData as any)?.enableRoundRobinFixtures ?? matchedTenant?.settings?.enableRoundRobinFixtures ?? enableRoundRobinFixtures,
+                    requireJerseyNumbers: (responseData as any)?.requireJerseyNumbers ?? matchedTenant?.settings?.requireJerseyNumbers ?? requireJerseyNumbers,
+                    showOffenseDefenseWidgets: (responseData as any)?.showOffenseDefenseWidgets ?? matchedTenant?.settings?.showOffenseDefenseWidgets ?? DEFAULT_SETTINGS.showOffenseDefenseWidgets,
+                    showDisciplineWidget: (responseData as any)?.showDisciplineWidget ?? matchedTenant?.settings?.showDisciplineWidget ?? DEFAULT_SETTINGS.showDisciplineWidget,
+                    allowMultipleTeamsPerPlayer: (responseData as any)?.allowMultipleTeamsPerPlayer ?? matchedTenant?.settings?.allowMultipleTeamsPerPlayer ?? DEFAULT_SETTINGS.allowMultipleTeamsPerPlayer,
+                    allowAdminExceedRosterLimit: (responseData as any)?.allowAdminExceedRosterLimit ?? matchedTenant?.settings?.allowAdminExceedRosterLimit ?? DEFAULT_SETTINGS.allowAdminExceedRosterLimit,
+                    rejectExpiredIne: (responseData as any)?.rejectExpiredIne ?? matchedTenant?.settings?.rejectExpiredIne ?? DEFAULT_SETTINGS.rejectExpiredIne,
+                    enableAccumulatedYellowSuspensions: (responseData as any)?.enableAccumulatedYellowSuspensions ?? matchedTenant?.settings?.enableAccumulatedYellowSuspensions ?? DEFAULT_SETTINGS.enableAccumulatedYellowSuspensions,
+                    tiebreakerOrder: (responseData as any)?.tiebreakerOrder ?? matchedTenant?.settings?.tiebreakerOrder ?? DEFAULT_SETTINGS.tiebreakerOrder,
                     tenantId // <--- CRUCIAL: explicitly set tenantId
                 });
             } catch (error) {
