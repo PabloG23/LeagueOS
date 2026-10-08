@@ -93,6 +93,49 @@ public class StatsService {
             matchesPlayed = matchEventRepository.countDistinctMatchesByPlayerId(playerId);
         }
 
+        // Calculate played matches per matchday for transparency
+        List<MatchEvent> playerEvents = matchEventRepository.findEventsWithMatchDetailsByPlayerId(playerId);
+        Map<UUID, List<MatchEvent>> eventsByMatch = new java.util.LinkedHashMap<>();
+        for (MatchEvent ev : playerEvents) {
+            if (ev.getMatch() != null) {
+                eventsByMatch.computeIfAbsent(ev.getMatch().getId(), k -> new ArrayList<>()).add(ev);
+            }
+        }
+
+        List<com.leagueos.modules.competition.api.dto.PlayerMatchAttendanceDTO> playedMatches = new ArrayList<>();
+        for (Map.Entry<UUID, List<MatchEvent>> entry : eventsByMatch.entrySet()) {
+            List<MatchEvent> mEvents = entry.getValue();
+            Match m = mEvents.get(0).getMatch();
+            Team myTeam = mEvents.get(0).getTeam();
+
+            boolean isHome = myTeam != null && m.getHomeTeam() != null && myTeam.getId().equals(m.getHomeTeam().getId());
+            Team opponent = isHome ? m.getAwayTeam() : m.getHomeTeam();
+
+            int mGoals = 0;
+            int mYellow = 0;
+            int mRed = 0;
+            for (MatchEvent ev : mEvents) {
+                if (ev.getEventType() == MatchEvent.MatchEventType.GOAL) mGoals++;
+                else if (ev.getEventType() == MatchEvent.MatchEventType.YELLOW_CARD) mYellow++;
+                else if (ev.getEventType() == MatchEvent.MatchEventType.RED_CARD) mRed++;
+            }
+
+            String oppLogo = opponent != null ? opponent.getLogoUrl() : null;
+
+            playedMatches.add(com.leagueos.modules.competition.api.dto.PlayerMatchAttendanceDTO.builder()
+                    .matchId(m.getId())
+                    .matchday(m.getMatchday())
+                    .matchDate(m.getMatchDate())
+                    .opponentName(opponent != null ? opponent.getName() : "Rival")
+                    .opponentLogo(oppLogo)
+                    .isHome(isHome)
+                    .goals(mGoals)
+                    .yellowCards(mYellow)
+                    .redCards(mRed)
+                    .verifiedInReport(true)
+                    .build());
+        }
+
         return PlayerProfileStatsDTO.builder()
                 .playerId(playerId)
                 .goals(goals)
@@ -100,6 +143,7 @@ public class StatsService {
                 .redCards(redCards)
                 .matchesPlayed(matchesPlayed)
                 .suspendedUntilMatchday(null)
+                .playedMatches(playedMatches)
                 .build();
     }
 

@@ -25,6 +25,15 @@ public interface MatchEventRepository extends JpaRepository<MatchEvent, UUID> {
     @Query("SELECT COUNT(DISTINCT e.match.id) FROM MatchEvent e WHERE e.player.id = :playerId")
     int countDistinctMatchesByPlayerId(@Param("playerId") UUID playerId);
 
+    @Query("SELECT e FROM MatchEvent e " +
+           "JOIN FETCH e.match m " +
+           "JOIN FETCH m.homeTeam ht " +
+           "JOIN FETCH m.awayTeam at " +
+           "JOIN FETCH e.team t " +
+           "WHERE e.player.id = :playerId " +
+           "ORDER BY m.matchday ASC, m.matchDate ASC")
+    List<MatchEvent> findEventsWithMatchDetailsByPlayerId(@Param("playerId") UUID playerId);
+
     @Query("SELECT new com.leagueos.modules.competition.api.dto.TeamStatDTO(t.id, t.name, COUNT(e), 0) " +
            "FROM MatchEvent e JOIN e.match m JOIN e.team t " +
            "WHERE e.eventType = 'RED_CARD' AND m.season.id IN :seasonIds " +

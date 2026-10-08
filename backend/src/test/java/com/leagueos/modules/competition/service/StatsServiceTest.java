@@ -416,5 +416,42 @@ class StatsServiceTest {
 
             assertThat(stats.getMatchesPlayed()).isEqualTo(4);
         }
+
+        @Test
+        @DisplayName("should populate playedMatches with opponent and matchday details from match events")
+        void populatesPlayedMatchesWithDetails() {
+            UUID playerId = UUID.randomUUID();
+            com.leagueos.modules.league.domain.Team myTeam = new com.leagueos.modules.league.domain.Team();
+            myTeam.setId(UUID.randomUUID());
+            myTeam.setName("Zenocar");
+
+            com.leagueos.modules.league.domain.Team opponentTeam = new com.leagueos.modules.league.domain.Team();
+            opponentTeam.setId(UUID.randomUUID());
+            opponentTeam.setName("Atlas");
+            opponentTeam.setLogoUrl("atlas-logo.png");
+
+            Match match1 = new Match();
+            match1.setId(UUID.randomUUID());
+            match1.setMatchday(3);
+            match1.setHomeTeam(myTeam);
+            match1.setAwayTeam(opponentTeam);
+
+            MatchEvent eventGoal = new MatchEvent();
+            eventGoal.setMatch(match1);
+            eventGoal.setTeam(myTeam);
+            eventGoal.setEventType(MatchEvent.MatchEventType.GOAL);
+
+            when(matchEventRepository.findEventsWithMatchDetailsByPlayerId(playerId))
+                    .thenReturn(List.of(eventGoal));
+
+            PlayerProfileStatsDTO stats = statsService.getPlayerProfileStats(playerId);
+
+            assertThat(stats.getPlayedMatches()).hasSize(1);
+            var att = stats.getPlayedMatches().get(0);
+            assertThat(att.getMatchday()).isEqualTo(3);
+            assertThat(att.getOpponentName()).isEqualTo("Atlas");
+            assertThat(att.getGoals()).isEqualTo(1);
+            assertThat(att.isVerifiedInReport()).isTrue();
+        }
     }
 }

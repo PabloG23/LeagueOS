@@ -132,6 +132,30 @@ export interface PlayerScorerDTO {
     profilePhotoUrl?: string;
 }
 
+export interface PlayerMatchAttendanceDTO {
+    matchId: string;
+    matchday?: number;
+    matchDate?: string;
+    opponentName: string;
+    opponentLogo?: string;
+    isHome: boolean;
+    goals: number;
+    yellowCards: number;
+    redCards: number;
+    verifiedInReport: boolean;
+}
+
+export interface PlayerProfileStatsDTO {
+    playerId: string;
+    matchesPlayed: number;
+    goals: number;
+    yellowCards: number;
+    redCards: number;
+    suspendedUntilMatchday?: number | null;
+    playedMatches?: PlayerMatchAttendanceDTO[];
+}
+
+
 export interface SoccerField {
     id: string;
     tenantId: string;
@@ -425,7 +449,7 @@ export const leagueApi = {
     getSeasonStandings: (seasonId: string, tenantId: string) =>
         api.get<any[]>(`/public/stats/seasons/${seasonId}/standings`, { headers: { 'X-Tenant-ID': tenantId } }),
     getPlayerStats: (playerId: string, tenantId: string) =>
-        api.get<any>(`/public/stats/players/${playerId}`, { headers: { 'X-Tenant-ID': tenantId } }),
+        api.get<PlayerProfileStatsDTO>(`/public/stats/players/${playerId}`, { headers: { 'X-Tenant-ID': tenantId } }),
 
     // Media
     getSignedUrl: (key: string) => api.get<{url: string}>(`/media/signed-url?key=${encodeURIComponent(key)}`),
