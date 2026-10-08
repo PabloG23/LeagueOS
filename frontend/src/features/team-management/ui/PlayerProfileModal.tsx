@@ -20,7 +20,7 @@ interface Player {
     name: string;
     photoUrl?: string;
     isActive?: boolean;
-    jerseyNumber?: number;
+    jerseyNumber?: number | string;
     curp?: string;
     birthDate?: string;
     stats?: {

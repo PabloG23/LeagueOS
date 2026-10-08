@@ -19,6 +19,7 @@ import { useToast } from '@/shared/components/ui/ToastContext';
 // Local type extending the base Player to include dashboard-specific info
 type ExtendedPlayer = Player & {
     teamName?: string;
+    teamLogo?: string;
     stats?: {
         matchesPlayed?: number;
         goals?: number;
