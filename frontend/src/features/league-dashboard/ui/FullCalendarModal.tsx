@@ -56,7 +56,9 @@ export const FullCalendarModal = ({ isOpen, onClose }: FullCalendarModalProps) =
                 seasonMap.set(id, m.season?.name || 'Categoría');
             }
         });
-        return Array.from(seasonMap.entries()).map(([id, name]) => ({ id, name }));
+        return Array.from(seasonMap.entries())
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
     }, [matches]);
 
     const [activeSeasonId, setActiveSeasonId] = useState<string>('');

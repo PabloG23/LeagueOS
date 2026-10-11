@@ -158,6 +158,17 @@
     --sidebar: 140 10% 6%;             /* #0E1210 Obsidiana profunda */
     --sidebar-foreground: 0 0% 100%;
   }
+
+  /* Logo Navbar Metepec: escudo completo, más grande y fundido con el fondo claro */
+  .theme-metepec .tenant-brand-logo {
+    height: 5.5rem;
+    border-radius: 0;
+    mix-blend-mode: multiply;
+    filter: none;
+  }
+  @media (min-width: 768px) {
+    .theme-metepec .tenant-brand-logo { height: 7rem; }
+  }
 }
 
 @layer base {

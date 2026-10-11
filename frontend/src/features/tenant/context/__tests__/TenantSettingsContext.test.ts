@@ -67,7 +67,7 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(TENANT_METEPEC.tenantId).toBe('e39a6b17-5646-452d-929c-ca9a8dc4e44d');
             expect(TENANT_METEPEC.name).toBe('LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.');
             expect(TENANT_METEPEC.themeClass).toBe('theme-metepec');
-            expect(TENANT_METEPEC.logoUrl).toBe('/ligaMunicipalMetepec.jpeg');
+            expect(TENANT_METEPEC.logoUrl).toBe('/ligaMunicipalMetepec.png');
         });
 
         it('TENANT_DEFAULT_PLATFORM should have neutral identity', () => {
@@ -108,6 +108,12 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(TENANT_METEPEC.allowMultipleTeamsPerPlayer).toBe(false);
             expect(TENANT_NUESTRO_DEPORTE.allowMultipleTeamsPerPlayer).toBe(false);
             expect(TENANT_SAN_LUCAS.allowMultipleTeamsPerPlayer).toBe(false);
+        });
+
+        it('allowQuickScore: Metepec = false, Nuestro Deporte = true, San Lucas = true', () => {
+            expect(TENANT_METEPEC.allowQuickScore).toBe(false);
+            expect(TENANT_NUESTRO_DEPORTE.allowQuickScore).toBe(true);
+            expect(TENANT_SAN_LUCAS.allowQuickScore).toBe(true);
         });
 
         it('themeClass should be unique per tenant', () => {

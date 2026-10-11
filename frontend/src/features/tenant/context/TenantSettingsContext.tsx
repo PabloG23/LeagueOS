@@ -46,6 +46,7 @@ export interface TenantSettings {
     rejectExpiredIne?: boolean;
     enableAccumulatedYellowSuspensions?: boolean;
     allowMultipleTeamsPerPlayer?: boolean;
+    allowQuickScore?: boolean;
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -77,6 +78,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
     allowAdminExceedRosterLimit: false,
     rejectExpiredIne: false,
     enableAccumulatedYellowSuspensions: false,
+    allowQuickScore: true,
     tiebreakerOrder: 'PTS_GD_GF_NAME',
 };
 

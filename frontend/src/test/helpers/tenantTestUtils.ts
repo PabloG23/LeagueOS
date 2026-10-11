@@ -29,6 +29,7 @@ export const createTenantSettings = (overrides: Partial<TenantSettings> = {}): T
     matchTickerTextClass: 'text-primary',
     enableRoundRobinFixtures: true,
     enableShootoutExtraPoint: false,
+    allowQuickScore: true,
     ...overrides,
 });
 
@@ -92,7 +93,7 @@ export const TENANT_SAN_LUCAS = createTenantSettings({
 export const TENANT_METEPEC = createTenantSettings({
     tenantId: 'e39a6b17-5646-452d-929c-ca9a8dc4e44d',
     name: 'LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.',
-    logoUrl: '/ligaMunicipalMetepec.jpeg',
+    logoUrl: '/ligaMunicipalMetepec.png',
     themeClass: 'theme-metepec',
     enableAutoSuspensions: false,
     allowTransfers: false,
@@ -108,6 +109,7 @@ export const TENANT_METEPEC = createTenantSettings({
     matchCardBackgroundClass: 'bg-[#1C261F]',
     matchTickerTextClass: 'text-[#93C572]',
     enableRoundRobinFixtures: true,
+    allowQuickScore: false,
     boardMembers: [
         { role: 'Presidente', name: 'Luis Rendón' },
         { role: 'Vicepresidente', name: 'Héctor Gómez' },

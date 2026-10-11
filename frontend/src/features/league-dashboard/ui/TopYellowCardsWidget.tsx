@@ -55,68 +55,54 @@ export const TopYellowCardsWidget = ({ data = [], loading = false }: TopYellowCa
                         Sin tarjetas amarillas registradas.
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {topList.map((item, index) => {
                             const playerName = item.playerName || item.name || '';
                             const teamName = item.teamName || item.team || '';
                             const count = item.yellowCards ?? item.redCards ?? 0;
                             const matchesSuspended = item.matchesSuspended ?? 0;
                             const cycleCount = count % 5 === 0 && count > 0 ? 5 : count % 5;
-                            const progressPct = Math.min((cycleCount / 5) * 100, 100);
                             const isAtLimit = cycleCount >= 4;
 
                             return (
-                                <div key={item.playerId || item.id || index} className="space-y-1.5">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <span className={cn(
-                                                "font-mono font-bold w-4 text-xs shrink-0",
-                                                isNuestroDeporte ? "text-slate-500" : "text-slate-400"
+                                <div key={item.playerId || item.id || index} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-100 last:border-none">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <span className={cn(
+                                            "font-mono font-bold w-4 text-xs shrink-0",
+                                            isNuestroDeporte ? "text-slate-500" : "text-slate-400"
+                                        )}>
+                                            {index + 1}
+                                        </span>
+                                        <div className="min-w-0">
+                                            <div className={cn(
+                                                "font-bold text-sm truncate",
+                                                isNuestroDeporte ? "text-slate-200" : "text-slate-800"
                                             )}>
-                                                {index + 1}
-                                            </span>
-                                            <div className="min-w-0">
-                                                <div className={cn(
-                                                    "font-bold text-sm truncate",
-                                                    isNuestroDeporte ? "text-slate-200" : "text-slate-800"
-                                                )}>
-                                                    {playerName}
-                                                </div>
-                                                <div className={cn(
-                                                    "text-[11px] truncate",
-                                                    isNuestroDeporte ? "text-slate-400" : "text-slate-500"
-                                                )}>
-                                                    {teamName}
-                                                </div>
+                                                {playerName}
                                             </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            {matchesSuspended > 0 && (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
-                                                    <ShieldAlert className="w-3 h-3" /> Suspendido
-                                                </span>
-                                            )}
-                                            <span className={cn(
-                                                "font-black text-sm px-2 py-0.5 rounded-lg border",
-                                                isAtLimit
-                                                    ? "bg-amber-100 text-amber-900 border-amber-300"
-                                                    : "bg-slate-100 text-slate-800 border-slate-200"
+                                            <div className={cn(
+                                                "text-[11px] truncate",
+                                                isNuestroDeporte ? "text-slate-400" : "text-slate-500"
                                             )}>
-                                                {count} 🟨
-                                            </span>
+                                                {teamName}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Barra de progreso hacia las 5 amarillas */}
-                                    <div className={cn("h-1.5 w-full rounded-full overflow-hidden", isNuestroDeporte ? "bg-blue-950/60" : "bg-slate-100")}>
-                                        <div
-                                            className={cn(
-                                                "h-full rounded-full transition-all duration-500",
-                                                cycleCount >= 4 ? "bg-amber-500" : (isMetepec ? "bg-[#93C572]" : "bg-amber-400")
-                                            )}
-                                            style={{ width: `${progressPct}%` }}
-                                        />
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {matchesSuspended > 0 && (
+                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                                                <ShieldAlert className="w-3 h-3" /> Suspendido
+                                            </span>
+                                        )}
+                                        <span className={cn(
+                                            "font-black text-sm px-2 py-0.5 rounded-lg border",
+                                            isAtLimit
+                                                ? "bg-amber-100 text-amber-900 border-amber-300"
+                                                : "bg-slate-100 text-slate-800 border-slate-200"
+                                        )}>
+                                            {count} 🟨
+                                        </span>
                                     </div>
                                 </div>
                             );

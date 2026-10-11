@@ -44,6 +44,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             allowAdminExceedRosterLimit: false,
             rejectExpiredIne: false,
             enableAccumulatedYellowSuspensions: false,
+            allowQuickScore: true,
             boardMembers: [
                 { role: "Presidente", name: "Alejo Reyes Mejía" },
                 { role: "Secretario", name: "Eduardo García Díaz" },
@@ -83,6 +84,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             allowAdminExceedRosterLimit: false,
             rejectExpiredIne: false,
             enableAccumulatedYellowSuspensions: false,
+            allowQuickScore: true,
             boardMembers: [
                 { role: "Presidente", name: "Mike Portocarrero" },
                 { role: "Vicepresidente", name: "Carlos Mejía" },
@@ -101,7 +103,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
         settings: {
             tenantId: TENANT_ID_METEPEC,
             name: "LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.",
-            logoUrl: "/ligaMunicipalMetepec.jpeg",
+            logoUrl: "/ligaMunicipalMetepec.png",
             themeClass: 'theme-metepec',
             allowTransfers: false,
             requireJerseyNumbers: false,
@@ -124,6 +126,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             allowAdminExceedRosterLimit: true,
             rejectExpiredIne: true,
             enableAccumulatedYellowSuspensions: true,
+            allowQuickScore: false,
             boardMembers: [
                 { role: "Presidente", name: "Luis Rendón" },
                 { role: "Vicepresidente", name: "Héctor Gómez" },

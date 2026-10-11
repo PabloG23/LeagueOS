@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { leagueApi, Season, TeamRegistration, MatchPreviewDTO } from '@/shared/api/league-api';
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
@@ -25,6 +25,7 @@ export const SeasonDetailsPage = () => {
     const [teamToUnenroll, setTeamToUnenroll] = useState<{ id: string, name: string } | null>(null);
     const [isUnenrolling, setIsUnenrolling] = useState(false);
     const [enrolledTeams, setEnrolledTeams] = useState<TeamRegistration[]>([]);
+    const [otherSiblingEnrolledIds, setOtherSiblingEnrolledIds] = useState<string[]>([]);
     const [isGeneratePlayoffsModalOpen, setIsGeneratePlayoffsModalOpen] = useState(false);
     const [bracketRefreshTrigger, setBracketRefreshTrigger] = useState(0);
     const [isDeletingSeason, setIsDeletingSeason] = useState(false);
@@ -41,6 +42,30 @@ export const SeasonDetailsPage = () => {
     const { showToast, showConfirm } = useToast();
     const enableRoundRobin = settings?.enableRoundRobinFixtures ?? true;
 
+    const loadSiblingTeams = useCallback(async (currentSeason: Season | null, seasonsList: Season[]) => {
+        if (!tenantId || !currentSeason) return;
+        const base = currentSeason.name.split(' - ')[0];
+        const siblings = seasonsList.filter(s => 
+            (s.name.startsWith(base + ' - ') || s.name === base) && s.id !== currentSeason.id
+        );
+
+        if (siblings.length === 0) {
+            setOtherSiblingEnrolledIds([]);
+            return;
+        }
+
+        try {
+            const responses = await Promise.all(siblings.map(s => leagueApi.getEnrolledTeams(tenantId, s.id)));
+            const ids = new Set<string>();
+            responses.forEach(res => {
+                res.data.forEach(reg => ids.add(reg.team.id));
+            });
+            setOtherSiblingEnrolledIds(Array.from(ids));
+        } catch (e) {
+            console.error("Error loading sibling enrolled teams", e);
+        }
+    }, [tenantId]);
+
     useEffect(() => {
         if (!seasonId || !tenantId) return;
         setLoading(true);
@@ -50,13 +75,14 @@ export const SeasonDetailsPage = () => {
         ])
             .then(([seasonRes, teamsRes]) => {
                 setAllSeasons(seasonRes.data);
-                const found = seasonRes.data.find(s => s.id === seasonId);
-                setSeason(found || null);
+                const found = seasonRes.data.find(s => s.id === seasonId) || null;
+                setSeason(found);
                 setEnrolledTeams(teamsRes.data);
+                loadSiblingTeams(found, seasonRes.data);
             })
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
-    }, [seasonId, tenantId]);
+    }, [seasonId, tenantId, loadSiblingTeams]);
 
     // Check whether a calendar already exists for this season when the calendar tab is opened.
     // O(1) — single API call, result stored as a boolean flag.
@@ -73,35 +99,68 @@ export const SeasonDetailsPage = () => {
         try {
             const res = await leagueApi.getEnrolledTeams(tenantId, seasonId);
             setEnrolledTeams(res.data);
+            if (season) {
+                loadSiblingTeams(season, allSeasons);
+            }
         } catch (e) {
             console.error("Error loading teams", e);
         }
     };
 
+    useEffect(() => {
+        if (isEnrollModalOpen && season && allSeasons.length > 0) {
+            loadSiblingTeams(season, allSeasons);
+        }
+    }, [isEnrollModalOpen, season, allSeasons, loadSiblingTeams]);
+
+    const excludedTeamIds = useMemo(() => {
+        const currentIds = enrolledTeams.map(reg => reg.team.id);
+        return Array.from(new Set([...currentIds, ...otherSiblingEnrolledIds]));
+    }, [enrolledTeams, otherSiblingEnrolledIds]);
+
     const handleActivateSeason = async () => {
         if (!seasonId || !tenantId) return;
+
+        const seasonsToActivate = siblingSeasons.length > 1 
+            ? siblingSeasons.filter(s => s.status === 'DRAFT')
+            : (season ? [season] : []);
+
+        if (enrolledTeams.length < 2) {
+            showToast("Debes inscribir al menos 2 equipos para poder activar el torneo.", "error");
+            return;
+        }
         
         showConfirm(
-            "¿Estás seguro de activar el torneo?\n\nUna vez activo, el calendario y los equipos serán visibles al público de la liga, y ya no podrás eliminar el torneo.",
+            siblingSeasons.length > 1
+                ? "¿Estás seguro de activar el torneo y sus fuerzas?\n\nUna vez activo, los calendarios y equipos serán visibles al público de la liga en el portal."
+                : "¿Estás seguro de activar el torneo?\n\nUna vez activo, el calendario y los equipos serán visibles al público de la liga, y ya no podrás eliminar el torneo.",
             async () => {
-        setIsActivating(true);
-        try {
-            await leagueApi.activateSeason(tenantId, seasonId);
-            
-            const [seasonRes] = await Promise.all([
-                leagueApi.getSeasons(tenantId)
-            ]);
-            setAllSeasons(seasonRes.data);
-            const found = seasonRes.data.find(s => s.id === seasonId);
-            setSeason(found || null);
-            showToast("¡Torneo activado exitosamente! Los partidos ahora serán públicos en el portal.", "success");
-        } catch (error) {
-            console.error("Error activating season", error);
-            showToast("No se pudo activar el torneo.", "error");
-        } finally {
-            setIsActivating(false);
-        }
-        }, "Sí, activar", "Cancelar");
+                setIsActivating(true);
+                try {
+                    await Promise.all(seasonsToActivate.map(s => leagueApi.activateSeason(tenantId, s.id)));
+                    
+                    const [seasonRes] = await Promise.all([
+                        leagueApi.getSeasons(tenantId)
+                    ]);
+                    setAllSeasons(seasonRes.data);
+                    const found = seasonRes.data.find(s => s.id === seasonId);
+                    setSeason(found || null);
+                    showToast(
+                        siblingSeasons.length > 1
+                            ? "¡Torneo y todas sus fuerzas activados exitosamente! Los partidos ahora son públicos en el portal."
+                            : "¡Torneo activado exitosamente! Los partidos ahora serán públicos en el portal.",
+                        "success"
+                    );
+                } catch (error) {
+                    console.error("Error activating season", error);
+                    showToast("No se pudo activar el torneo.", "error");
+                } finally {
+                    setIsActivating(false);
+                }
+            },
+            "Sí, activar",
+            "Cancelar"
+        );
     };
 
     const handleUnenrollClick = (teamId: string, teamName: string) => {
@@ -125,31 +184,21 @@ export const SeasonDetailsPage = () => {
         }
     };
 
-    const handleOpenRoundRobin = async () => {
+    const handleOpenRoundRobin = () => {
         if (!seasonId || !tenantId) return;
-        if (enrolledTeams.length < 2) {
-            showToast("Se necesitan al menos 2 equipos inscritos para generar el calendario.", "error");
-            return;
-        }
-        setIsLoadingPreview(true);
-        try {
-            const res = await leagueApi.previewRoundRobinFixtures(tenantId, seasonId);
-            setRoundRobinPreviews(res.data);
-            setIsRoundRobinPreviewOpen(true);
-        } catch (err: any) {
-            console.error("Error fetching round robin preview:", err);
-            const msg = err.response?.data?.error || "No se pudo generar la vista previa. Revisa que haya al menos 2 equipos aprobados.";
-            showToast(msg, "error");
-        } finally {
-            setIsLoadingPreview(false);
-        }
+        setIsRoundRobinPreviewOpen(true);
     };
 
     const handleRoundRobinConfirmed = () => {
         setIsRoundRobinPreviewOpen(false);
         setHasCalendar(true);
         setUploadSuccess(true);
-        showToast("¡Calendario Round Robin generado y guardado exitosamente!", "success");
+        showToast("¡Calendario configurado exitosamente! El torneo está listo para activarse.", "success");
+        if (seasonId && tenantId) {
+            leagueApi.getSeasonMatches(tenantId, seasonId)
+                .then(res => setHasCalendar(res.data.length > 0))
+                .catch(() => {});
+        }
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,8 +263,9 @@ export const SeasonDetailsPage = () => {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleActivateSeason}
-                                disabled={isActivating}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg transition-all shadow-md shadow-green-500/20 disabled:opacity-50"
+                                disabled={isActivating || enrolledTeams.length < 2}
+                                title={enrolledTeams.length < 2 ? "Inscribe al menos 2 equipos para poder activar el torneo" : undefined}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg transition-all shadow-md shadow-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 {isActivating ? (
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -420,20 +470,12 @@ export const SeasonDetailsPage = () => {
                                         <button
                                             id="btn-generate-round-robin"
                                             onClick={handleOpenRoundRobin}
-                                            disabled={isLoadingPreview || enrolledTeams.length < 2}
+                                            disabled={enrolledTeams.length < 2 && siblingSeasons.length <= 1}
+                                            title={enrolledTeams.length < 2 && siblingSeasons.length <= 1 ? "Inscribe al menos 2 equipos para generar el calendario" : undefined}
                                             className="w-full flex items-center justify-center gap-2.5 py-3.5 px-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            {isLoadingPreview ? (
-                                                <>
-                                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                                    Calculando jornadas...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Shuffle className="w-5 h-5" />
-                                                    Generar con Round Robin
-                                                </>
-                                            )}
+                                            <Shuffle className="w-5 h-5" />
+                                            Generar con Round Robin
                                         </button>
                                     </div>
 
@@ -519,16 +561,9 @@ export const SeasonDetailsPage = () => {
                                     <Shield className="w-8 h-8" />
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-800 mb-1">Aún no hay equipos inscritos</h3>
-                                <p className="text-sm text-slate-500 max-w-sm mb-6">
+                                <p className="text-sm text-slate-500 max-w-sm">
                                     Inscribe a los equipos del catálogo general para comenzar a armar el torneo y su calendario.
                                 </p>
-                                <button
-                                    onClick={() => setIsEnrollModalOpen(true)}
-                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20"
-                                >
-                                    <UserPlus className="w-4 h-4" />
-                                    Inscribir Primeros Equipos
-                                </button>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -578,7 +613,7 @@ export const SeasonDetailsPage = () => {
                             onClose={() => setIsEnrollModalOpen(false)}
                             tenantId={tenantId || ''}
                             seasonId={seasonId || ''}
-                            alreadyEnrolledTeamIds={enrolledTeams.map(reg => reg.team.id)}
+                            alreadyEnrolledTeamIds={excludedTeamIds}
                             onSaved={loadTeams}
                         />
 
@@ -760,6 +795,7 @@ export const SeasonDetailsPage = () => {
                     tenantId={tenantId}
                     seasonId={seasonId}
                     initialPreviews={roundRobinPreviews}
+                    siblingSeasons={siblingSeasons}
                     onClose={() => setIsRoundRobinPreviewOpen(false)}
                     onConfirmed={handleRoundRobinConfirmed}
                 />

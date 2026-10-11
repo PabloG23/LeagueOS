@@ -284,9 +284,6 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-emerald-500" /> Ganado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-slate-400" /> Empatado</span>
                     <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-500" /> Perdido</span>
-                    {isMetepec && (
-                        <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-400" /> Descenso</span>
-                    )}
                 </div>
             </div>
 

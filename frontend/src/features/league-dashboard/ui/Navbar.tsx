@@ -32,7 +32,7 @@ export const Navbar = () => {
                             src={settings.logoUrl}
                             alt={settings.name}
                             className={cn(
-                                "h-14 md:h-16 w-auto object-contain relative z-10 drop-shadow-md transition-transform duration-300 group-hover:scale-105 rounded-md",
+                                "tenant-brand-logo h-14 md:h-16 w-auto object-contain relative z-10 drop-shadow-md transition-transform duration-300 group-hover:scale-105 rounded-md",
                                 isNuestroDeporte ? "border border-blue-400/20 shadow-blue-900/40" : ""
                             )}
                         />

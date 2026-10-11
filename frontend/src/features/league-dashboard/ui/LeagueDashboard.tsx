@@ -33,10 +33,11 @@ export const LeagueDashboard = () => {
         if (!settings?.tenantId) return;
         leagueApi.getSeasons(settings.tenantId)
             .then(res => {
-                const active = res.data.find(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
-                const actives = res.data.filter(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
-                if (active) {
-                    setActiveSeason(active);
+                const actives = res.data
+                    .filter(s => s.status === 'ACTIVE' || s.status === 'COMPLETED')
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                if (actives.length > 0) {
+                    setActiveSeason(actives[0]);
                 }
                 setAllActiveSeasons(actives);
             })

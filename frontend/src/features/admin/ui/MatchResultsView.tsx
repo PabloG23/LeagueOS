@@ -41,6 +41,9 @@ const MatchRow = ({
     isDownloadingReportPhoto?: boolean;
     isLast?: boolean;
 }) => {
+    const { settings } = useTenantSettings();
+    const allowQuickScore = settings?.allowQuickScore ?? true;
+
     const isFinished = match.status === 'FINISHED';
     const isDraw = isFinished && match.homeScore !== null && match.homeScore !== undefined && match.homeScore === match.awayScore;
     const penaltyWinnerId = match.penaltyWinnerTeamId || (match as any).penaltyWinnerTeam?.id;
@@ -211,14 +214,16 @@ const MatchRow = ({
                     </button>
 
                     {/* 2. Quick Score Button (Direct Score / No players needed) */}
-                    <button
-                        onClick={() => onOpenQuickScore(match)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/80 shadow-2xs transition-colors"
-                        title="Capturar marcador directo sin requerir jugadores (ideal para jornadas de gracia)"
-                    >
-                        <Trophy className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Marcador Rápido</span>
-                    </button>
+                    {allowQuickScore && (
+                        <button
+                            onClick={() => onOpenQuickScore(match)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/80 shadow-2xs transition-colors"
+                            title="Capturar marcador directo sin requerir jugadores (ideal para jornadas de gracia)"
+                        >
+                            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Marcador Rápido</span>
+                        </button>
+                    )}
 
                     {/* 3. PDFs Dropdown Menu (Cédula PDF + Tarjetas PDF) */}
                     <div className="relative" ref={pdfMenuRef}>
@@ -391,7 +396,7 @@ const MatchRow = ({
                 </div>
 
                 {/* Mobile Action Buttons Grid */}
-                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                <div className={`grid ${allowQuickScore ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 pt-1`}>
                     <button
                         onClick={() => onOpenEditSchedule(match)}
                         className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
@@ -400,14 +405,16 @@ const MatchRow = ({
                         <span>Horario</span>
                     </button>
 
-                    <button
-                        onClick={() => onOpenQuickScore(match)}
-                        className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 shadow-2xs"
-                        title="Marcador Rápido"
-                    >
-                        <Trophy className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Marcador</span>
-                    </button>
+                    {allowQuickScore && (
+                        <button
+                            onClick={() => onOpenQuickScore(match)}
+                            className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 shadow-2xs"
+                            title="Marcador Rápido"
+                        >
+                            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Marcador</span>
+                        </button>
+                    )}
 
                     <button
                         onClick={() => onDownloadSheet(match)}

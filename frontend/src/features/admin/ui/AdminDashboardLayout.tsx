@@ -1,8 +1,10 @@
 import { ReactNode, useState } from 'react';
-import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin, UserCheck, X } from 'lucide-react';
+import { Users, LayoutDashboard, Database, Repeat, LogOut, Menu, MapPin, UserCheck, X, ShieldAlert } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
+import { resolveTenantById } from '@/features/tenant/config/tenantsRegistry';
+import { isTenantSessionMismatch } from '@/features/tenant/lib/tenantSessionGuard';
 
 interface LayoutProps {
     children: ReactNode;
@@ -11,7 +13,7 @@ interface LayoutProps {
 export const AdminDashboardLayout = ({ children }: LayoutProps) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const location = useLocation();
-    const { settings } = useTenantSettings();
+    const { settings, isLoading } = useTenantSettings();
 
     // Extract current league slug from URL or default to 'ligaNuestroDeporte'
     const currentPath = location.pathname;
@@ -29,6 +31,38 @@ export const AdminDashboardLayout = ({ children }: LayoutProps) => {
         { path: `/${leagueSlug}/admin/users`, icon: Users, label: 'Usuarios' },
         { path: `/${leagueSlug}/admin/transfers`, icon: Repeat, label: 'Transferencias', hidden: !settings.allowTransfers },
     ].filter(item => !item.hidden);
+
+    // Guard: la sesión guardada pertenece a otro tenant distinto al de la URL
+    const sessionTenantId = localStorage.getItem('tenantId');
+    if (!isLoading && isTenantSessionMismatch(sessionTenantId, settings.tenantId)) {
+        const sessionTenantName = resolveTenantById(sessionTenantId!)?.settings.name ?? 'otra liga';
+        const relogin = () => {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.replace(`/${leagueSlug}/login`);
+        };
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+                <div id="tenant-session-mismatch" className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-200 p-8 text-center">
+                    <div className="mx-auto mb-5 w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+                        <ShieldAlert className="w-7 h-7 text-amber-600" />
+                    </div>
+                    <h1 className="text-xl font-bold text-slate-900">Sesión de otra liga</h1>
+                    <p className="mt-3 text-sm text-slate-600">
+                        Tu sesión actual pertenece a <strong>{sessionTenantName}</strong>. Para administrar{' '}
+                        <strong>{settings.name}</strong> necesitas iniciar sesión con una cuenta de esa liga.
+                    </p>
+                    <button
+                        id="tenant-session-relogin"
+                        onClick={relogin}
+                        className="mt-6 w-full px-4 py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 transition-colors"
+                    >
+                        Cerrar sesión e ingresar a {settings.name}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 flex">
