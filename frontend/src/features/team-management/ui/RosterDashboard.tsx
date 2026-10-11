@@ -19,6 +19,7 @@ import { useToast } from '@/shared/components/ui/ToastContext';
 // Local type extending the base Player to include dashboard-specific info
 type ExtendedPlayer = Player & {
     teamName?: string;
+    teamLogo?: string;
     stats?: {
         matchesPlayed?: number;
         goals?: number;
@@ -432,7 +433,7 @@ export const RosterDashboard = () => {
                 setVerifyingPlayer(player);
                 setIsAddModalOpen(true);
             } else if (player.status !== 'PENDING_VERIFICATION') {
-                setSelectedPlayer({ ...player, teamName });
+                setSelectedPlayer({ ...player, teamName, teamLogo });
             }
         }}>
             <PlayerCard
@@ -668,7 +669,7 @@ export const RosterDashboard = () => {
                                                 setVerifyingPlayer(player);
                                                 setIsAddModalOpen(true);
                                             } else if (player.status !== 'PENDING_VERIFICATION') {
-                                                setSelectedPlayer({ ...player, teamName });
+                                                setSelectedPlayer({ ...player, teamName, teamLogo });
                                             }
                                         }}
                                     >
@@ -789,7 +790,7 @@ export const RosterDashboard = () => {
                 <PlayerProfileModal
                     isOpen={!!selectedPlayer && selectedPlayer.status !== 'PENDING_VERIFICATION'}
                     onClose={() => setSelectedPlayer(null)}
-                    player={selectedPlayer as any}
+                    player={selectedPlayer ? { ...selectedPlayer, teamLogo: selectedPlayer.teamLogo || teamLogo } as any : null}
                 />
 
                 {/* Reactivation Jersey Conflict Modal */}

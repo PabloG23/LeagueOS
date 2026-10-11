@@ -220,24 +220,7 @@ const MatchRow = ({
                         <span>Marcador Rápido</span>
                     </button>
 
-                    {/* 3. Photo Report Button (If referee uploaded it) */}
-                    {hasPhotoReport && onDownloadReportPhoto && (
-                        <button
-                            onClick={() => onDownloadReportPhoto(match)}
-                            disabled={isDownloadingReportPhoto}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs transition-colors disabled:opacity-50"
-                            title="Descargar o ver foto de la cédula subida por el árbitro"
-                        >
-                            {isDownloadingReportPhoto ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                            ) : (
-                                <ImageDown className="w-3.5 h-3.5 text-emerald-600" />
-                            )}
-                            <span>Foto Cédula</span>
-                        </button>
-                    )}
-
-                    {/* 4. PDFs Dropdown Menu (Cédula PDF + Tarjetas PDF) */}
+                    {/* 3. PDFs Dropdown Menu (Cédula PDF + Tarjetas PDF) */}
                     <div className="relative" ref={pdfMenuRef}>
                         <button
                             type="button"
@@ -406,23 +389,6 @@ const MatchRow = ({
                         </div>
                     </div>
                 </div>
-
-                {/* Photo Report Notification Banner (Mobile) */}
-                {hasPhotoReport && onDownloadReportPhoto && (
-                    <button
-                        onClick={() => onDownloadReportPhoto(match)}
-                        disabled={isDownloadingReportPhoto}
-                        className="w-full flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs shadow-2xs hover:bg-emerald-100 transition-colors"
-                    >
-                        <div className="flex items-center gap-2">
-                            <ImageDown className="w-4 h-4 text-emerald-600" />
-                            <span>El árbitro subió la cédula física</span>
-                        </div>
-                        <span className="text-[10px] bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-md">
-                            Ver Foto ↗
-                        </span>
-                    </button>
-                )}
 
                 {/* Mobile Action Buttons Grid */}
                 <div className="grid grid-cols-4 gap-1.5 pt-1">

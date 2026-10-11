@@ -370,7 +370,7 @@ export const PlayersDirectoryView = () => {
                                 curp: player.curp,
                                 birthDate: player.birthDate,
                                 teamName: player.teamName,
-                                teamLogo: player.signedTeamLogoUrl || player.teamLogoUrl,
+                                teamLogo: player.teamLogoUrl || player.signedTeamLogoUrl,
                                 stats: {
                                     matchesPlayed: player.matchesPlayed,
                                     goals: player.goals,
@@ -548,7 +548,7 @@ export const PlayersDirectoryView = () => {
                                             curp: player.curp,
                                             birthDate: player.birthDate,
                                             teamName: player.teamName,
-                                            teamLogo: player.signedTeamLogoUrl || player.teamLogoUrl,
+                                            teamLogo: player.teamLogoUrl || player.signedTeamLogoUrl,
                                             stats: {
                                                 matchesPlayed: player.matchesPlayed,
                                                 goals: player.goals,

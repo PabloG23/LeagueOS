@@ -20,4 +20,7 @@ public class PlayerProfileStatsDTO {
     private int yellowCards;
     private int redCards;
     private Integer suspendedUntilMatchday;
+
+    // Transparencia de jornadas jugadas en cédula
+    private java.util.List<PlayerMatchAttendanceDTO> playedMatches;
 }
