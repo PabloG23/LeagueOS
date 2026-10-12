@@ -171,7 +171,7 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
                         return (
                             <div
                                 key={`${match.id}-${idx}`}
-                                className={`w-[290px] min-w-[290px] min-h-[115px] flex flex-col justify-center ${settings.matchCardBackgroundClass || 'bg-card'} backdrop-blur-md rounded-2xl p-4 gap-3 border border-red-700/40 hover:border-red-500/80 transition-all cursor-pointer shadow-sm hover:shadow-md hover:shadow-red-900/20 hover:-translate-y-0.5`}
+                                className={`w-[290px] min-w-[290px] min-h-[115px] flex flex-col justify-center ${settings.matchCardBackgroundClass || 'bg-card'} backdrop-blur-md rounded-2xl p-4 gap-3 border ${settings.matchCardBorderClass || 'border-red-700/40 hover:border-red-500/80 hover:shadow-red-900/20'} transition-all cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5`}
                             >
                                 <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-1 gap-2">
                                     <div className="flex flex-col min-w-0 flex-1">

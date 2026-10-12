@@ -36,6 +36,8 @@ export interface TenantSettings {
     // Match Ticker Styles
     matchTickerBackgroundClass: string;
     matchCardBackgroundClass: string;
+    /** Border + hover classes for match cards. Defaults to red when omitted. */
+    matchCardBorderClass?: string;
     matchTickerTextClass: string;
 
     // Feature flags

@@ -22,59 +22,9 @@
     <meta name="twitter:description" content="Consulta estadísticas, tabla de posiciones, rol de juegos y resultados en vivo." />
     <meta name="twitter:image" content="https://league-os-weld.vercel.app/league_logo_new.png" />
 
-    <script>
-      (function() {
-        var path = window.location.pathname.toLowerCase();
-        var host = window.location.hostname.toLowerCase();
-        var isSanLucas = path.indexOf('sanlucas') !== -1;
-        var isNuestroDeporte = host.indexOf('nuestrodeporte') !== -1 || path.indexOf('nuestrodeporte') !== -1;
-
-        var title = 'LeagueOS - Plataforma de Gestión Deportiva';
-        var desc = 'Consulta estadísticas, rol de juegos, tabla de posiciones y resultados en vivo.';
-        var siteName = 'LeagueOS';
-        var iconUrl = '/league_logo_new.png';
-
-        if (isSanLucas) {
-          title = 'Liga Ejidal de Futbol San Sebastian y San Lucas - Portal Oficial';
-          desc = 'Portal Oficial de la Liga Ejidal de Futbol San Sebastian y San Lucas. Uniendo tradición y pasión en cada encuentro deportivo.';
-          siteName = 'Liga San Lucas';
-          iconUrl = '/san_lucas_logo.png';
-        } else if (isNuestroDeporte) {
-          title = 'Liga Nuestro Deporte - Portal Oficial';
-          desc = 'Portal Oficial de Liga Nuestro Deporte. Desde 1985.';
-          siteName = 'Liga Nuestro Deporte';
-          iconUrl = '/nuestro_deporte_logo.png';
-        }
-
-        document.title = title;
-
-        var link = document.querySelector("link[rel~='icon']") || document.createElement('link');
-        link.rel = 'icon';
-        link.type = 'image/png';
-        link.href = iconUrl;
-        document.head.appendChild(link);
-
-        var fullImageUrl = window.location.origin + iconUrl;
-
-        // Update OpenGraph meta tags dynamically
-        var ogTitle = document.querySelector('meta[property="og:title"]');
-        if (ogTitle) ogTitle.setAttribute('content', title);
-        var ogSiteName = document.querySelector('meta[property="og:site_name"]');
-        if (ogSiteName) ogSiteName.setAttribute('content', siteName);
-        var ogDesc = document.querySelector('meta[property="og:description"]');
-        if (ogDesc) ogDesc.setAttribute('content', desc);
-        var ogImage = document.querySelector('meta[property="og:image"]');
-        if (ogImage) ogImage.setAttribute('content', fullImageUrl);
-
-        // Update Twitter meta tags dynamically
-        var twTitle = document.querySelector('meta[name="twitter:title"]');
-        if (twTitle) twTitle.setAttribute('content', title);
-        var twDesc = document.querySelector('meta[name="twitter:description"]');
-        if (twDesc) twDesc.setAttribute('content', desc);
-        var twImage = document.querySelector('meta[name="twitter:image"]');
-        if (twImage) twImage.setAttribute('content', fullImageUrl);
-      })();
-    </script>
+    <!-- Per-tenant title, favicon and OG tags are injected server-side by middleware.ts -->
+    <meta property="og:url" content="https://league-os-weld.vercel.app/" />
+    <link rel="icon" type="image/png" href="/league_logo_new.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&display=swap" rel="stylesheet">
