@@ -77,18 +77,11 @@ export const LeagueOSLandingPage: React.FC = () => {
             <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#060913]/90 border-b border-white/10 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
                     
-                    {/* Brand Logo with Official LeagueOS Logo */}
+                    {/* Brand Logotype (Only typography matching the official logo) */}
                     <div className="flex items-center shrink-0 mr-4 lg:mr-8">
-                        <Link to="/leagueos" className="relative group flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-2 shadow-lg shadow-blue-500/25 flex items-center justify-center border border-white/20 group-hover:scale-105 transition-transform duration-300 shrink-0">
-                                <img 
-                                    src="/league_logo_new.png" 
-                                    alt="Logo LeagueOS" 
-                                    className="w-full h-full object-contain filter drop-shadow-md brightness-110"
-                                />
-                            </div>
-                            <span className="text-2xl font-black tracking-tight text-white font-sans whitespace-nowrap">
-                                League<span className="text-blue-500">OS</span>
+                        <Link to="/leagueos" className="relative group flex items-center">
+                            <span className="text-2xl sm:text-3xl font-black font-['Orbitron',sans-serif] tracking-wider text-white whitespace-nowrap group-hover:scale-105 transition-all duration-300">
+                                League<span className="text-[#00e5ff] drop-shadow-[0_0_12px_rgba(0,229,255,0.65)]">OS</span>
                             </span>
                         </Link>
                     </div>
@@ -126,13 +119,27 @@ export const LeagueOSLandingPage: React.FC = () => {
             {/* ========================================================================= */}
             {/* 2. HERO SECTION */}
             {/* ========================================================================= */}
-            <section className="relative pt-12 pb-20 lg:pt-20 lg:pb-32 overflow-hidden">
+            <section className="relative pt-10 pb-20 lg:pt-16 lg:pb-32 overflow-hidden">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                     
-                    {/* Badge Callout */}
-                    <div className="flex justify-center mb-6">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs sm:text-sm font-bold backdrop-blur-md animate-pulse">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    {/* Hero LeagueOS Emblem & Badge */}
+                    <div className="flex flex-col items-center justify-center mb-6 space-y-4">
+                        {/* Imposing Floating Emblem with Radiant Halo (Sin marco ni recuadro) */}
+                        <div className="relative group cursor-pointer flex items-center justify-center">
+                            {/* Radiant Glow Halo */}
+                            <div className="absolute w-64 h-64 sm:w-80 sm:h-80 bg-gradient-to-tr from-blue-600/60 via-indigo-500/40 to-emerald-400/30 rounded-full blur-3xl opacity-80 group-hover:opacity-100 transition-all duration-700 pointer-events-none animate-pulse" />
+                            
+                            {/* Shield Logo directly without any box, large & imposing */}
+                            <img 
+                                src="/league_logo_transparent.png" 
+                                alt="Escudo Oficial LeagueOS" 
+                                className="relative w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 object-contain filter drop-shadow-[0_0_60px_rgba(37,99,235,0.7)] hover:scale-105 transition-all duration-500"
+                            />
+                        </div>
+
+                        {/* Badge Callout */}
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs sm:text-sm font-bold backdrop-blur-md">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             <span>Potenciando ligas deportivas de alto rendimiento con IA</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                         </div>
@@ -784,6 +791,47 @@ export const LeagueOSLandingPage: React.FC = () => {
                                 <ArrowRight className="w-4 h-4" />
                             </a>
                         </div>
+
+                        {/* Client 3: Liga Municipal Metepec (Centrado abajo) */}
+                        <div className="md:col-span-2 flex justify-center">
+                            <div className="w-full md:max-w-[calc(50%-1rem)] p-8 rounded-3xl bg-slate-900/80 border border-white/15 hover:border-[#93C572]/60 backdrop-blur-xl transition-all space-y-6 flex flex-col justify-between shadow-xl">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-16 h-16 rounded-2xl bg-white/10 p-2 border border-white/20 flex items-center justify-center">
+                                            <img 
+                                                src="/ligaMunicipalMetepec.png" 
+                                                alt="Liga Municipal de Fútbol de Metepec A.C." 
+                                                className="max-h-full max-w-full object-contain"
+                                            />
+                                        </div>
+                                        <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-black uppercase border border-emerald-500/30">
+                                            ● En Vivo
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-2xl font-black text-white uppercase">Liga Municipal Metepec</h3>
+                                        <p className="text-xs text-[#93C572] font-bold uppercase tracking-wider mt-0.5">
+                                            Torneo con 3 Fuerzas y más de 60 equipos
+                                        </p>
+                                    </div>
+
+                                    <p className="text-sm text-slate-300 leading-relaxed">
+                                        "Gestionar múltiples fuerzas con estadísticas oficiales en tiempo real elevó la seriedad y el prestigio de nuestra liga en Metepec a un nivel profesional."
+                                    </p>
+                                </div>
+
+                                <a 
+                                    href="https://league-os-weld.vercel.app/ligaMetepec" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center gap-2 w-full py-3 bg-white/5 hover:bg-[#93C572] hover:text-black text-white font-bold text-sm rounded-xl border border-white/10 hover:border-[#93C572] transition-all"
+                                >
+                                    <span>Explorar Portal en Vivo</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -894,8 +942,8 @@ export const LeagueOSLandingPage: React.FC = () => {
                                         className="w-full h-full object-contain brightness-110"
                                     />
                                 </div>
-                                <span className="text-xl font-black text-white tracking-tight uppercase">
-                                    League<span className="text-blue-500">OS</span>
+                                <span className="text-xl font-black font-['Orbitron',sans-serif] tracking-wider text-white">
+                                    League<span className="text-[#00e5ff]">OS</span>
                                 </span>
                             </div>
                             <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
@@ -921,6 +969,7 @@ export const LeagueOSLandingPage: React.FC = () => {
                             <ul className="space-y-2 text-xs">
                                 <li><a href="https://www.nuestrodeporte.com/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Liga Nuestro Deporte</a></li>
                                 <li><a href="https://league-os-weld.vercel.app/ligaSanLucas" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Liga San Lucas</a></li>
+                                <li><a href="https://league-os-weld.vercel.app/ligaMetepec" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Liga Municipal Metepec</a></li>
                                 <li><Link to="/login" className="hover:text-white transition-colors">Portal de Acceso</Link></li>
                             </ul>
                         </div>
