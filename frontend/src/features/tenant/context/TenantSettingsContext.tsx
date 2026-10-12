@@ -64,9 +64,9 @@ const DEFAULT_SETTINGS: TenantSettings = {
     footerPhone: "",
     footerBackgroundClass: "bg-slate-900",
     slogan: "Plataforma de Gestión Deportiva",
-    facebookUrl: "#",
-    instagramUrl: "#",
-    twitterUrl: "#",
+    facebookUrl: undefined,
+    instagramUrl: undefined,
+    twitterUrl: undefined,
 
     matchTickerBackgroundClass: "bg-sidebar",
     matchCardBackgroundClass: "bg-white/5",
@@ -142,9 +142,9 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 let footerPhone = "";
                 let footerBackgroundClass = "bg-slate-900";
                 let slogan = "Plataforma de Gestión Deportiva";
-                let facebookUrl: string | undefined = "#";
-                let instagramUrl: string | undefined = "#";
-                let twitterUrl: string | undefined = "#";
+                let facebookUrl: string | undefined = undefined;
+                let instagramUrl: string | undefined = undefined;
+                let twitterUrl: string | undefined = undefined;
 
                 let matchTickerBackgroundClass = "bg-sidebar";
                 let matchCardBackgroundClass = "bg-white/5";
@@ -196,9 +196,9 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     if (s.footerPhone !== undefined) footerPhone = s.footerPhone;
                     if (s.footerBackgroundClass) footerBackgroundClass = s.footerBackgroundClass;
                     if (s.slogan) slogan = s.slogan;
-                    if (s.facebookUrl !== undefined) facebookUrl = s.facebookUrl;
-                    if (s.instagramUrl !== undefined) instagramUrl = s.instagramUrl;
-                    if (s.twitterUrl !== undefined) twitterUrl = s.twitterUrl;
+                    facebookUrl = s.facebookUrl;
+                    instagramUrl = s.instagramUrl;
+                    twitterUrl = s.twitterUrl;
                     if (s.matchTickerBackgroundClass) matchTickerBackgroundClass = s.matchTickerBackgroundClass;
                     if (s.matchCardBackgroundClass) matchCardBackgroundClass = s.matchCardBackgroundClass;
                     if (s.matchTickerTextClass) matchTickerTextClass = s.matchTickerTextClass;

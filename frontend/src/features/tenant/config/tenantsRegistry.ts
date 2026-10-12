@@ -1,10 +1,13 @@
-import { BoardMember, TenantSettings } from '../context/TenantSettingsContext';
+// Type-only import: this file is also bundled by the Vercel Edge middleware (middleware.ts).
+import type { BoardMember, TenantSettings } from '../context/TenantSettingsContext';
 
 export interface TenantDefinition {
     tenantId: string;
     primarySlug: string;
     slugs: string[];
     hostnames?: string[];
+    /** Optional lighter image for social previews (WhatsApp ignores images > ~300KB). Defaults to settings.logoUrl. */
+    ogImageUrl?: string;
     settings: Partial<TenantSettings>;
 }
 
@@ -100,6 +103,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
         tenantId: TENANT_ID_METEPEC,
         primarySlug: 'ligaMetepec',
         slugs: ['ligametepec', 'metepec'],
+        ogImageUrl: '/ligaMunicipalMetepec.jpeg',
         settings: {
             tenantId: TENANT_ID_METEPEC,
             name: "LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.",
