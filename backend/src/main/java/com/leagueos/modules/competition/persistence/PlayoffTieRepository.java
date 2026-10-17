@@ -10,5 +10,6 @@ import java.util.UUID;
 @Repository
 public interface PlayoffTieRepository extends JpaRepository<PlayoffTie, UUID> {
     List<PlayoffTie> findBySeasonId(UUID seasonId);
+    List<PlayoffTie> findByNextTieIdOrderByIdAsc(UUID nextTieId);
     void deleteBySeasonId(UUID seasonId);
 }

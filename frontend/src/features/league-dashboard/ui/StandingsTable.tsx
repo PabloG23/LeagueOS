@@ -13,6 +13,12 @@ import { cn } from '@/shared/lib/utils';
 import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { TeamLogo } from '@/shared/components/TeamLogo';
 
+import { InteractiveCopaBracketView } from '@/features/league-management/ui/InteractiveCopaBracketView';
+import { Season, leagueApi } from '@/shared/api/league-api';
+import type { LeaderVariant } from './top-scorers/LeaderParts';
+import { ShareStandingsButton, ShareStandingsDialog } from './standings-share/ShareStandingsDialog';
+import type { StandingsShareCardData, StandingsShareTeam } from './standings-share/standingsShareCard';
+
 export type TeamStanding = {
     id: string;
     rank: number;
@@ -36,6 +42,7 @@ export type TeamStanding = {
 interface StandingsTableProps {
     // Can receive flat array (legacy) or mapped divisions
     data: TeamStanding[] | Record<string, TeamStanding[]>;
+    seasons?: Season[];
 }
 
 const RecentFormCell = ({ form }: { form: ('W' | 'D' | 'L')[] }) => (
@@ -59,7 +66,17 @@ const RecentFormCell = ({ form }: { form: ('W' | 'D' | 'L')[] }) => (
     </div>
 );
 
-export const StandingsTable = ({ data }: StandingsTableProps) => {
+const resolvePhotoUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+        return url;
+    }
+    return leagueApi.getProxyUrl(url);
+};
+
+const resolveLogoUrl = (url?: string) => (url?.startsWith('/') ? url : resolvePhotoUrl(url));
+
+export const StandingsTable = ({ data, seasons }: StandingsTableProps) => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const { settings } = useTenantSettings();
     const effectiveLeagueSlug = leagueSlug || (settings?.themeClass === 'theme-san-lucas' ? 'ligaSanLucas' : (settings?.themeClass === 'theme-metepec' ? 'ligaMetepec' : 'ligaNuestroDeporte'));
@@ -69,6 +86,7 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
     const isMultiDivision = !Array.isArray(data);
     const divisions = isMultiDivision ? Object.keys(data as object) : ['General'];
     const [activeTab, setActiveTab] = useState(divisions[0] || 'General');
+    const [shareData, setShareData] = useState<StandingsShareCardData | null>(null);
 
     // Reset tab if data changes completely (e.g. tenant switch)
     useEffect(() => {
@@ -77,6 +95,15 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
         }
     }, [isMultiDivision, divisions, activeTab]);
 
+    const activeSeason = useMemo(() => {
+        return seasons?.find(s => {
+            const shortName = s.name.includes(' - ') ? s.name.split(' - ')[1] : s.name;
+            return shortName === activeTab || s.name === activeTab || s.id === activeTab;
+        });
+    }, [seasons, activeTab]);
+
+    const isCopa = activeSeason?.tournamentType === 'COPA';
+
     const currentData = useMemo(() => {
         if (Array.isArray(data)) return data;
         return data[activeTab] || [];
@@ -84,6 +111,12 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
 
     const isNuestroDeporte = settings?.themeClass === 'theme-nuestro-deporte' || settings?.tenantId === '11111111-1111-1111-1111-111111111111';
     const isMetepec = settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
+
+    const variant: LeaderVariant = isNuestroDeporte
+        ? 'fut'
+        : isMetepec
+            ? 'metepec'
+            : 'classic';
 
     const hasPhaseGroups = useMemo(() => {
         return currentData.some(item => !!item.phaseGroup);
@@ -95,6 +128,45 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
         if (!hasPhaseGroups || phaseFilter === 'ALL') return currentData;
         return currentData.filter(item => item.phaseGroup === phaseFilter);
     }, [currentData, hasPhaseGroups, phaseFilter]);
+
+    const handleOpenShare = () => {
+        if (filteredData.length === 0) return;
+
+        // Ensure teams are sorted by rank
+        const sorted = [...filteredData].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+
+        const teams: StandingsShareTeam[] = sorted.map((item, idx) => ({
+            rank: item.rank || idx + 1,
+            team: item.team,
+            logoUrl: resolvePhotoUrl(item.signedLogoUrl || item.logoUrl),
+            played: item.played,
+            won: item.won,
+            drawn: item.drawn,
+            lost: item.lost,
+            goalsFor: item.goalsFor,
+            goalsAgainst: item.goalsAgainst,
+            goalDifference: item.goalDifference,
+            points: item.points,
+        }));
+
+        const leagueUrl = typeof window !== 'undefined'
+            ? `${window.location.origin}/${effectiveLeagueSlug}`
+            : `https://liganuestrodeporte.com/${effectiveLeagueSlug}`;
+
+        const secondaryLogoUrl = isNuestroDeporte ? '/TorneoVictorRuiz.jpeg' : undefined;
+
+        setShareData({
+            leagueName: settings?.name || 'Liga Nuestro Deporte',
+            leagueLogoUrl: resolveLogoUrl(settings?.logoUrl),
+            secondaryLogoUrl,
+            leagueUrl,
+            divisionName: isMultiDivision && activeTab !== 'General' ? activeTab : undefined,
+            seasonName: activeSeason?.name,
+            variant,
+            teams,
+        });
+    };
+
 
     const hasFairPlay = Boolean(settings?.tiebreakerOrder?.includes('FP') || isMetepec);
 
@@ -246,11 +318,14 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                         isNuestroDeporte ? "text-white font-['Bebas_Neue'] tracking-wider text-xl" : "text-slate-800"
                     )}>
                         <Trophy className={cn("w-5 h-5 drop-shadow-sm", isMetepec ? "text-[#93C572]" : (isNuestroDeporte ? "text-red-400" : "text-amber-500"))} fill="currentColor" />
-                        Tabla General
+                        {isCopa ? "Cuadro de Eliminación Directa" : "Tabla General"}
                     </h3>
 
-                    {/* Phase group filter (Fase 2) */}
-                    {hasPhaseGroups && (
+                    {isCopa ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 shadow-2xs">
+                            🏆 Torneo de Copa
+                        </span>
+                    ) : hasPhaseGroups ? (
                         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
                             <button
                                 type="button"
@@ -274,17 +349,27 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                                 ⚠️ Permanencia
                             </button>
                         </div>
-                    )}
+                    ) : null}
                 </div>
 
-                <div className={cn(
-                    "flex items-center gap-3 text-xs font-medium px-3 py-1.5 rounded-lg border shadow-sm",
-                    isNuestroDeporte ? "bg-[#0D1A3C] border-blue-900/40 text-slate-400" : "bg-white border-slate-100 text-slate-500"
-                )}>
-                    <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-emerald-500" /> Ganado</span>
-                    <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-slate-400" /> Empatado</span>
-                    <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-500" /> Perdido</span>
-                </div>
+                {!isCopa && (
+                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
+                        <div className={cn(
+                            "hidden sm:flex items-center gap-3 text-xs font-medium px-3 py-1.5 rounded-lg border shadow-sm",
+                            isNuestroDeporte ? "bg-[#0D1A3C] border-blue-900/40 text-slate-400" : "bg-white border-slate-100 text-slate-500"
+                        )}>
+                            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-emerald-500" /> Ganado</span>
+                            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-slate-400" /> Empatado</span>
+                            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded shadow-sm bg-rose-500" /> Perdido</span>
+                        </div>
+                        {filteredData.length > 0 && (
+                            <ShareStandingsButton
+                                variant={variant}
+                                onClick={handleOpenShare}
+                            />
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Header Tabs (Integrados a la tabla) */}
@@ -321,8 +406,17 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                 </div>
             )}
 
-            {/* Table Area */}
-            <div className="relative w-full overflow-auto flex-1">
+            {/* Table Area or Copa Bracket Area */}
+            {isCopa && activeSeason ? (
+                <div className="p-2 sm:p-4 bg-slate-50/40">
+                    <InteractiveCopaBracketView
+                        tenantId={settings?.tenantId || ''}
+                        seasonId={activeSeason.id}
+                        readonly={true}
+                    />
+                </div>
+            ) : (
+                <div className="relative w-full overflow-auto flex-1">
                 <table className="w-full caption-bottom text-sm">
                     <thead className={cn(
                         "[&_tr]:border-b",
@@ -400,6 +494,13 @@ export const StandingsTable = ({ data }: StandingsTableProps) => {
                     </tbody >
                 </table>
             </div>
+            )}
+
+            {/* Modal para compartir tabla en redes sociales */}
+            <ShareStandingsDialog
+                data={shareData}
+                onClose={() => setShareData(null)}
+            />
         </div>
     );
 };

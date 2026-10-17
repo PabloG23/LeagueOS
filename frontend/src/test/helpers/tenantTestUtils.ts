@@ -30,6 +30,7 @@ export const createTenantSettings = (overrides: Partial<TenantSettings> = {}): T
     enableRoundRobinFixtures: true,
     enableShootoutExtraPoint: false,
     allowQuickScore: true,
+    enableTournamentTypeSelection: false,
     ...overrides,
 });
 
@@ -110,9 +111,10 @@ export const TENANT_METEPEC = createTenantSettings({
     matchTickerTextClass: 'text-[#93C572]',
     enableRoundRobinFixtures: true,
     allowQuickScore: false,
+    enableTournamentTypeSelection: true,
     boardMembers: [
         { role: 'Presidente', name: 'Luis Rendón' },
-        { role: 'Vicepresidente', name: 'Héctor Gómez' },
+        { role: 'Vicepresidente', name: 'Omar Rea' },
     ],
 });
 

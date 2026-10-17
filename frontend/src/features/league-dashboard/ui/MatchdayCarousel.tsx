@@ -5,6 +5,7 @@ import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { leagueApi, Match, Season } from '@/shared/api/league-api';
 import { TeamLogo } from '@/shared/components/TeamLogo';
 import { MatchReportPhotoModal } from '@/shared/components/MatchReportPhotoModal';
+import { cn } from '@/shared/lib/utils';
 
 interface MatchdayCarouselProps {
     activeSeasons: Season[];
@@ -15,6 +16,7 @@ interface MatchdayCarouselProps {
 export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: MatchdayCarouselProps) => {
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const { settings } = useTenantSettings();
+    const isMetepec = settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d';
     const [activeTabId, setActiveTabId] = useState<string>('');
     const [selectedMatchForReport, setSelectedMatchForReport] = useState<Match | null>(null);
 
@@ -273,7 +275,15 @@ export const MatchdayCarousel = ({ activeSeasons, upcomingMatches, onViewAll }: 
 
             {/* View Full Schedule Button - Centered below grid */}
             <div className="mt-4 flex justify-center max-w-[1400px] mx-auto px-4">
-                <button onClick={onViewAll} className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/20 text-slate-300 hover:text-white hover:bg-white/10 transition-colors text-sm font-medium">
+                <button
+                    onClick={onViewAll}
+                    className={cn(
+                        "flex items-center gap-2 px-6 py-2 rounded-full border text-sm font-medium transition-all shadow-sm",
+                        isMetepec
+                            ? "border-[#93C572]/30 text-slate-200 hover:text-[#93C572] hover:bg-[#93C572]/10 hover:border-[#93C572]/60"
+                            : "border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                    )}
+                >
                     Ver Calendario Completo
                     <ChevronRight className="w-4 h-4" />
                 </button>

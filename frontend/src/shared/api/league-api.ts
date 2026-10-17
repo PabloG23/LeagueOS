@@ -59,6 +59,7 @@ export interface Season {
     status: 'DRAFT' | 'REGISTRATION_CLOSED' | 'ACTIVE' | 'COMPLETED';
     currentMatchday: number;
     tenantId: string;
+    tournamentType?: string;
 }
 
 export interface Person {
@@ -252,6 +253,8 @@ export interface Match {
     awayPenaltyScore?: number | null;
     penaltyWinnerTeamId?: string | null;
     penaltyWinnerTeam?: Team;
+    playoffTieId?: string | null;
+    playoffTie?: { id: string } | null;
 }
 
 /**

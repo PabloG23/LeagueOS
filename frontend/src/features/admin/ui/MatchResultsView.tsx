@@ -11,6 +11,7 @@ import {
     SubstitutionCardsModal,
 } from '@/features/match-report';
 import { TeamLogo } from '@/shared/components/TeamLogo';
+import { InteractiveCopaBracketView } from '@/features/league-management/ui/InteractiveCopaBracketView';
 
 // UI Helper to match the design logic
 interface UIMatch extends Match {
@@ -465,6 +466,7 @@ export const MatchResultsView = () => {
     const [homeRoster, setHomeRoster] = useState<Player[]>([]);
     const [awayRoster, setAwayRoster] = useState<Player[]>([]);
     const [loadingRosters, setLoadingRosters] = useState(false);
+    const [bracketRefreshTrigger, setBracketRefreshTrigger] = useState(0);
 
     useEffect(() => {
         if (!settings?.tenantId) return;
@@ -513,6 +515,7 @@ export const MatchResultsView = () => {
 
     const handleWizardSuccess = () => {
         loadMatches();
+        setBracketRefreshTrigger(prev => prev + 1);
         setSelectedMatch(null);
         setSelectedQuickScoreMatch(null);
     };
@@ -623,6 +626,8 @@ export const MatchResultsView = () => {
         }
     };
 
+    const selectedSeason = seasons.find(s => s.id === selectedSeasonId);
+    const isCopa = selectedSeason?.tournamentType === 'COPA';
     const displayedMatches = matches.filter(m => (m.matchday || 1) === selectedMatchday);
 
     return (
@@ -632,7 +637,7 @@ export const MatchResultsView = () => {
                     <h1 className="text-2xl font-bold text-slate-900">Resultados de Partidos</h1>
                     <p className="text-slate-500">Gestión de Cédulas Digitales, Impresión y Marcadores.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
                     {/* Season Selector */}
                     <select
                         value={selectedSeasonId}
@@ -641,73 +646,104 @@ export const MatchResultsView = () => {
                     >
                         {seasons.length === 0 && <option value="">Sin Torneos</option>}
                         {seasons.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
+                            <option key={s.id} value={s.id}>
+                                {s.name} {s.tournamentType === 'COPA' ? '(Copa)' : ''}
+                            </option>
                         ))}
                     </select>
 
-                    {/* Matchday Selector */}
-                    <select
-                        value={selectedMatchday}
-                        onChange={(e) => setSelectedMatchday(Number(e.target.value))}
-                        disabled={matchdays.length === 0}
-                        className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    >
-                        {matchdays.length === 0 && <option value="">Sin Jornadas</option>}
-                        {matchdays.map(md => {
-                            const selectedSeason = seasons.find(s => s.id === selectedSeasonId);
-                            const isCurrent = selectedSeason?.currentMatchday === md;
-                            return (
-                                <option key={md} value={md}>
-                                    Jornada {md} {isCurrent ? '(Pública)' : ''}
-                                </option>
-                            );
-                        })}
-                    </select>
-
-                    <button
-                        onClick={handlePublishMatchday}
-                        disabled={!selectedMatchday || isPublishingMatchday || seasons.find(s => s.id === selectedSeasonId)?.currentMatchday === selectedMatchday}
-                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-                    >
-                        {isPublishingMatchday ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        Publicar como Actual
-                    </button>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 min-h-[400px]">
-                <div className="p-4 bg-slate-50 border-b border-slate-200 font-medium text-slate-500 text-sm flex justify-between rounded-t-2xl">
-                    <span>Partidos Programados</span>
-                    <span className="text-slate-400 font-normal">
-                        {selectedMatchday ? `Jornada ${selectedMatchday}` : 'Seleccione una jornada'}
-                    </span>
-                </div>
-                <div className="divide-y divide-slate-100">
-                    {isLoading ? (
-                        <div className="p-8 text-center text-slate-500">Cargando partidos...</div>
-                    ) : displayedMatches.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500">
-                            No hay partidos programados en esta jornada.
-                        </div>
+                    {isCopa ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 shadow-2xs">
+                            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                            Torneo de Copa
+                        </span>
                     ) : (
-                        displayedMatches.map((match, index) => (
-                            <MatchRow
-                                key={match.id}
-                                match={match}
-                                onOpenWizard={handleOpenWizard}
-                                onOpenQuickScore={setSelectedQuickScoreMatch}
-                                onOpenEditSchedule={setSelectedEditMatch}
-                                onDownloadSheet={handleDownloadRefereeSheet}
-                                onOpenCardsModal={setSelectedCardsMatch}
-                                onDownloadReportPhoto={handleDownloadReportPhoto}
-                                isDownloadingSheet={downloadingMatchId === match.id}
-                                isDownloadingReportPhoto={downloadingReportPhotoId === match.id}
-                                isLast={index >= displayedMatches.length - 2 || displayedMatches.length <= 2}
-                            />
-                        ))
+                        <>
+                            {/* Matchday Selector */}
+                            <select
+                                value={selectedMatchday}
+                                onChange={(e) => setSelectedMatchday(Number(e.target.value))}
+                                disabled={matchdays.length === 0}
+                                className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            >
+                                {matchdays.length === 0 && <option value="">Sin Jornadas</option>}
+                                {matchdays.map(md => {
+                                    const isCurrent = selectedSeason?.currentMatchday === md;
+                                    return (
+                                        <option key={md} value={md}>
+                                            Jornada {md} {isCurrent ? '(Pública)' : ''}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+
+                            <button
+                                onClick={handlePublishMatchday}
+                                disabled={!selectedMatchday || isPublishingMatchday || selectedSeason?.currentMatchday === selectedMatchday}
+                                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+                            >
+                                {isPublishingMatchday ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Publicar como Actual
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
+
+            {isCopa ? (
+                <InteractiveCopaBracketView
+                    tenantId={settings?.tenantId || ''}
+                    seasonId={selectedSeasonId}
+                    matches={matches}
+                    onOpenWizard={handleOpenWizard}
+                    onOpenQuickScore={setSelectedQuickScoreMatch}
+                    onOpenEditSchedule={setSelectedEditMatch}
+                    onDownloadSheet={handleDownloadRefereeSheet}
+                    onOpenCardsModal={setSelectedCardsMatch}
+                    onDownloadReportPhoto={handleDownloadReportPhoto}
+                    downloadingMatchId={downloadingMatchId}
+                    downloadingReportPhotoId={downloadingReportPhotoId}
+                    onRefreshBracket={() => {
+                        loadMatches();
+                        setBracketRefreshTrigger(prev => prev + 1);
+                    }}
+                    refreshTrigger={bracketRefreshTrigger}
+                />
+            ) : (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 min-h-[400px]">
+                    <div className="p-4 bg-slate-50 border-b border-slate-200 font-medium text-slate-500 text-sm flex justify-between rounded-t-2xl">
+                        <span>Partidos Programados</span>
+                        <span className="text-slate-400 font-normal">
+                            {selectedMatchday ? `Jornada ${selectedMatchday}` : 'Seleccione una jornada'}
+                        </span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {isLoading ? (
+                            <div className="p-8 text-center text-slate-500">Cargando partidos...</div>
+                        ) : displayedMatches.length === 0 ? (
+                            <div className="p-12 text-center text-slate-500">
+                                No hay partidos programados en esta jornada.
+                            </div>
+                        ) : (
+                            displayedMatches.map((match, index) => (
+                                <MatchRow
+                                    key={match.id}
+                                    match={match}
+                                    onOpenWizard={handleOpenWizard}
+                                    onOpenQuickScore={setSelectedQuickScoreMatch}
+                                    onOpenEditSchedule={setSelectedEditMatch}
+                                    onDownloadSheet={handleDownloadRefereeSheet}
+                                    onOpenCardsModal={setSelectedCardsMatch}
+                                    onDownloadReportPhoto={handleDownloadReportPhoto}
+                                    isDownloadingSheet={downloadingMatchId === match.id}
+                                    isDownloadingReportPhoto={downloadingReportPhotoId === match.id}
+                                    isLast={index >= displayedMatches.length - 2 || displayedMatches.length <= 2}
+                                />
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
 
             {selectedMatch && (
                 <MatchReportWizard

@@ -224,6 +224,9 @@ public class LeagueService {
         if (tenantId != null && season.getMaxActivePlayersPerTeam() <= 0) {
             season.setMaxActivePlayersPerTeam(30);
         }
+        if (season.getTournamentType() == null || season.getTournamentType().isBlank()) {
+            season.setTournamentType("LIGA");
+        }
         return seasonRepository.save(season);
     }
 

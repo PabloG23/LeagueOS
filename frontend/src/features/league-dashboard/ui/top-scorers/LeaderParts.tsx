@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/utils';
  * - `fut`: Trading-card ("FUT") style used by tenants with the `theme-nuestro-deporte` theme.
  * - `classic`: Circular-photo layout used by every other tenant.
  */
-export type LeaderVariant = 'fut' | 'classic';
+export type LeaderVariant = 'fut' | 'metepec' | 'classic';
 
 /* ------------------------------------------------------------------ */
 /* PlayerAvatar: image with automatic icon fallback on load error       */
@@ -61,6 +61,8 @@ export const LeaderBadge = ({ variant, coLeaderIndex, coLeaderCount }: LeaderBad
             'inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-sm',
             variant === 'fut'
                 ? 'bg-amber-400/25 border border-amber-400/50 text-amber-300'
+                : variant === 'metepec'
+                ? 'bg-[#C9A54A]/25 border border-[#C9A54A]/50 text-amber-300'
                 : 'bg-yellow-400/25 border border-yellow-400/50 text-yellow-300'
         )}
     >
@@ -96,10 +98,14 @@ export const LeaderTeam = ({ variant, team, to }: LeaderTeamProps) => (
             'text-xs font-semibold transition-colors uppercase tracking-wider flex items-center justify-center gap-1.5 max-w-full',
             variant === 'fut'
                 ? 'mb-2.5 text-slate-300 hover:text-red-400'
+                : variant === 'metepec'
+                ? 'mb-2.5 text-slate-300 hover:text-[#93C572]'
                 : 'mb-2 text-white/70 hover:text-white'
         )}
     >
-        {variant === 'fut' && <Shield className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+        {(variant === 'fut' || variant === 'metepec') && (
+            <Shield className={cn("w-3.5 h-3.5 shrink-0", variant === 'metepec' ? "text-[#93C572]" : "text-red-400")} />
+        )}
         <span className="truncate">{team}</span>
     </Link>
 );
@@ -120,6 +126,17 @@ export const GoalsCounter = ({ variant, goals }: GoalsCounterProps) => {
         return (
             <div className="flex items-baseline justify-center gap-1.5 bg-black/40 px-4 py-1 rounded-full border border-white/10 shadow-inner">
                 <span className="font-['Bebas_Neue'] text-3xl text-red-400 tracking-wider leading-none drop-shadow-md">
+                    {goals}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{label}</span>
+            </div>
+        );
+    }
+
+    if (variant === 'metepec') {
+        return (
+            <div className="flex items-baseline justify-center gap-1.5 bg-black/50 px-4 py-1 rounded-full border border-[#93C572]/30 shadow-inner">
+                <span className="font-['Bebas_Neue'] text-3xl text-[#93C572] tracking-wider leading-none drop-shadow-md">
                     {goals}
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{label}</span>

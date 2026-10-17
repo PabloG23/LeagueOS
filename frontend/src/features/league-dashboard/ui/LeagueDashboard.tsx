@@ -86,11 +86,13 @@ export const LeagueDashboard = () => {
                 
                 for (const season of allActiveSeasons) {
                     try {
-                        const { data: standings } = await leagueApi.getSeasonStandings(season.id, settings.tenantId as string);
-                        
-                        // Use the short name of the season for the tab
                         const shortName = season.name.includes(' - ') ? season.name.split(' - ')[1] : season.name;
-                        grouped[shortName] = standings;
+                        if (season.tournamentType === 'COPA') {
+                            grouped[shortName] = [];
+                        } else {
+                            const { data: standings } = await leagueApi.getSeasonStandings(season.id, settings.tenantId as string);
+                            grouped[shortName] = standings;
+                        }
                     } catch (err) {
                         console.error(`Error fetching standings for season ${season.name}`, err);
                     }
@@ -138,7 +140,7 @@ export const LeagueDashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     <div className="lg:col-span-9 flex flex-col gap-8">
                         <div className="space-y-4">
-                            <StandingsTable data={finalStandingsData} />
+                            <StandingsTable data={finalStandingsData} seasons={allActiveSeasons} />
                         </div>
                     </div>
 

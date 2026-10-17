@@ -43,12 +43,14 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             showDisciplineWidget: true,
             showOffenseDefenseWidgets: false,
             requireJerseyNumbers: true,
+            showJerseyNumberOnCredentials: true,
             allowMultipleTeamsPerPlayer: false,
             tiebreakerOrder: 'PTS_GD_GF_NAME',
             allowAdminExceedRosterLimit: false,
             rejectExpiredIne: false,
             enableAccumulatedYellowSuspensions: false,
             allowQuickScore: true,
+            enableTournamentTypeSelection: false,
             boardMembers: [
                 { role: "Presidente", name: "Alejo Reyes Mejía" },
                 { role: "Secretario", name: "Eduardo García Díaz" },
@@ -69,6 +71,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             themeClass: 'theme-nuestro-deporte',
             allowTransfers: true,
             requireJerseyNumbers: true,
+            showJerseyNumberOnCredentials: true,
             footerAddress: "Liga Nuestro Deporte",
             footerPhone: "722 170 3324",
             footerBackgroundClass: "bg-[#060B1C]",
@@ -89,6 +92,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             rejectExpiredIne: false,
             enableAccumulatedYellowSuspensions: false,
             allowQuickScore: true,
+            enableTournamentTypeSelection: false,
             boardMembers: [
                 { role: "Presidente", name: "Mike Portocarrero" },
                 { role: "Vicepresidente", name: "Carlos Mejía" },
@@ -112,6 +116,7 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             themeClass: 'theme-metepec',
             allowTransfers: false,
             requireJerseyNumbers: false,
+            showJerseyNumberOnCredentials: false,
             footerAddress: "Calle Josefa Ortiz de Domínguez 501, Coaxustenco, 52140 Metepec, Méx.",
             footerPhone: "+52 722 960 9949",
             footerBackgroundClass: "bg-[#0E1210]",
@@ -133,17 +138,18 @@ export const TENANT_REGISTRY: Record<string, TenantDefinition> = {
             rejectExpiredIne: true,
             enableAccumulatedYellowSuspensions: true,
             allowQuickScore: false,
+            enableTournamentTypeSelection: true,
             boardMembers: [
                 { role: "Presidente", name: "Luis Rendón" },
-                { role: "Vicepresidente", name: "Héctor Gómez" },
-                { role: "Secretario General", name: "Alejandro Morales" },
-                { role: "Tesorero", name: "Carlos Mendoza" },
-                { role: "Comisión Disciplinaria", name: "Roberto Peña" },
-                { role: "Comisión de Arbitraje", name: "Fernando Salgado" },
-                { role: "Vocal 1", name: "Juan Carlos Dávila" },
-                { role: "Vocal 2", name: "Miguel Ángel Flores" },
-                { role: "Consejo de Vigilancia", name: "Ricardo Trejo" },
-                { role: "Coordinador de Campos", name: "Gustavo Serrano" }
+                { role: "Vicepresidente", name: "Omar Rea" },
+                { role: "Secretario", name: "Juan Martínez Estrada" },
+                { role: "Tesorería", name: "Jorge Cruz" },
+                { role: "Aux. de Tesorería", name: "Jorge Flores Hernández" },
+                { role: "Comisión Disciplinaria", name: "Félix Marín" },
+                { role: "Aux. de Comisión Disciplinaria", name: "Jorge Carrillo García" },
+                { role: "Estadísticas", name: "Julio Enrique Estrada Segura" },
+                { role: "Control Administrativo", name: "Sergio Cano" },
+                { role: "Relaciones Públicas", name: "Juan Rodríguez" }
             ]
         }
     }

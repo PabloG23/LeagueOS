@@ -32,7 +32,7 @@ export const ShareLeaderButton = ({ variant, onClick }: ShareLeaderButtonProps) 
         className={cn(
             'mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all duration-200',
             'hover:scale-105 active:scale-95 shadow-lg',
-            variant === 'fut'
+            variant === 'fut' || variant === 'metepec'
                 ? 'text-white bg-gradient-to-r from-[#833AB4] via-[#E1306C] to-[#F77737] shadow-pink-900/40 hover:shadow-pink-600/40'
                 : 'text-slate-900 bg-gradient-to-r from-amber-300 to-yellow-400 shadow-amber-900/30'
         )}

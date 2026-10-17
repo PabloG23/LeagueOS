@@ -38,20 +38,28 @@ public class PlayoffService {
             PlayoffRound.SEMI_FINALS,    new int[][]{{0, 3}, {1, 2}},
             PlayoffRound.QUARTER_FINALS, new int[][]{{0, 7}, {3, 4}, {1, 6}, {2, 5}},
             PlayoffRound.ROUND_OF_16,    new int[][]{{0, 15}, {7, 8}, {3, 12}, {4, 11},
-                                                     {1, 14}, {6, 9}, {2, 13}, {5, 10}}
+                                                     {1, 14}, {6, 9}, {2, 13}, {5, 10}},
+            PlayoffRound.ROUND_OF_32,    new int[][]{
+                    {0, 31}, {15, 16}, {7, 24}, {8, 23}, {3, 28}, {12, 19}, {4, 27}, {11, 20},
+                    {1, 30}, {14, 17}, {6, 25}, {9, 22}, {2, 29}, {13, 18}, {5, 26}, {10, 21}
+            }
     );
 
     private static final Map<PlayoffRound, Integer> EXPECTED_TEAMS = Map.of(
             PlayoffRound.FINAL,          2,
             PlayoffRound.SEMI_FINALS,    4,
             PlayoffRound.QUARTER_FINALS, 8,
-            PlayoffRound.ROUND_OF_16,    16
+            PlayoffRound.ROUND_OF_16,    16,
+            PlayoffRound.ROUND_OF_32,    32
     );
 
     @Transactional
     public void generateBracket(UUID seasonId, PlayoffRound startingRound, List<UUID> seededTeamIds, int numLegs) {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new IllegalArgumentException("Season not found"));
+
+        // If a bracket already exists for this season, clean it up first
+        deleteBracket(seasonId);
 
         int expected = EXPECTED_TEAMS.getOrDefault(startingRound, -1);
         if (expected == -1) throw new IllegalArgumentException("Unsupported starting round: " + startingRound);
@@ -97,19 +105,34 @@ public class PlayoffService {
             return;
         }
 
-        // ROUND_OF_16
-        int[][] r16Seeds = SEEDING.get(PlayoffRound.ROUND_OF_16);
+        // ROUND_OF_16 ties
         PlayoffTie[] r16 = {
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[0][0]), teams.get(r16Seeds[0][1]), qf1),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[1][0]), teams.get(r16Seeds[1][1]), qf1),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[2][0]), teams.get(r16Seeds[2][1]), qf2),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[3][0]), teams.get(r16Seeds[3][1]), qf2),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[4][0]), teams.get(r16Seeds[4][1]), qf3),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[5][0]), teams.get(r16Seeds[5][1]), qf3),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[6][0]), teams.get(r16Seeds[6][1]), qf4),
-            saveTie(season, PlayoffRound.ROUND_OF_16, teams.get(r16Seeds[7][0]), teams.get(r16Seeds[7][1]), qf4)
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf1),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf1),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf2),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf2),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf3),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf3),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf4),
+            saveTie(season, PlayoffRound.ROUND_OF_16, null, null, qf4)
         };
-        for (PlayoffTie tie : r16) {
+
+        if (startingRound == PlayoffRound.ROUND_OF_16) {
+            int[][] r16Seeds = SEEDING.get(PlayoffRound.ROUND_OF_16);
+            for (int i = 0; i < 8; i++) {
+                r16[i].setHomeSeedTeam(teams.get(r16Seeds[i][0]));
+                r16[i].setAwaySeedTeam(teams.get(r16Seeds[i][1]));
+                playoffTieRepository.save(r16[i]);
+                createMatchesForTie(r16[i], numLegs);
+            }
+            return;
+        }
+
+        // ROUND_OF_32 (32 teams -> 16 ties pointing to r16)
+        int[][] r32Seeds = SEEDING.get(PlayoffRound.ROUND_OF_32);
+        for (int i = 0; i < 16; i++) {
+            PlayoffTie parentR16 = r16[i / 2];
+            PlayoffTie tie = saveTie(season, PlayoffRound.ROUND_OF_32, teams.get(r32Seeds[i][0]), teams.get(r32Seeds[i][1]), parentR16);
             createMatchesForTie(tie, numLegs);
         }
     }
@@ -130,11 +153,33 @@ public class PlayoffService {
 
         if (tie.getNextTieId() != null) {
             playoffTieRepository.findById(tie.getNextTieId()).ifPresent(nextTie -> {
-                if (nextTie.getHomeSeedTeam() == null) {
-                    nextTie.setHomeSeedTeam(winner);
-                } else if (nextTie.getAwaySeedTeam() == null) {
-                    nextTie.setAwaySeedTeam(winner);
-                    createMatchesForTie(nextTie, matchLegs.size());
+                List<PlayoffTie> siblingTies = playoffTieRepository.findByNextTieIdOrderByIdAsc(nextTie.getId());
+                if (siblingTies != null && siblingTies.size() >= 2) {
+                    if (siblingTies.get(0).getId().equals(tie.getId())) {
+                        nextTie.setHomeSeedTeam(winner);
+                    } else {
+                        nextTie.setAwaySeedTeam(winner);
+                    }
+                } else {
+                    // Fallback when siblings are not queried (e.g. unit mocks)
+                    if (nextTie.getHomeSeedTeam() == null) {
+                        nextTie.setHomeSeedTeam(winner);
+                    } else if (nextTie.getAwaySeedTeam() == null || nextTie.getAwaySeedTeam().getId().equals(winner.getId())) {
+                        nextTie.setAwaySeedTeam(winner);
+                    }
+                }
+
+                if (nextTie.getHomeSeedTeam() != null && nextTie.getAwaySeedTeam() != null) {
+                    List<Match> existingNextMatches = matchRepository.findByPlayoffTieId(nextTie.getId());
+                    if (existingNextMatches == null || existingNextMatches.isEmpty()) {
+                        createMatchesForTie(nextTie, matchLegs.size() > 0 ? matchLegs.size() : 1);
+                    } else {
+                        for (Match nm : existingNextMatches) {
+                            nm.setHomeTeam(nextTie.getHomeSeedTeam());
+                            nm.setAwayTeam(nextTie.getAwaySeedTeam());
+                            matchRepository.save(nm);
+                        }
+                    }
                 }
                 playoffTieRepository.save(nextTie);
             });
@@ -213,7 +258,24 @@ public class PlayoffService {
             }
         }
 
-        // Simplified tiebreaker: higher seed (team1) wins on aggregate draw
-        return score1 >= score2 ? team1 : team2;
+        if (score1 > score2) return team1;
+        if (score2 > score1) return team2;
+
+        // In case of a draw, check if a penalty shootout was recorded
+        for (Match m : matchLegs) {
+            if (m.getPenaltyWinnerTeam() != null) {
+                return m.getPenaltyWinnerTeam();
+            }
+            if (m.getHomePenaltyScore() != null && m.getAwayPenaltyScore() != null) {
+                if (m.getHomePenaltyScore() > m.getAwayPenaltyScore()) {
+                    return m.getHomeTeam();
+                } else if (m.getAwayPenaltyScore() > m.getHomePenaltyScore()) {
+                    return m.getAwayTeam();
+                }
+            }
+        }
+
+        // Simplified tiebreaker: higher seed (team1) wins on aggregate draw if no shootout
+        return team1;
     }
 }

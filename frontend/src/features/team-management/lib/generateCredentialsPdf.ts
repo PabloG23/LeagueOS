@@ -6,8 +6,74 @@ interface GenerateCredentialsOptions {
     players: Player[];
     leagueLogoUrl?: string;
     requireJerseyNumbers?: boolean;
+    showJerseyNumberOnCredentials?: boolean;
+    themeClass?: string;
+    tenantId?: string;
+    leagueName?: string;
 }
 
+interface CredentialThemePalette {
+    photoBorder: [number, number, number];
+    bannerBg: [number, number, number];
+    bannerText: [number, number, number];
+    accentLine?: [number, number, number];
+    bottomBg: [number, number, number];
+    jerseyNumberText: [number, number, number];
+    playerNameText: [number, number, number];
+    trimBorder: [number, number, number];
+    defaultLeagueLogo: string;
+    fallbackLeagueName: string;
+}
+
+const CREDENTIAL_THEMES: Record<string, CredentialThemePalette> = {
+    'theme-metepec': {
+        photoBorder: [147, 197, 114],       // Verde Pistache (#93C572)
+        bannerBg: [147, 197, 114],          // Verde Pistache (#93C572)
+        bannerText: [14, 18, 16],           // Obsidiana (#0E1210) para contraste óptimo
+        accentLine: [201, 165, 74],         // Dorado Metepec (#C9A54A)
+        bottomBg: [14, 18, 16],             // Obsidiana (#0E1210)
+        jerseyNumberText: [255, 255, 255],  // Blanco puro
+        playerNameText: [14, 18, 16],       // Obsidiana (#0E1210)
+        trimBorder: [203, 213, 225],        // slate-300
+        defaultLeagueLogo: '/ligaMunicipalMetepec.png',
+        fallbackLeagueName: 'LIGA MUNICIPAL DE FUTBOL DE METEPEC A.C.',
+    },
+    'theme-san-lucas': {
+        photoBorder: [5, 150, 105],         // Esmeralda 600 (#059669)
+        bannerBg: [5, 150, 105],            // Esmeralda 600 (#059669)
+        bannerText: [255, 255, 255],        // Blanco
+        bottomBg: [6, 95, 70],              // Esmeralda 800 (#065F46)
+        jerseyNumberText: [255, 255, 255],  // Blanco
+        playerNameText: [15, 23, 42],       // Slate-900
+        trimBorder: [148, 163, 184],        // Slate-400
+        defaultLeagueLogo: '/san_lucas_logo.png',
+        fallbackLeagueName: 'LIGA EJIDAL DE FUTBOL SAN SEBASTIAN Y SAN LUCAS',
+    },
+    'theme-nuestro-deporte': {
+        photoBorder: [220, 38, 38],         // Rojo Copa (#DC2626)
+        bannerBg: [220, 38, 38],            // Rojo Copa (#DC2626)
+        bannerText: [255, 255, 255],        // Blanco
+        bottomBg: [15, 23, 42],             // Slate-900 (#0F172A)
+        jerseyNumberText: [255, 255, 255],  // Blanco
+        playerNameText: [15, 23, 42],       // Slate-900
+        trimBorder: [148, 163, 184],        // Slate-400
+        defaultLeagueLogo: '/nuestro_deporte_logo.png',
+        fallbackLeagueName: 'LIGA NUESTRO DEPORTE',
+    },
+};
+
+const resolveTheme = (themeClass?: string, tenantId?: string): CredentialThemePalette => {
+    if (themeClass && CREDENTIAL_THEMES[themeClass]) {
+        return CREDENTIAL_THEMES[themeClass];
+    }
+    if (tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d') {
+        return CREDENTIAL_THEMES['theme-metepec'];
+    }
+    if (tenantId === '22222222-2222-2222-2222-222222222222') {
+        return CREDENTIAL_THEMES['theme-san-lucas'];
+    }
+    return CREDENTIAL_THEMES['theme-nuestro-deporte'];
+};
 
 interface FetchedImage {
     dataUrl: string;
@@ -80,20 +146,31 @@ const resolveImageUrl = (srcKey?: string): string | undefined => {
 };
 
 const fetchImageAsBase64 = async (url: string, rawFallbackUrl?: string): Promise<FetchedImage> => {
-    const toPngDataUrl = (img: HTMLImageElement): FetchedImage => {
+    const toPngDataUrl = (img: HTMLImageElement, maxDim = 400): FetchedImage => {
+        let w = img.naturalWidth || img.width || 200;
+        let h = img.naturalHeight || img.height || 200;
+        if (w > maxDim || h > maxDim) {
+            if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+            } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+            }
+        }
         const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || img.width || 200;
-        canvas.height = img.naturalHeight || img.height || 200;
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, w, h);
             return {
                 dataUrl: canvas.toDataURL('image/png'),
-                width: canvas.width,
-                height: canvas.height
+                width: w,
+                height: h
             };
         }
-        return { dataUrl: img.src, width: img.width, height: img.height };
+        return { dataUrl: img.src, width: w, height: h };
     };
 
     if (url.startsWith('data:')) {
@@ -160,13 +237,27 @@ const fetchImageAsBase64 = async (url: string, rawFallbackUrl?: string): Promise
 };
 
 export const generateCredentialsPdf = async (options: GenerateCredentialsOptions) => {
-    const { team, players: inputPlayers, leagueLogoUrl } = options;
+    const {
+        team,
+        players: inputPlayers,
+        leagueLogoUrl,
+        themeClass,
+        tenantId,
+        leagueName,
+        requireJerseyNumbers,
+        showJerseyNumberOnCredentials,
+    } = options;
+
+    // Regla del tenant: en credenciales se muestra el dorsal a menos que la regla del tenant lo desactive expresamente (showJerseyNumberOnCredentials === false)
+    const showJerseyNumber = showJerseyNumberOnCredentials !== false;
 
     const players = (inputPlayers || []).filter(p => !p.status || p.status === 'ACTIVE');
 
     if (!players || players.length === 0) {
         throw new Error('No hay jugadores activos registrados en este equipo.');
     }
+
+    const theme = resolveTheme(themeClass, tenantId);
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -188,7 +279,7 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
 
     // 1. Pre-load common images (League Logo & Team Logo)
     let leagueLogoImg: FetchedImage | undefined;
-    const targetLeagueLogo = leagueLogoUrl || '/nuestro_deporte_logo.png';
+    const targetLeagueLogo = leagueLogoUrl || theme.defaultLeagueLogo;
     const resolvedLeagueLogo = resolveImageUrl(targetLeagueLogo);
     if (resolvedLeagueLogo) {
         try {
@@ -265,10 +356,10 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
                 console.warn('Failed to render league logo in credentials PDF:', err);
             }
         } else {
-            doc.setTextColor(15, 23, 42); // slate-900 legible sobre blanco
+            doc.setTextColor(theme.playerNameText[0], theme.playerNameText[1], theme.playerNameText[2]);
             doc.setFontSize(9);
             doc.setFont("helvetica", "bolditalic");
-            doc.text("LIGA NUESTRO DEPORTE", x + cardWidth / 2, y + 12, { align: 'center' });
+            doc.text((leagueName || theme.fallbackLeagueName).toUpperCase(), x + cardWidth / 2, y + 12, { align: 'center' });
         }
 
         // -- Foto del Jugador (Centro) --
@@ -281,8 +372,8 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
         if (photoImg) {
             try {
                 doc.addImage(photoImg.dataUrl, 'PNG', photoX, photoY, photoSize, photoSize);
-                // Marco deportivo rojo alrededor de la foto
-                doc.setDrawColor(220, 38, 38); // red-600
+                // Marco deportivo con el color de tema del tenant
+                doc.setDrawColor(theme.photoBorder[0], theme.photoBorder[1], theme.photoBorder[2]);
                 doc.setLineWidth(1.2);
                 doc.rect(photoX, photoY, photoSize, photoSize);
                 photoDrawn = true;
@@ -295,7 +386,7 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             // Placeholder limpio sobre fondo blanco
             doc.setFillColor(241, 245, 249); // slate-100
             doc.rect(photoX, photoY, photoSize, photoSize, 'F');
-            doc.setDrawColor(220, 38, 38); // red-600
+            doc.setDrawColor(theme.photoBorder[0], theme.photoBorder[1], theme.photoBorder[2]);
             doc.setLineWidth(1.2);
             doc.rect(photoX, photoY, photoSize, photoSize);
             doc.setTextColor(148, 163, 184); // slate-400
@@ -304,8 +395,8 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             doc.text("FOTO", photoX + photoSize / 2, photoY + photoSize / 2 + 3, { align: 'center' });
         }
 
-        // -- Nombre del Jugador (Texto oscuro sobre fondo blanco) --
-        doc.setTextColor(15, 23, 42); // slate-900
+        // -- Nombre del Jugador (Texto con color de tema sobre fondo blanco) --
+        doc.setTextColor(theme.playerNameText[0], theme.playerNameText[1], theme.playerNameText[2]);
         doc.setFont("helvetica", "bolditalic");
         const fullName = [player.firstName, player.lastName].filter(Boolean).join(' ').trim().toUpperCase();
         
@@ -326,13 +417,19 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             doc.text(splitName.slice(0, 2), x + cardWidth / 2, photoY + photoSize + 4.5, { align: 'center', lineHeightFactor: 1.15 });
         }
 
-        // -- Raya Roja (Banner del Equipo) --
+        // -- Franja (Banner del Equipo) --
         const bannerY = photoY + photoSize + 11;
         const bannerHeight = 8;
-        doc.setFillColor(220, 38, 38); // red-600
+        doc.setFillColor(theme.bannerBg[0], theme.bannerBg[1], theme.bannerBg[2]);
         doc.rect(x, bannerY, cardWidth, bannerHeight, 'F');
         
-        doc.setTextColor(255, 255, 255); // blanco nítido sobre fondo rojo
+        // Línea de acento si el tema lo especifica (ej. Dorado Metepec)
+        if (theme.accentLine) {
+            doc.setFillColor(theme.accentLine[0], theme.accentLine[1], theme.accentLine[2]);
+            doc.rect(x, bannerY + bannerHeight - 0.7, cardWidth, 0.7, 'F');
+        }
+
+        doc.setTextColor(theme.bannerText[0], theme.bannerText[1], theme.bannerText[2]);
         doc.setFont("helvetica", "bolditalic");
         const teamName = (team.name || '').trim().toUpperCase();
         let teamFontSize = 10.5;
@@ -348,13 +445,13 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
             doc.text(teamNameSplit.slice(0, 2), x + cardWidth / 2, bannerY + 3.5, { align: 'center', lineHeightFactor: 1.1 });
         }
 
-        // -- Sección inferior DEBAJO de la raya amarilla (Se mantiene oscura exactamente como pidió el cliente) --
+        // -- Sección inferior con color de tema del tenant --
         const bottomSectionY = bannerY + bannerHeight;
         const bottomSectionH = cardHeight - (bottomSectionY - y);
-        doc.setFillColor(15, 23, 42); // slate-900
+        doc.setFillColor(theme.bottomBg[0], theme.bottomBg[1], theme.bottomBg[2]);
         doc.rect(x, bottomSectionY, cardWidth, bottomSectionH, 'F');
 
-        // -- Logo del Equipo (Abajo a la izquierda) --
+        // -- Logo del Equipo (Centrado si no lleva dorsal según la regla del tenant, o a la izquierda si lleva dorsal) --
         if (teamLogoImg) {
             try {
                 const maxLogoH = bottomSectionH - 4;
@@ -364,25 +461,50 @@ export const generateCredentialsPdf = async (options: GenerateCredentialsOptions
                     tLogoH = maxLogoH;
                     tLogoW = maxLogoH * (teamLogoImg.width / teamLogoImg.height);
                 }
-                doc.addImage(teamLogoImg.dataUrl, 'PNG', x + 4, y + cardHeight - tLogoH - 3.5, tLogoW, tLogoH);
+                const logoX = showJerseyNumber ? (x + 4) : (x + (cardWidth - tLogoW) / 2);
+                doc.addImage(teamLogoImg.dataUrl, 'PNG', logoX, y + cardHeight - tLogoH - 3.5, tLogoW, tLogoH);
             } catch (err) {
                 console.warn('Failed to render team logo in credentials PDF:', err);
             }
         }
 
-        // -- Número de Dorsal (Abajo a la derecha en blanco) --
-        if (player.jerseyNumber !== undefined && player.jerseyNumber !== null) {
+        // -- Número de Dorsal (Abajo a la derecha, solo si la regla del tenant lo permite) --
+        if (showJerseyNumber && player.jerseyNumber !== undefined && player.jerseyNumber !== null) {
             doc.setFontSize(32);
             doc.setFont("helvetica", "bolditalic");
-            doc.setTextColor(255, 255, 255); // white
+            doc.setTextColor(theme.jerseyNumberText[0], theme.jerseyNumberText[1], theme.jerseyNumberText[2]);
             doc.text(`${player.jerseyNumber}`, x + cardWidth - 4, y + cardHeight - 3, { align: 'right' });
         }
 
         // -- Borde exterior / Guía de recorte para las micas (0.3mm para fácil corte) --
-        doc.setDrawColor(148, 163, 184); // slate-400
+        doc.setDrawColor(theme.trimBorder[0], theme.trimBorder[1], theme.trimBorder[2]);
         doc.setLineWidth(0.3);
         doc.rect(x, y, cardWidth, cardHeight, 'D');
     }
 
-    doc.save(`Credenciales_${team.name.replace(/\s+/g, '_')}.pdf`);
+    const cleanTeamName = (team.name || 'Equipo').trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+    const fileName = `Credenciales_${cleanTeamName}.pdf`;
+
+    try {
+        const rawBlob = doc.output('blob');
+        const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        link.setAttribute('download', fileName);
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+            try {
+                if (link.parentNode) {
+                    document.body.removeChild(link);
+                }
+                URL.revokeObjectURL(blobUrl);
+            } catch (_) {}
+        }, 60000);
+    } catch {
+        doc.save(fileName);
+    }
 };

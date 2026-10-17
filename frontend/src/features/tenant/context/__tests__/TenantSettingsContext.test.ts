@@ -116,6 +116,12 @@ describe('TenantSettings — Tenant Isolation', () => {
             expect(TENANT_SAN_LUCAS.allowQuickScore).toBe(true);
         });
 
+        it('enableTournamentTypeSelection: Metepec = true, Nuestro Deporte = false, San Lucas = false', () => {
+            expect(TENANT_METEPEC.enableTournamentTypeSelection).toBe(true);
+            expect(TENANT_NUESTRO_DEPORTE.enableTournamentTypeSelection).toBe(false);
+            expect(TENANT_SAN_LUCAS.enableTournamentTypeSelection).toBe(false);
+        });
+
         it('themeClass should be unique per tenant', () => {
             expect(TENANT_NUESTRO_DEPORTE.themeClass).not.toBe(TENANT_SAN_LUCAS.themeClass);
             expect(TENANT_NUESTRO_DEPORTE.themeClass).not.toBe(TENANT_DEFAULT_PLATFORM.themeClass);

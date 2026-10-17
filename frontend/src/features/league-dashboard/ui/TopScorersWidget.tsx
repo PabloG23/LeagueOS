@@ -53,8 +53,15 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
     const { settings } = useTenantSettings();
 
     // Layout is decided exclusively by the tenant theme (no hardcoded tenant IDs)
-    const variant: LeaderVariant = settings?.themeClass === 'theme-nuestro-deporte' ? 'fut' : 'classic';
+    const isMetepecTenant = settings?.themeClass === 'theme-metepec' || settings?.tenantId === 'e39a6b17-5646-452d-929c-ca9a8dc4e44d' || leagueSlug === 'metepec' || leagueSlug === 'ligametepec';
+    const variant: LeaderVariant = settings?.themeClass === 'theme-nuestro-deporte'
+        ? 'fut'
+        : isMetepecTenant
+            ? 'metepec'
+            : 'classic';
     const isFut = variant === 'fut';
+    const isMetepec = variant === 'metepec';
+    const isCard = variant === 'fut' || variant === 'metepec';
 
     const [activeLeaderIdx, setActiveLeaderIdx] = useState(0);
     const [isAutoCycling, setIsAutoCycling] = useState(true);
@@ -123,6 +130,7 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
         if (isLocal) {
             if (themeClass === 'theme-nuestro-deporte') return 'nuestrodeporte.com';
             if (slug === 'sanlucas' || slug === 'ligasanlucas') return 'ligasanlucas.com';
+            if (slug === 'metepec' || slug === 'ligametepec' || themeClass === 'theme-metepec') return 'ligametepec.com';
             return slug ? `${slug}.leagueos.app` : 'leagueos.app';
         }
         return hostname.replace(/^www\./, '');
@@ -165,9 +173,11 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
         <div 
             className={cn(
                 "rounded-2xl border shadow-xl overflow-hidden flex flex-col transition-all duration-300 w-full shrink-0",
-                isFut
-                    ? "border-blue-900/40 bg-[#0D1A3C] text-white shadow-blue-950/50"
-                    : "border-slate-200 bg-white text-slate-900 shadow-slate-200/40"
+                isMetepec
+                    ? "border-[#93C572]/30 bg-[#0B100D] text-white shadow-black/60"
+                    : isFut
+                        ? "border-blue-900/40 bg-[#0D1A3C] text-white shadow-blue-950/50"
+                        : "border-slate-200 bg-white text-slate-900 shadow-slate-200/40"
             )}
             onMouseEnter={() => setIsAutoCycling(false)}
             onMouseLeave={() => setIsAutoCycling(true)}
@@ -175,22 +185,29 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
             {/* Widget Header */}
             <div className={cn(
                 "flex items-center justify-between px-4 py-3.5 border-b",
-                isFut ? "bg-[#091030]/95 border-red-900/30" : "bg-slate-50/80 border-slate-100"
+                isMetepec
+                    ? "bg-[#070B09]/95 border-[#93C572]/20"
+                    : isFut ? "bg-[#091030]/95 border-red-900/30" : "bg-slate-50/80 border-slate-100"
             )}>
                 <h3 className={cn(
                     "tracking-tight text-base font-bold flex items-center gap-2",
-                    isFut ? "font-['Bebas_Neue'] tracking-wider text-xl text-white" : ""
+                    isCard ? "font-['Bebas_Neue'] tracking-wider text-xl text-white" : ""
                 )}>
-                    <Trophy className={cn("w-5 h-5", isFut ? "text-amber-400" : "text-amber-500")} />
+                    <Trophy className={cn(
+                        "w-5 h-5",
+                        isMetepec ? "text-[#93C572]" : isFut ? "text-amber-400" : "text-amber-500"
+                    )} />
                     Goleo Individual
                 </h3>
 
                 {hasMultipleLeaders && (
                     <span className={cn(
                         "text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full",
-                        isFut 
-                            ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-sm" 
-                            : "bg-amber-100 text-amber-800"
+                        isMetepec
+                            ? "bg-[#93C572]/20 text-[#93C572] border border-[#93C572]/40 shadow-sm"
+                            : isFut 
+                                ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-sm" 
+                                : "bg-amber-100 text-amber-800"
                     )}>
                         Empate en la cima
                     </span>
@@ -206,11 +223,13 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                     <div className="p-8 text-center flex flex-col items-center justify-center">
                         <div className={cn(
                             "w-12 h-12 rounded-full flex items-center justify-center mb-3",
-                            isFut ? "bg-blue-950/50 text-blue-400 border border-blue-800/30" : "bg-slate-100 text-slate-400"
+                            isMetepec
+                                ? "bg-[#14231A]/60 text-[#93C572] border border-[#93C572]/30"
+                                : isFut ? "bg-blue-950/50 text-blue-400 border border-blue-800/30" : "bg-slate-100 text-slate-400"
                         )}>
                             <Trophy className="w-6 h-6 opacity-60" />
                         </div>
-                        <p className={cn("text-xs font-bold", isFut ? "text-slate-300" : "text-slate-600")}>
+                        <p className={cn("text-xs font-bold", isCard ? "text-slate-300" : "text-slate-600")}>
                             Sin goles registrados aún
                         </p>
                         <p className="text-[11px] text-slate-500 mt-1">
@@ -219,15 +238,19 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                     </div>
                 ) : (
                     <>
-                        {/* Hero Leader Section (Podio Dorado & Rojo Copa) */}
+                        {/* Hero Leader Section (Podio Dorado / Pistache & Obsidiana Metepec) */}
                         <div className={cn(
                             "relative px-3 sm:px-5 pt-4 sm:pt-5 pb-4 text-center overflow-hidden transition-all",
-                            isFut
-                                ? "bg-gradient-to-br from-red-950/90 via-[#0D1A3C] to-[#091030] text-white border-b border-red-600/30"
-                                : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-b border-slate-700"
+                            isMetepec
+                                ? "bg-gradient-to-br from-[#14231A]/95 via-[#0D1510] to-[#070B09] text-white border-b border-[#93C572]/25"
+                                : isFut
+                                    ? "bg-gradient-to-br from-red-950/90 via-[#0D1A3C] to-[#091030] text-white border-b border-red-600/30"
+                                    : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-b border-slate-700"
                         )}>
                             {/* Watermark / Ambient Lighting */}
-                            {isFut ? (
+                            {isMetepec ? (
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#93C572]/15 rounded-full blur-3xl pointer-events-none" />
+                            ) : isFut ? (
                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
                             ) : (
                                 <div className="absolute top-2 right-2 p-1 opacity-10 pointer-events-none">
@@ -239,7 +262,7 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                             {hasMultipleLeaders && (
                                 <div className={cn(
                                     "absolute inset-x-1.5 sm:inset-x-3 flex items-center justify-between z-30 pointer-events-none",
-                                    isFut ? "top-[40%] -translate-y-1/2" : "top-4"
+                                    isCard ? "top-[40%] -translate-y-1/2" : "top-4"
                                 )}>
                                     <button
                                         onClick={handlePrevLeader}
@@ -259,10 +282,20 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                             )}
 
                             <div className="relative z-10 flex flex-col items-center">
-                                {isFut ? (
-                                    /* FUT / Trading Card Hero presentation (theme-nuestro-deporte) */
-                                    <div className="relative w-full max-w-[240px] sm:max-w-[260px] mx-auto rounded-2xl p-[2px] bg-gradient-to-b from-amber-400 via-red-500/80 to-amber-500/40 shadow-[0_0_30px_rgba(232,35,26,0.35)] transition-all duration-300 hover:shadow-[0_0_40px_rgba(251,191,36,0.45)] mb-3">
-                                        <div className="relative w-full rounded-[14px] overflow-hidden bg-gradient-to-b from-[#141f48] via-[#0d163a] to-[#080d24] flex flex-col items-center p-3 text-center border border-white/10">
+                                {isCard ? (
+                                    /* FUT / Trading Card Hero presentation (theme-nuestro-deporte & theme-metepec) */
+                                    <div className={cn(
+                                        "relative w-full max-w-[240px] sm:max-w-[260px] mx-auto rounded-2xl p-[2px] transition-all duration-300 mb-3",
+                                        isMetepec
+                                            ? "bg-gradient-to-b from-[#C9A54A] via-[#93C572] to-[#C9A54A]/40 shadow-[0_0_30px_rgba(147,197,114,0.30)] hover:shadow-[0_0_40px_rgba(201,165,74,0.4)]"
+                                            : "bg-gradient-to-b from-amber-400 via-red-500/80 to-amber-500/40 shadow-[0_0_30px_rgba(232,35,26,0.35)] hover:shadow-[0_0_40px_rgba(251,191,36,0.45)]"
+                                    )}>
+                                        <div className={cn(
+                                            "relative w-full rounded-[14px] overflow-hidden flex flex-col items-center p-3 text-center border border-white/10",
+                                            isMetepec
+                                                ? "bg-gradient-to-b from-[#142219] via-[#0E1712] to-[#080C0A]"
+                                                : "bg-gradient-to-b from-[#141f48] via-[#0d163a] to-[#080d24]"
+                                        )}>
                                             {/* Diagonal glass sheen */}
                                             <div className="pointer-events-none absolute -top-12 -left-12 w-28 h-28 bg-white/5 rotate-45 blur-sm" />
 
@@ -272,11 +305,17 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                             </div>
 
                                             {/* Photo Container: full photo over a blurred copy (no crop, no white bars) */}
-                                            <div className="relative w-full h-52 sm:h-56 rounded-xl overflow-hidden mb-2.5 bg-[#060a1a] flex items-center justify-center">
+                                            <div className={cn(
+                                                "relative w-full h-52 sm:h-56 rounded-xl overflow-hidden mb-2.5 flex items-center justify-center",
+                                                isMetepec ? "bg-[#060A08]" : "bg-[#060a1a]"
+                                            )}>
                                                 <ContainedPhoto key={currentLeader.id} src={leaderPhoto} alt={currentLeader.name} />
 
-                                                {/* Dark gradient fade-out at bottom only (borde inferior / cuello) */}
-                                                <div className="absolute inset-x-0 bottom-0 h-8 z-10 bg-gradient-to-t from-[#080d24] to-transparent pointer-events-none" />
+                                                {/* Dark gradient fade-out at bottom only */}
+                                                <div className={cn(
+                                                    "absolute inset-x-0 bottom-0 h-8 z-10 bg-gradient-to-t to-transparent pointer-events-none",
+                                                    isMetepec ? "from-[#080C0A]" : "from-[#080d24]"
+                                                )} />
                                             </div>
 
                                             {leaderInfo}
@@ -323,9 +362,11 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                                         className={cn(
                                                             "relative rounded-full transition-all duration-200 p-[2px] group",
                                                             isSelected
-                                                                ? isFut 
-                                                                    ? "ring-2 ring-amber-400 scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]" 
-                                                                    : "ring-2 ring-amber-400 scale-110 shadow-lg"
+                                                                ? isMetepec
+                                                                    ? "ring-2 ring-[#93C572] scale-110 shadow-[0_0_12px_rgba(147,197,114,0.6)]"
+                                                                    : isFut 
+                                                                        ? "ring-2 ring-amber-400 scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]" 
+                                                                        : "ring-2 ring-amber-400 scale-110 shadow-lg"
                                                                 : "opacity-60 hover:opacity-100 hover:scale-105"
                                                         )}
                                                         title={`${leader.name} (${leader.team})`}
@@ -337,7 +378,10 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                                             fallbackIconClassName="w-4 h-4 text-white"
                                                         />
                                                         {isSelected && (
-                                                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                                            <span className={cn(
+                                                                "absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full",
+                                                                isMetepec ? "bg-[#93C572]" : "bg-amber-400"
+                                                            )} />
                                                         )}
                                                     </button>
                                                 );
@@ -352,7 +396,7 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                         {otherScorers.length > 0 && (
                             <div className={cn(
                                 "p-2.5 space-y-1",
-                                isFut ? "bg-[#0D1A3C]" : "bg-white"
+                                isMetepec ? "bg-[#0B100D]" : isFut ? "bg-[#0D1A3C]" : "bg-white"
                             )}>
                                 {otherScorers.map((scorer, idx) => {
                                     const rank = getDenseRank(scorer, idx);
@@ -364,12 +408,16 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                             className={cn(
                                                 "flex items-center justify-between px-2.5 py-2 rounded-xl transition-all group",
                                                 isLeaderRank
-                                                    ? isFut 
-                                                        ? "bg-amber-400/10 border border-amber-400/30 hover:bg-amber-400/15" 
-                                                        : "bg-amber-50/80 border border-amber-200"
-                                                    : isFut
-                                                        ? "hover:bg-blue-950/50 border border-transparent hover:border-blue-900/30"
-                                                        : "hover:bg-slate-50 border border-transparent"
+                                                    ? isMetepec
+                                                        ? "bg-[#93C572]/10 border border-[#93C572]/30 hover:bg-[#93C572]/15"
+                                                        : isFut 
+                                                            ? "bg-amber-400/10 border border-amber-400/30 hover:bg-amber-400/15" 
+                                                            : "bg-amber-50/80 border border-amber-200"
+                                                    : isMetepec
+                                                        ? "hover:bg-[#121B15] border border-transparent hover:border-[#93C572]/20"
+                                                        : isFut
+                                                            ? "hover:bg-blue-950/50 border border-transparent hover:border-blue-900/30"
+                                                            : "hover:bg-slate-50 border border-transparent"
                                             )}
                                         >
                                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -377,10 +425,12 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                                 <span className={cn(
                                                     "font-mono text-xs font-black w-4 text-center shrink-0",
                                                     isLeaderRank
-                                                        ? "text-amber-400"
-                                                        : isFut 
-                                                            ? "text-slate-400 group-hover:text-red-400" 
-                                                            : "text-slate-400 group-hover:text-primary"
+                                                        ? isMetepec ? "text-[#93C572]" : "text-amber-400"
+                                                        : isMetepec
+                                                            ? "text-slate-400 group-hover:text-[#93C572]"
+                                                            : isFut 
+                                                                ? "text-slate-400 group-hover:text-red-400" 
+                                                                : "text-slate-400 group-hover:text-primary"
                                                 )}>
                                                     {rank}
                                                 </span>
@@ -392,14 +442,20 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                                     className={cn(
                                                         "w-7 h-7 rounded-full shrink-0 border",
                                                         isLeaderRank
-                                                            ? "border-amber-400/60 shadow-[0_0_8px_rgba(251,191,36,0.3)] bg-slate-900"
-                                                            : isFut
-                                                                ? "border-blue-800/40 bg-blue-950/60"
-                                                                : "border-slate-200 bg-slate-100"
+                                                            ? isMetepec
+                                                                ? "border-[#93C572]/60 shadow-[0_0_8px_rgba(147,197,114,0.3)] bg-slate-900"
+                                                                : "border-amber-400/60 shadow-[0_0_8px_rgba(251,191,36,0.3)] bg-slate-900"
+                                                            : isMetepec
+                                                                ? "border-[#93C572]/30 bg-[#121B15]"
+                                                                : isFut
+                                                                    ? "border-blue-800/40 bg-blue-950/60"
+                                                                    : "border-slate-200 bg-slate-100"
                                                     )}
                                                     fallbackIconClassName={cn(
                                                         "w-3.5 h-3.5",
-                                                        isLeaderRank ? "text-amber-300" : "text-slate-400"
+                                                        isLeaderRank 
+                                                            ? isMetepec ? "text-[#93C572]" : "text-amber-300" 
+                                                            : "text-slate-400"
                                                     )}
                                                 />
 
@@ -408,8 +464,8 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                                     <p className={cn(
                                                         "text-xs font-bold leading-tight line-clamp-2 break-words",
                                                         isLeaderRank 
-                                                            ? "text-amber-200 font-extrabold" 
-                                                            : isFut ? "text-slate-200 group-hover:text-white" : "text-slate-700 group-hover:text-slate-900"
+                                                            ? isMetepec ? "text-emerald-200 font-extrabold" : "text-amber-200 font-extrabold" 
+                                                            : isCard ? "text-slate-200 group-hover:text-white" : "text-slate-700 group-hover:text-slate-900"
                                                     )}>
                                                         {scorer.name}
                                                     </p>
@@ -417,7 +473,11 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                                         to={getTeamLink(scorer.teamId) || '#'} 
                                                         className={cn(
                                                             "text-[11px] font-medium truncate hover:underline block",
-                                                            isFut ? "text-slate-400 group-hover:text-blue-300" : "text-slate-500 group-hover:text-primary"
+                                                            isMetepec
+                                                                ? "text-slate-400 group-hover:text-[#93C572]"
+                                                                : isFut 
+                                                                    ? "text-slate-400 group-hover:text-blue-300" 
+                                                                    : "text-slate-500 group-hover:text-primary"
                                                         )}
                                                     >
                                                         {scorer.team}
@@ -429,10 +489,14 @@ export const TopScorersWidget = ({ scorers: rawScorers = [], loading = false }: 
                                             <span className={cn(
                                                 "font-black px-2.5 py-0.5 rounded-lg text-xs shrink-0 transition-colors",
                                                 isLeaderRank
-                                                    ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 font-black"
-                                                    : isFut
-                                                        ? "bg-red-950/90 text-red-300 border border-red-800/40 group-hover:bg-red-600 group-hover:text-white"
-                                                        : "bg-slate-100 text-slate-900 group-hover:bg-primary/10 group-hover:text-primary"
+                                                    ? isMetepec
+                                                        ? "bg-[#93C572]/20 text-[#93C572] border border-[#93C572]/40 font-black"
+                                                        : "bg-amber-400/20 text-amber-300 border border-amber-400/40 font-black"
+                                                    : isMetepec
+                                                        ? "bg-[#14231A] text-[#93C572] border border-[#93C572]/40 group-hover:bg-[#93C572] group-hover:text-[#080C0A]"
+                                                        : isFut
+                                                            ? "bg-red-950/90 text-red-300 border border-red-800/40 group-hover:bg-red-600 group-hover:text-white"
+                                                            : "bg-slate-100 text-slate-900 group-hover:bg-primary/10 group-hover:text-primary"
                                             )}>
                                                 {scorer.goals}
                                             </span>

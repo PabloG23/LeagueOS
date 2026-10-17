@@ -5,7 +5,7 @@ import { leagueApi } from '@/shared/api/league-api';
 
 export interface PlayoffTie {
     id: string;
-    round: 'FINAL' | 'SEMI_FINALS' | 'QUARTER_FINALS' | 'ROUND_OF_16';
+    round: 'FINAL' | 'SEMI_FINALS' | 'QUARTER_FINALS' | 'ROUND_OF_16' | 'ROUND_OF_32';
     homeSeedTeam: any;
     awaySeedTeam: any;
     advancingTeam: any;
@@ -17,9 +17,22 @@ interface PlayoffsBracketViewProps {
     seasonId: string;
     refreshTrigger?: number;
     readonly?: boolean;
+    emptyTitle?: string;
+    emptyDescription?: string;
+    onActionClick?: () => void;
+    actionLabel?: string;
 }
 
-export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, readonly = false }: PlayoffsBracketViewProps) => {
+export const PlayoffsBracketView = ({
+    tenantId,
+    seasonId,
+    refreshTrigger = 0,
+    readonly = false,
+    emptyTitle,
+    emptyDescription,
+    onActionClick,
+    actionLabel
+}: PlayoffsBracketViewProps) => {
     const [ties, setTies] = useState<PlayoffTie[]>([]);
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,10 +63,12 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
                 leagueApi.getPlayoffBracket(tenantId, seasonId),
                 leagueApi.getSeasonMatches(tenantId, seasonId)
             ]);
-            setTies(bracketRes.data);
-            setMatches(matchesRes.data);
+            setTies(Array.isArray(bracketRes?.data) ? bracketRes.data : []);
+            setMatches(Array.isArray(matchesRes?.data) ? matchesRes.data : []);
         } catch (error) {
             console.error(error);
+            setTies([]);
+            setMatches([]);
         } finally {
             setLoading(false);
         }
@@ -95,19 +110,37 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
                 <div className="relative z-10 w-20 h-20 bg-slate-800/80 text-cyan-500 rounded-2xl flex items-center justify-center mb-6 border border-cyan-500/30 shadow-[0_0_30px_rgba(34,211,238,0.2)] transform -rotate-3 hover:rotate-0 transition-transform">
                     <Trophy className="w-10 h-10" />
                 </div>
-                <h3 className="relative z-10 text-2xl font-black text-white mb-3 tracking-wide drop-shadow-md uppercase">Aún no hay liguilla generada</h3>
-                {!readonly && <p className="relative z-10 text-slate-500 max-w-md mx-auto">Haz clic en el botón superior para realizar el sorteo y comenzar la fase final del torneo con toda la emoción.</p>}
+                <h3 className="relative z-10 text-2xl font-black text-white mb-3 tracking-wide drop-shadow-md uppercase">
+                    {emptyTitle || "Aún no hay liguilla generada"}
+                </h3>
+                {!readonly && (
+                    <p className="relative z-10 text-slate-500 max-w-md mx-auto mb-6">
+                        {emptyDescription || "Haz clic en el botón superior para realizar el sorteo y comenzar la fase final del torneo con toda la emoción."}
+                    </p>
+                )}
+                {!readonly && onActionClick && actionLabel && (
+                    <button
+                        onClick={onActionClick}
+                        className="relative z-10 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-sm rounded-xl shadow-lg shadow-amber-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                    >
+                        <Trophy className="w-4 h-4" />
+                        {actionLabel}
+                    </button>
+                )}
             </div>
         );
     }
 
+    const safeTies = Array.isArray(ties) ? ties : [];
     const roundsMap = {
-        'ROUND_OF_16': ties.filter(t => t.round === 'ROUND_OF_16'),
-        'QUARTER_FINALS': ties.filter(t => t.round === 'QUARTER_FINALS'),
-        'SEMI_FINALS': ties.filter(t => t.round === 'SEMI_FINALS'),
-        'FINAL': ties.filter(t => t.round === 'FINAL')
+        'ROUND_OF_32': safeTies.filter(t => t?.round === 'ROUND_OF_32'),
+        'ROUND_OF_16': safeTies.filter(t => t?.round === 'ROUND_OF_16'),
+        'QUARTER_FINALS': safeTies.filter(t => t?.round === 'QUARTER_FINALS'),
+        'SEMI_FINALS': safeTies.filter(t => t?.round === 'SEMI_FINALS'),
+        'FINAL': safeTies.filter(t => t?.round === 'FINAL')
     };
 
+    const hasRoundOf32 = roundsMap['ROUND_OF_32'].length > 0;
     const hasRoundOf16 = roundsMap['ROUND_OF_16'].length > 0;
     const hasQuarters = roundsMap['QUARTER_FINALS'].length > 0;
     const hasSemis = roundsMap['SEMI_FINALS'].length > 0;
@@ -122,12 +155,13 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
     );
 
     const TieCard = ({ tie, roundIndex }: { tie: PlayoffTie, roundIndex: number }) => {
-        const homeWinner = tie.advancingTeam?.id === tie.homeSeedTeam?.id;
-        const awayWinner = tie.advancingTeam?.id === tie.awaySeedTeam?.id;
-        const isFinal = tie.round === 'FINAL';
+        const homeWinner = Boolean(tie?.advancingTeam?.id && tie?.homeSeedTeam?.id && tie.advancingTeam.id === tie.homeSeedTeam.id);
+        const awayWinner = Boolean(tie?.advancingTeam?.id && tie?.awaySeedTeam?.id && tie.advancingTeam.id === tie.awaySeedTeam.id);
+        const isFinal = tie?.round === 'FINAL';
 
-        // Find the match for this tie
-        const tieMatch = matches.find(m => m.playoffTie?.id === tie.id);
+        // Find the match for this tie safely
+        const tieMatchesList = Array.isArray(matches) ? matches : [];
+        const tieMatch = tieMatchesList.find(m => m?.playoffTie?.id === tie?.id);
 
         return (
             <div className="relative flex items-center w-full justify-center group animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: `${roundIndex * 0.2}s` }}>
@@ -213,10 +247,11 @@ export const PlayoffsBracketView = ({ tenantId, seasonId, refreshTrigger = 0, re
             <div className="overflow-x-auto pb-4 hide-scrollbar">
                 <div className="w-max flex gap-16 pl-4 pt-4 relative">
                     
-                    {renderColumn('Octavos', roundsMap['ROUND_OF_16'], <Zap className="w-4 h-4 text-amber-500" />, 0)}
-                    {renderColumn('Cuartos', roundsMap['QUARTER_FINALS'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf16 ? 1 : 0)}
-                    {renderColumn('Semifinal', roundsMap['SEMI_FINALS'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf16 ? 2 : 1)}
-                    {renderColumn('Gran Final', roundsMap['FINAL'], <Trophy className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />, hasRoundOf16 ? 3 : 2, true)}
+                    {renderColumn('16vos', roundsMap['ROUND_OF_32'], <Zap className="w-4 h-4 text-amber-500" />, 0)}
+                    {renderColumn('Octavos', roundsMap['ROUND_OF_16'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 1 : 0)}
+                    {renderColumn('Cuartos', roundsMap['QUARTER_FINALS'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 2 : hasRoundOf16 ? 1 : 0)}
+                    {renderColumn('Semifinal', roundsMap['SEMI_FINALS'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 3 : hasRoundOf16 ? 2 : 1)}
+                    {renderColumn('Gran Final', roundsMap['FINAL'], <Trophy className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />, hasRoundOf32 ? 4 : hasRoundOf16 ? 3 : 2, true)}
 
                 </div>
             </div>

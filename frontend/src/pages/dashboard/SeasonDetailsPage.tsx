@@ -4,6 +4,7 @@ import { leagueApi, Season, TeamRegistration, MatchPreviewDTO } from '@/shared/a
 import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { EnrollTeamsModal } from '@/features/admin/ui/EnrollTeamsModal';
 import { GeneratePlayoffsModal } from '@/features/league-management/ui/GeneratePlayoffsModal';
+import { GenerateCopaBracketModal } from '@/features/league-management/ui/GenerateCopaBracketModal';
 import { PlayoffsBracketView } from '@/features/league-management/ui/PlayoffsBracketView';
 import { CalendarMethodSelectorModal } from '@/features/fixture-generator/ui/CalendarMethodSelectorModal';
 import { RoundRobinPreviewModal } from '@/features/fixture-generator/ui/RoundRobinPreviewModal';
@@ -27,6 +28,7 @@ export const SeasonDetailsPage = () => {
     const [enrolledTeams, setEnrolledTeams] = useState<TeamRegistration[]>([]);
     const [otherSiblingEnrolledIds, setOtherSiblingEnrolledIds] = useState<string[]>([]);
     const [isGeneratePlayoffsModalOpen, setIsGeneratePlayoffsModalOpen] = useState(false);
+    const [isCopaBracketModalOpen, setIsCopaBracketModalOpen] = useState(false);
     const [bracketRefreshTrigger, setBracketRefreshTrigger] = useState(0);
     const [isDeletingSeason, setIsDeletingSeason] = useState(false);
     const [showDeleteSeasonModal, setShowDeleteSeasonModal] = useState(false);
@@ -245,27 +247,34 @@ export const SeasonDetailsPage = () => {
     if (!season) return <div className="p-8">Torneo no encontrado.</div>;
 
     const baseName = season.name.split(' - ')[0];
+    const isCopa = season.tournamentType === 'COPA';
     const siblingSeasons = [...allSeasons.filter(s => s.name.startsWith(baseName + ' - ') || s.name === baseName)].sort((a, b) => a.name.localeCompare(b.name));
 
     return (
-        <div className="p-8 max-w-6xl mx-auto space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto space-y-6">
 
             <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">{baseName}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{baseName}</h1>
+                        {isCopa && (
+                            <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5 shadow-xs">
+                                <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                                Torneo de Copa
+                            </span>
+                        )}
                         {season.status === 'DRAFT' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">EN BORRADOR</span>}
                         {season.status === 'REGISTRATION_CLOSED' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">REGISTROS CERRADOS</span>}
                         {season.status === 'ACTIVE' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">EN CURSO</span>}
                         {season.status === 'COMPLETED' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">CONCLUIDO</span>}
                     </div>
                     {season.status === 'DRAFT' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <button
                                 onClick={handleActivateSeason}
                                 disabled={isActivating || enrolledTeams.length < 2}
                                 title={enrolledTeams.length < 2 ? "Inscribe al menos 2 equipos para poder activar el torneo" : undefined}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg transition-all shadow-md shadow-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white hover:bg-green-600 font-bold rounded-lg transition-all shadow-md shadow-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm"
                             >
                                 {isActivating ? (
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -276,7 +285,7 @@ export const SeasonDetailsPage = () => {
                             </button>
                             <button
                                 onClick={() => setShowDeleteSeasonModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-medium rounded-lg transition-colors"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-medium rounded-lg transition-colors text-xs sm:text-sm"
                             >
                                 <Trash2 className="w-4 h-4" />
                                 Eliminar
@@ -305,10 +314,10 @@ export const SeasonDetailsPage = () => {
                 )}
             </div>
 
-            <div className="flex gap-8 border-b border-slate-200">
+            <div className="flex gap-4 sm:gap-8 border-b border-slate-200 overflow-x-auto hide-scrollbar">
                 <button
                     onClick={() => setActiveTab('teams')}
-                    className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'teams' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 shrink-0 ${activeTab === 'teams' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${activeTab === 'teams' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'}`}>1</span>
                     Equipos Inscritos
@@ -316,26 +325,40 @@ export const SeasonDetailsPage = () => {
                     {activeTab === 'teams' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>}
                 </button>
 
-                <button
-                    onClick={() => enrolledTeams.length > 0 && setActiveTab('calendar')}
-                    disabled={enrolledTeams.length === 0}
-                    className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${enrolledTeams.length === 0 ? 'opacity-50 cursor-not-allowed text-slate-400' : activeTab === 'calendar' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'}`}
-                    title={enrolledTeams.length === 0 ? 'Debes inscribir al menos 1 equipo primero' : ''}
-                >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${enrolledTeams.length === 0 ? 'bg-slate-100 text-slate-400' : activeTab === 'calendar' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'}`}>2</span>
-                    Calendario de Juegos
-                    {enrolledTeams.length === 0 && <Lock className="w-4 h-4 text-slate-400" />}
-                    {activeTab === 'calendar' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>}
-                </button>
+                {!isCopa ? (
+                    <>
+                        <button
+                            onClick={() => enrolledTeams.length > 0 && setActiveTab('calendar')}
+                            disabled={enrolledTeams.length === 0}
+                            className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${enrolledTeams.length === 0 ? 'opacity-50 cursor-not-allowed text-slate-400' : activeTab === 'calendar' ? 'text-primary' : 'text-slate-500 hover:text-slate-700'}`}
+                            title={enrolledTeams.length === 0 ? 'Debes inscribir al menos 1 equipo primero' : ''}
+                        >
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${enrolledTeams.length === 0 ? 'bg-slate-100 text-slate-400' : activeTab === 'calendar' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'}`}>2</span>
+                            Calendario de Juegos
+                            {enrolledTeams.length === 0 && <Lock className="w-4 h-4 text-slate-400" />}
+                            {activeTab === 'calendar' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>}
+                        </button>
 
-                <button
-                    onClick={() => setActiveTab('liguilla')}
-                    className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'liguilla' ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${activeTab === 'liguilla' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}><Trophy className="w-3.5 h-3.5" /></span>
-                    Fase Final (Liguilla)
-                    {activeTab === 'liguilla' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full"></span>}
-                </button>
+                        <button
+                            onClick={() => setActiveTab('liguilla')}
+                            className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'liguilla' ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${activeTab === 'liguilla' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}><Trophy className="w-3.5 h-3.5" /></span>
+                            Fase Final (Liguilla)
+                            {activeTab === 'liguilla' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full"></span>}
+                        </button>
+                    </>
+                ) : (
+                    <button
+                        onClick={() => setActiveTab('liguilla')}
+                        className={`pb-4 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'liguilla' ? 'text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${activeTab === 'liguilla' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>2</span>
+                        <Trophy className="w-4 h-4" />
+                        Llaves de Eliminación
+                        {activeTab === 'liguilla' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-amber-600 rounded-t-full"></span>}
+                    </button>
+                )}
             </div>
 
             <div className="mt-6">
@@ -534,37 +557,61 @@ export const SeasonDetailsPage = () => {
 
                 {activeTab === 'teams' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                            <div>
-                                <div className="flex items-center gap-2.5">
-                                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Equipos Inscritos</h2>
-                                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700">
-                                        {enrolledTeams.length}
-                                    </span>
+                        {(!isCopa || enrolledTeams.length > 0) && (
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+                                <div>
+                                    <div className="flex items-center gap-2.5">
+                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Equipos Inscritos</h2>
+                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700">
+                                            {enrolledTeams.length}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-medium mt-1">
+                                        Planteles confirmados y listos para competir en este torneo
+                                    </p>
                                 </div>
-                                <p className="text-xs text-slate-500 font-medium mt-1">
-                                    Planteles confirmados y listos para competir en este torneo
-                                </p>
+                                <button
+                                    onClick={() => isCopa ? setIsCopaBracketModalOpen(true) : setIsEnrollModalOpen(true)}
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-600/20 transition-all transform hover:scale-[1.02]"
+                                >
+                                    <Trophy className="w-4 h-4" />
+                                    {isCopa ? 'Configurar Llaves de Copa' : 'Añadir Equipos'}
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setIsEnrollModalOpen(true)}
-                                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-600/20 transition-all transform hover:scale-[1.02]"
-                            >
-                                <UserPlus className="w-4 h-4" />
-                                Añadir Equipos
-                            </button>
-                        </div>
+                        )}
 
                         {enrolledTeams.length === 0 ? (
-                            <div className="border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center bg-slate-50/50 flex flex-col items-center justify-center">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
-                                    <Shield className="w-8 h-8" />
+                            isCopa ? (
+                                <div className="border-2 border-dashed border-amber-200/80 rounded-3xl p-10 sm:p-14 text-center bg-gradient-to-b from-amber-50/40 via-white to-amber-50/20 flex flex-col items-center justify-center shadow-xs">
+                                    <div className="w-16 h-16 rounded-2xl bg-amber-100/70 border border-amber-200 text-amber-600 flex items-center justify-center mb-4 shadow-inner">
+                                        <Trophy className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 mb-1.5 tracking-tight">
+                                        Configuración del Torneo de Copa
+                                    </h3>
+                                    <p className="text-sm text-slate-600 max-w-md mb-6 leading-relaxed">
+                                        Define desde qué fase arrancará la eliminación directa (4os, 8vos o 16vos), selecciona exactamente la cuota de equipos y arma los cruces mano a mano.
+                                    </p>
+                                    <button
+                                        onClick={() => setIsCopaBracketModalOpen(true)}
+                                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-amber-500/25 transition-all hover:scale-105 active:scale-95"
+                                    >
+                                        <Trophy className="w-4 h-4" />
+                                        <span>Configurar Llaves de Copa</span>
+                                        <ArrowRight className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-800 mb-1">Aún no hay equipos inscritos</h3>
-                                <p className="text-sm text-slate-500 max-w-sm">
-                                    Inscribe a los equipos del catálogo general para comenzar a armar el torneo y su calendario.
-                                </p>
-                            </div>
+                            ) : (
+                                <div className="border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center bg-slate-50/50 flex flex-col items-center justify-center">
+                                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
+                                        <Shield className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-slate-800 mb-1">Aún no hay equipos inscritos</h3>
+                                    <p className="text-sm text-slate-500 max-w-sm">
+                                        Inscribe a los equipos del catálogo general para comenzar a armar el torneo y sus llaves.
+                                    </p>
+                                </div>
+                            )
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                                 {enrolledTeams.map((reg) => (
@@ -619,13 +666,28 @@ export const SeasonDetailsPage = () => {
 
                         {enrolledTeams.length > 0 && (
                             <div className="mt-8 pt-6 border-t flex justify-end animate-in fade-in duration-300">
-                                <button
-                                    onClick={() => setActiveTab('calendar')}
-                                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl group"
-                                >
-                                    Siguiente: Configurar Calendario
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </button>
+                                {isCopa ? (
+                                    <button
+                                        onClick={() => {
+                                            setActiveTab('liguilla');
+                                            if (enrolledTeams.length >= 2) {
+                                                setIsCopaBracketModalOpen(true);
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-600/20 group"
+                                    >
+                                        Siguiente: Definir Llaves de Copa
+                                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setActiveTab('calendar')}
+                                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl group"
+                                    >
+                                        Siguiente: Configurar Calendario
+                                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                )}
                             </div>
                         )}
 
@@ -681,35 +743,65 @@ export const SeasonDetailsPage = () => {
                 )}
                 {activeTab === 'liguilla' && (
                     <div className="space-y-6">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <div>
-                                <h2 className="text-2xl font-black text-slate-800 tracking-tight">Fase Final</h2>
-                                <p className="text-sm text-slate-500">Árbol de competición de la liguilla</p>
+                                <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                                    {isCopa ? 'Llaves de Eliminación Directa' : 'Fase Final'}
+                                </h2>
+                                <p className="text-xs sm:text-sm text-slate-500">
+                                    {isCopa ? 'Torneo de Copa • Definición de cruces mano a mano' : 'Árbol de competición de la liguilla'}
+                                </p>
                             </div>
-                            <button
-                                onClick={() => setIsGeneratePlayoffsModalOpen(true)}
-                                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-purple-600/20"
-                            >
-                                <Trophy className="w-4 h-4" />
-                                Generar Liguilla
-                            </button>
+                            {!isCopa && (
+                                <button
+                                    onClick={() => setIsGeneratePlayoffsModalOpen(true)}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-purple-600/20 w-full sm:w-auto text-sm"
+                                >
+                                    <Trophy className="w-4 h-4" />
+                                    Generar Liguilla
+                                </button>
+                            )}
                         </div>
 
-                        <PlayoffsBracketView tenantId={tenantId || ''} seasonId={seasonId || ''} refreshTrigger={bracketRefreshTrigger} />
-
-                        <GeneratePlayoffsModal
-                            isOpen={isGeneratePlayoffsModalOpen}
-                            onClose={() => setIsGeneratePlayoffsModalOpen(false)}
+                        <PlayoffsBracketView
                             tenantId={tenantId || ''}
                             seasonId={seasonId || ''}
-                            onGenerated={() => {
-                                setActiveTab('liguilla');
-                                setBracketRefreshTrigger(prev => prev + 1);
-                            }}
+                            refreshTrigger={bracketRefreshTrigger}
+                            emptyTitle={isCopa ? "Aún no hay llaves de copa generadas" : undefined}
+                            emptyDescription={isCopa ? "Define los cruces de eliminación directa eligiendo las parejas de equipos o realizando un sorteo aleatorio." : undefined}
+                            onActionClick={isCopa ? () => setIsCopaBracketModalOpen(true) : undefined}
+                            actionLabel={isCopa ? "Armar Llaves de Copa" : undefined}
                         />
+
                     </div>
                 )}
             </div>
+
+            {/* Bracket Generation Modals (Accessible from any tab) */}
+            {isCopa ? (
+                <GenerateCopaBracketModal
+                    isOpen={isCopaBracketModalOpen}
+                    onClose={() => setIsCopaBracketModalOpen(false)}
+                    tenantId={tenantId || ''}
+                    seasonId={seasonId || ''}
+                    onGenerated={() => {
+                        loadTeams();
+                        setActiveTab('liguilla');
+                        setBracketRefreshTrigger(prev => prev + 1);
+                    }}
+                />
+            ) : (
+                <GeneratePlayoffsModal
+                    isOpen={isGeneratePlayoffsModalOpen}
+                    onClose={() => setIsGeneratePlayoffsModalOpen(false)}
+                    tenantId={tenantId || ''}
+                    seasonId={seasonId || ''}
+                    onGenerated={() => {
+                        setActiveTab('liguilla');
+                        setBracketRefreshTrigger(prev => prev + 1);
+                    }}
+                />
+            )}
 
             {/* Custom Confirmation Modal for Deleting Season */}
             {showDeleteSeasonModal && (

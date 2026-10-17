@@ -42,6 +42,15 @@ const PALETTES: Record<LeaderVariant, {
         goldDeep: '#E8231A',
         muted: '#CBD5E1',
     },
+    metepec: {
+        bgTop: '#14231A',
+        bgBottom: '#060A08',
+        glow: 'rgba(147, 197, 114, 0.45)',
+        accent: '#93C572',
+        gold: '#C9A54A',
+        goldDeep: '#93C572',
+        muted: '#CBD5E1',
+    },
     classic: {
         bgTop: '#1E293B',
         bgBottom: '#020617',

@@ -112,8 +112,12 @@ export const RosterDashboard = () => {
             await generateCredentialsPdf({
                 team: { id: targetId, name: teamName, logoUrl: teamLogo } as any,
                 players: activePlayers,
-                leagueLogoUrl: settings.logoUrl,
-                requireJerseyNumbers: settings.requireJerseyNumbers
+                leagueLogoUrl: settings?.logoUrl,
+                requireJerseyNumbers: settings?.requireJerseyNumbers,
+                showJerseyNumberOnCredentials: settings?.showJerseyNumberOnCredentials,
+                themeClass: settings?.themeClass,
+                tenantId: settings?.tenantId,
+                leagueName: settings?.name
             });
             showToast('Credenciales generadas con éxito', 'success');
         } catch (error: any) {

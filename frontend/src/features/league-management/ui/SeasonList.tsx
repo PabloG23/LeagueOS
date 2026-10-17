@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { leagueApi, Season } from '@/shared/api/league-api';
 import { useToast } from '@/shared/components/ui/ToastContext';
+import { useTenantSettings } from '@/features/tenant/context/TenantSettingsContext';
 import { Trash2, AlertTriangle, X, Trophy, Plus, Sparkles, Layers, Check, Calendar, ArrowRight } from 'lucide-react';
 
 interface SeasonListProps {
@@ -15,11 +16,23 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
     const [isCreating, setIsCreating] = useState(false);
     const [seasonToDelete, setSeasonToDelete] = useState<{ baseName: string, subSeasons: Season[] } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [newSeasonData, setNewSeasonData] = useState<{ baseName: string, startDate: string, endDate: string, divisions: string[] }>({
-        baseName: '', startDate: '', endDate: '', divisions: []
+    const [newSeasonData, setNewSeasonData] = useState<{
+        baseName: string;
+        startDate: string;
+        endDate: string;
+        divisions: string[];
+        tournamentType: 'LIGA' | 'COPA';
+    }>({
+        baseName: '',
+        startDate: '',
+        endDate: '',
+        divisions: [],
+        tournamentType: 'LIGA',
     });
     const { leagueSlug } = useParams<{ leagueSlug: string }>();
     const { showToast } = useToast();
+    const { settings } = useTenantSettings();
+    const showTournamentTypeSelection = Boolean(settings?.enableTournamentTypeSelection);
 
     const DIVISIONS = ['1ra Fuerza', '2da Fuerza', '3ra Fuerza'];
     const currentLeague = leagueSlug || 'ligaNuestroDeporte';
@@ -50,7 +63,8 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
             baseName: '',
             startDate: start,
             endDate: end,
-            divisions: []
+            divisions: [],
+            tournamentType: 'LIGA',
         });
         setIsCreating(true);
     };
@@ -81,19 +95,34 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
                     startDate: newSeasonData.startDate,
                     endDate: newSeasonData.endDate,
                     status: 'DRAFT',
-                    currentMatchday: 1
+                    currentMatchday: 1,
+                    tournamentType: showTournamentTypeSelection ? newSeasonData.tournamentType : 'LIGA',
                 })
             );
 
             await Promise.all(promises);
             setIsCreating(false);
             const { start, end } = getDefaultDates();
-            setNewSeasonData({ baseName: '', startDate: start, endDate: end, divisions: [] });
+            setNewSeasonData({ baseName: '', startDate: start, endDate: end, divisions: [], tournamentType: 'LIGA' });
             loadSeasons();
-            showToast("Torneo creado exitosamente.", "success");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating season", error);
-            showToast("No se pudo crear el torneo. Revisa los datos.", "error");
+            const status = error.response?.status;
+            let errorMessage = "No se pudo crear el torneo. Revisa los datos.";
+
+            if (status === 403) {
+                errorMessage = "Sesión no autorizada: tu cuenta activa no tiene permisos en esta liga o pertenece a otra liga. Por favor inicia sesión con el administrador correspondiente.";
+            } else if (status === 401) {
+                errorMessage = "Tu sesión ha expirado. Por favor vuelve a iniciar sesión.";
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (typeof error.response?.data === 'string' && error.response.data.trim()) {
+                errorMessage = error.response.data;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            showToast(errorMessage, "error");
         }
     };
 
@@ -129,7 +158,8 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
             representativeId: groupedSeasons[0].id,
             startDate: groupedSeasons[0].startDate,
             endDate: groupedSeasons[0].endDate,
-            status: groupedSeasons.some(s => s.status === 'ACTIVE') ? 'ACTIVE' : groupedSeasons[0].status
+            status: groupedSeasons.some(s => s.status === 'ACTIVE') ? 'ACTIVE' : groupedSeasons[0].status,
+            tournamentType: groupedSeasons[0].tournamentType || 'LIGA'
         }));
     }, [seasons]);
 
@@ -171,9 +201,6 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
                     <div className="relative z-10">
                         <div className="flex items-start justify-between pb-4 mb-6 border-b border-slate-800">
                             <div>
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2">
-                                    <Sparkles className="w-3.5 h-3.5" /> Alta de Competición
-                                </span>
                                 <h3 className="text-xl font-bold text-white tracking-tight">Crear Nuevo Torneo</h3>
                                 <p className="text-xs text-slate-400 mt-0.5">
                                     Configura los parámetros iniciales de la temporada y sus divisiones.
@@ -203,7 +230,79 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
                                 />
                             </div>
 
-                            {/* Categorías / Divisiones */}
+                            {/* Formato / Tipo de Torneo (Exclusivo cuando el tenant lo habilita por settings) */}
+                            {showTournamentTypeSelection && (
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                            Formato / Tipo de Torneo <span className="text-blue-400">*</span>
+                                        </label>
+                                        <span className="text-xs text-slate-400">
+                                            {newSeasonData.tournamentType === 'LIGA' ? 'Liga en dos fases' : 'Eliminación directa'}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {/* Torneo de Liga */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewSeasonData({ ...newSeasonData, tournamentType: 'LIGA' })}
+                                            className={`flex flex-col p-4 rounded-xl border text-left transition-all ${
+                                                newSeasonData.tournamentType === 'LIGA'
+                                                    ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm shadow-blue-500/20 ring-1 ring-blue-500/50'
+                                                    : 'bg-slate-800/60 border-slate-700/70 text-slate-300 hover:bg-slate-800 hover:border-slate-600 hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between w-full mb-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <Trophy className={`w-4 h-4 ${newSeasonData.tournamentType === 'LIGA' ? 'text-blue-400' : 'text-slate-400'}`} />
+                                                    <span className="font-bold text-sm text-white">Torneo de Liga</span>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
+                                                    newSeasonData.tournamentType === 'LIGA'
+                                                        ? 'bg-blue-600 border-blue-400 text-white'
+                                                        : 'border-slate-600 bg-slate-800'
+                                                }`}>
+                                                    {newSeasonData.tournamentType === 'LIGA' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-slate-400 leading-relaxed">
+                                                Torneo de liga en dos fases (todos vs todos a un partido y partición en Campeonato / Permanencia).
+                                            </p>
+                                        </button>
+
+                                        {/* Torneo de Copa */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewSeasonData({ ...newSeasonData, tournamentType: 'COPA', divisions: [] })}
+                                            className={`flex flex-col p-4 rounded-xl border text-left transition-all ${
+                                                newSeasonData.tournamentType === 'COPA'
+                                                    ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm shadow-blue-500/20 ring-1 ring-blue-500/50'
+                                                    : 'bg-slate-800/60 border-slate-700/70 text-slate-300 hover:bg-slate-800 hover:border-slate-600 hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between w-full mb-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className={`w-4 h-4 ${newSeasonData.tournamentType === 'COPA' ? 'text-amber-400' : 'text-slate-400'}`} />
+                                                    <span className="font-bold text-sm text-white">Torneo de Copa</span>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
+                                                    newSeasonData.tournamentType === 'COPA'
+                                                        ? 'bg-blue-600 border-blue-400 text-white'
+                                                        : 'border-slate-600 bg-slate-800'
+                                                }`}>
+                                                    {newSeasonData.tournamentType === 'COPA' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-slate-400 leading-relaxed">
+                                                Torneo de copa por eliminación directa en llaves / bracket hasta definir al campeón.
+                                            </p>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Categorías / Divisiones (Solo aplica para torneos de liga regular, no en Copa) */}
+                            {newSeasonData.tournamentType !== 'COPA' && (
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -248,6 +347,7 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
                                     Si seleccionas múltiples divisiones, se creará un torneo independiente para cada categoría (ej. <em>{newSeasonData.baseName || 'Torneo'} - 1ra Fuerza</em>).
                                 </p>
                             </div>
+                            )}
 
                             {/* Dates Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -329,9 +429,23 @@ export const SeasonList = ({ tenantId }: SeasonListProps) => {
                         >
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                                        {mega.baseName}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors">
+                                            {mega.baseName}
+                                        </h3>
+                                        {showTournamentTypeSelection && mega.tournamentType === 'COPA' && (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                                <Sparkles className="w-3 h-3 text-amber-600" />
+                                                Copa
+                                            </span>
+                                        )}
+                                        {showTournamentTypeSelection && mega.tournamentType === 'LIGA' && (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                                                <Trophy className="w-3 h-3 text-blue-600" />
+                                                Liga
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
                                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                                         {new Date(mega.startDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(mega.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}

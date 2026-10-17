@@ -24,6 +24,7 @@ export interface TenantSettings {
     minMatchesForPlayoffs: number;
     allowTransfers: boolean;
     requireJerseyNumbers: boolean;
+    showJerseyNumberOnCredentials?: boolean;
     themeClass?: string;
     footerAddress: string;
     footerPhone: string;
@@ -49,6 +50,7 @@ export interface TenantSettings {
     enableAccumulatedYellowSuspensions?: boolean;
     allowMultipleTeamsPerPlayer?: boolean;
     allowQuickScore?: boolean;
+    enableTournamentTypeSelection?: boolean;
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -61,6 +63,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
     minMatchesForPlayoffs: 0,
     allowTransfers: false,
     requireJerseyNumbers: false,
+    showJerseyNumberOnCredentials: true,
     themeClass: '',
     footerAddress: "Plataforma de Gestión Deportiva LeagueOS",
     footerPhone: "",
@@ -81,6 +84,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
     rejectExpiredIne: false,
     enableAccumulatedYellowSuspensions: false,
     allowQuickScore: true,
+    enableTournamentTypeSelection: false,
     tiebreakerOrder: 'PTS_GD_GF_NAME',
 };
 
@@ -253,12 +257,14 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                     matchTickerTextClass: (responseData as any)?.matchTickerTextClass ?? matchedTenant?.settings?.matchTickerTextClass ?? matchTickerTextClass,
                     enableRoundRobinFixtures: (responseData as any)?.enableRoundRobinFixtures ?? matchedTenant?.settings?.enableRoundRobinFixtures ?? enableRoundRobinFixtures,
                     requireJerseyNumbers: (responseData as any)?.requireJerseyNumbers ?? matchedTenant?.settings?.requireJerseyNumbers ?? requireJerseyNumbers,
+                    showJerseyNumberOnCredentials: (responseData as any)?.showJerseyNumberOnCredentials ?? matchedTenant?.settings?.showJerseyNumberOnCredentials ?? true,
                     showOffenseDefenseWidgets: (responseData as any)?.showOffenseDefenseWidgets ?? matchedTenant?.settings?.showOffenseDefenseWidgets ?? DEFAULT_SETTINGS.showOffenseDefenseWidgets,
                     showDisciplineWidget: (responseData as any)?.showDisciplineWidget ?? matchedTenant?.settings?.showDisciplineWidget ?? DEFAULT_SETTINGS.showDisciplineWidget,
                     allowMultipleTeamsPerPlayer: (responseData as any)?.allowMultipleTeamsPerPlayer ?? matchedTenant?.settings?.allowMultipleTeamsPerPlayer ?? DEFAULT_SETTINGS.allowMultipleTeamsPerPlayer,
                     allowAdminExceedRosterLimit: (responseData as any)?.allowAdminExceedRosterLimit ?? matchedTenant?.settings?.allowAdminExceedRosterLimit ?? DEFAULT_SETTINGS.allowAdminExceedRosterLimit,
                     rejectExpiredIne: (responseData as any)?.rejectExpiredIne ?? matchedTenant?.settings?.rejectExpiredIne ?? DEFAULT_SETTINGS.rejectExpiredIne,
                     enableAccumulatedYellowSuspensions: (responseData as any)?.enableAccumulatedYellowSuspensions ?? matchedTenant?.settings?.enableAccumulatedYellowSuspensions ?? DEFAULT_SETTINGS.enableAccumulatedYellowSuspensions,
+                    enableTournamentTypeSelection: (responseData as any)?.enableTournamentTypeSelection ?? matchedTenant?.settings?.enableTournamentTypeSelection ?? DEFAULT_SETTINGS.enableTournamentTypeSelection,
                     tiebreakerOrder: (responseData as any)?.tiebreakerOrder ?? matchedTenant?.settings?.tiebreakerOrder ?? DEFAULT_SETTINGS.tiebreakerOrder,
                     tenantId // <--- CRUCIAL: explicitly set tenantId
                 });

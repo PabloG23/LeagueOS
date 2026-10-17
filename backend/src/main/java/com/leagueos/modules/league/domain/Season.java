@@ -41,4 +41,7 @@ public class Season extends BaseEntity {
 
     @Column(name = "max_active_players_per_team", nullable = false)
     private int maxActivePlayersPerTeam = 30;
+
+    @Column(name = "tournament_type")
+    private String tournamentType = "LIGA";
 }

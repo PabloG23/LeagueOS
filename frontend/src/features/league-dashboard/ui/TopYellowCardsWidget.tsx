@@ -25,7 +25,7 @@ export const TopYellowCardsWidget = ({ data = [], loading = false }: TopYellowCa
                     : "border-slate-200 bg-white text-slate-900 shadow-slate-200/40"
         )}>
             <div className={cn(
-                "flex items-center justify-between p-5 border-b",
+                "flex items-center justify-between gap-2 p-5 border-b",
                 isNuestroDeporte
                     ? "bg-[#060B1A]/80 border-blue-900/30"
                     : isMetepec
@@ -40,7 +40,7 @@ export const TopYellowCardsWidget = ({ data = [], loading = false }: TopYellowCa
                     <div className="w-3.5 h-4.5 bg-amber-400 rounded-sm shadow-sm border border-amber-500/40 inline-block mr-1" />
                     Tarjetas Amarillas
                 </h3>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 whitespace-nowrap shrink-0">
                     5 = Suspensión
                 </span>
             </div>

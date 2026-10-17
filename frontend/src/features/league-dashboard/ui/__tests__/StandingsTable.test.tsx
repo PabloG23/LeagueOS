@@ -67,4 +67,14 @@ describe('StandingsTable — Total Points Tests', () => {
         expect(screen.getByText('Atlas')).toBeInTheDocument();
         expect(screen.getByText('Pumas')).toBeInTheDocument();
     });
+
+    it('should render the share standings button for Nuestro Deporte', () => {
+        renderWithProviders(<StandingsTable data={mockStandings} />, {
+            tenantSettings: TENANT_NUESTRO_DEPORTE,
+        });
+
+        const shareButton = screen.getByRole('button', { name: /compartir tabla/i });
+        expect(shareButton).toBeInTheDocument();
+    });
 });
+
