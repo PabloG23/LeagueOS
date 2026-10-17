@@ -149,9 +149,14 @@ export const StandingsTable = ({ data, seasons }: StandingsTableProps) => {
             points: item.points,
         }));
 
+        const isCustomDomain = typeof window !== 'undefined' &&
+            !window.location.hostname.includes('localhost') &&
+            !window.location.hostname.includes('127.0.0.1') &&
+            !window.location.hostname.includes('vercel.app');
+
         const leagueUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/${effectiveLeagueSlug}`
-            : `https://liganuestrodeporte.com/${effectiveLeagueSlug}`;
+            ? (isCustomDomain ? window.location.origin : `${window.location.origin}/${effectiveLeagueSlug}`)
+            : 'https://www.nuestrodeporte.com';
 
         const secondaryLogoUrl = isNuestroDeporte ? '/TorneoVictorRuiz.jpeg' : undefined;
 

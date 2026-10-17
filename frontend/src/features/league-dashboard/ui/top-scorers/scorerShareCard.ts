@@ -486,8 +486,7 @@ export const generateScorerShareCard = async (data: ScorerShareCardData): Promis
         ctx.textAlign = 'center';
         ctx.font = `600 24px ${SANS}`;
         setSpacing(ctx, 3);
-        ctx.fillStyle = 'rgba(203, 213, 225, 0.65)';
-        ctx.fillText(data.leagueUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''), WIDTH / 2, HEIGHT - 46);
+        ctx.fillText(data.leagueUrl.replace(/^https?:\/\//i, '').split('/')[0], WIDTH / 2, HEIGHT - 46);
 
         return await new Promise<Blob>((resolve, reject) => {
             canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('No se pudo generar la imagen'))), 'image/png');

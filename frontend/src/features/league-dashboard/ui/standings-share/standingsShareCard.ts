@@ -806,9 +806,9 @@ export const generateStandingsShareCard = async (data: StandingsShareCardData): 
         setSpacing(ctx, 2.5);
         ctx.fillStyle = 'rgba(203, 213, 225, 0.6)';
         const cleanDomain = data.leagueUrl
-            .replace(/^https?:\/\//, '')
-            .replace(/\/$/, '')
-            .replace(/^localhost:\d+\/?/, 'liganuestrodeporte.com/');
+            .replace(/^https?:\/\//i, '')
+            .split('/')[0]
+            .replace(/^localhost:\d+/, 'nuestrodeporte.com');
         ctx.fillText(`${cleanDomain}  •  Tu pasión, nuestro deporte`, WIDTH / 2, footerY + 34);
 
         return await new Promise<Blob>((resolve, reject) => {
