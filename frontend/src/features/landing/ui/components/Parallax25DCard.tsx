@@ -36,7 +36,7 @@ export const Parallax25DCard: React.FC<Parallax25DCardProps> = ({
     const glareY = useTransform(smoothY, [-0.5, 0.5], ['15%', '85%']);
 
     const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!cardRef.current) return;
+        if (e.pointerType === 'touch' || !cardRef.current) return;
         const rect = cardRef.current.getBoundingClientRect();
         const normX = (e.clientX - rect.left) / rect.width - 0.5;
         const normY = (e.clientY - rect.top) / rect.height - 0.5;
