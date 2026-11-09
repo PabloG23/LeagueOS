@@ -101,9 +101,14 @@ export const TenantSettingsContext = createContext<TenantSettingsContextType>({
 });
 
 export const TenantSettingsProvider = ({ children }: { children: React.ReactNode }) => {
-    const [settings, setSettings] = useState<TenantSettings>(DEFAULT_SETTINGS);
-    const [isLoading, setIsLoading] = useState(true);
     const location = useLocation();
+    const isMarketingRoute =
+        location.pathname === '/landing' ||
+        location.pathname === '/leagueos' ||
+        location.pathname === '/about';
+
+    const [settings, setSettings] = useState<TenantSettings>(DEFAULT_SETTINGS);
+    const [isLoading, setIsLoading] = useState(!isMarketingRoute);
 
     // Effect to apply theme class, favicon and title dynamically
     useEffect(() => {
@@ -135,6 +140,15 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
         let requestInterceptor: number | undefined;
 
         const fetchSettings = async () => {
+            if (
+                location.pathname === '/landing' ||
+                location.pathname === '/leagueos' ||
+                location.pathname === '/about'
+            ) {
+                setSettings(DEFAULT_SETTINGS);
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
                 // Neutral Platform Defaults
@@ -228,7 +242,9 @@ export const TenantSettingsProvider = ({ children }: { children: React.ReactNode
                 try {
                     const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
                     const finalBaseUrl = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
-                    const response = await axios.get(`${finalBaseUrl}/tenants/settings/current`);
+                    const response = await axios.get(`${finalBaseUrl}/tenants/settings/current`, {
+                        timeout: 4000,
+                    });
                     responseData = response.data;
                 } catch (apiError) {
                     console.error("[TenantContext] Failed to fetch tenant settings from backend. Using local fallbacks.", apiError);

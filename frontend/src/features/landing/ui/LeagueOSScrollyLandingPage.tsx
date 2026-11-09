@@ -58,10 +58,10 @@ export const LeagueOSScrollyLandingPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#060913] text-slate-100 font-sans selection:bg-blue-500 selection:text-white relative overflow-x-clip">
-            {/* Top Glowing Ambient Accents */}
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-[140px] pointer-events-none z-0" />
-            <div className="fixed top-[40%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/10 blur-[160px] pointer-events-none z-0" />
-            <div className="fixed bottom-[10%] left-[-10%] w-[600px] h-[600px] bg-blue-600/10 blur-[180px] pointer-events-none z-0" />
+            {/* Top Glowing Ambient Accents (Desktop only to save mobile GPU tile memory) */}
+            <div className="hidden md:block fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-[140px] pointer-events-none z-0" />
+            <div className="hidden md:block fixed top-[40%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/10 blur-[160px] pointer-events-none z-0" />
+            <div className="hidden md:block fixed bottom-[10%] left-[-10%] w-[600px] h-[600px] bg-blue-600/10 blur-[180px] pointer-events-none z-0" />
 
             {/* ========================================================================= */}
             {/* 1. TOP STICKY NAVBAR */}

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
     motion,
-    useScroll,
+    useMotionValue,
     useSpring,
     useTransform,
 } from 'framer-motion';
@@ -31,6 +31,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
     const h1Ref = useRef<HTMLHeadingElement | null>(null);
     const revolucionaRef = useRef<HTMLSpanElement | null>(null);
     const lastMeasuredWidthRef = useRef<number>(0);
+    const maxScrollDistanceRef = useRef<number>(1200);
 
     const [isMobile, setIsMobile] = useState<boolean>(() =>
         typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -50,9 +51,29 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
         deltaY: 0,
     });
 
+    // Zero-dead-zone scroll progress starting immediately at window.scrollY = 0
+    const rawScrollProgress = useMotionValue(0);
+    const desktopSmoothProgress = useSpring(rawScrollProgress, {
+        stiffness: 180,
+        damping: 30,
+        mass: 0.25,
+        restDelta: 0.0005,
+    });
+
+    // On mobile touch screens, bind 1:1 to rawScrollProgress so there is zero delay when swiping in Chrome/Brave
+    const activeProgress = isMobile ? rawScrollProgress : desktopSmoothProgress;
+
     useEffect(() => {
-        const measureRevolucionaCenter = (force = false) => {
+        const updateMetrics = (force = false) => {
             const currentW = window.innerWidth;
+            const trackEl = trackRef.current;
+            if (trackEl) {
+                maxScrollDistanceRef.current = Math.max(
+                    300,
+                    trackEl.offsetHeight - window.innerHeight
+                );
+            }
+
             // Ignore vertical-only resize events from mobile Chrome/Brave URL bar hiding/showing
             if (!force && Math.abs(currentW - lastMeasuredWidthRef.current) < 8) {
                 return;
@@ -85,122 +106,123 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
             });
         };
 
-        measureRevolucionaCenter(true);
-        const onResize = () => measureRevolucionaCenter(false);
+        const handleScroll = () => {
+            const y = window.scrollY || window.pageYOffset || 0;
+            const maxDist = maxScrollDistanceRef.current;
+            const p = Math.max(0, Math.min(1, y / maxDist));
+            rawScrollProgress.set(p);
+        };
+
+        updateMetrics(true);
+        handleScroll();
+
+        const onResize = () => {
+            updateMetrics(false);
+            handleScroll();
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
         window.addEventListener('resize', onResize, { passive: true });
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
-
-    const { scrollYProgress } = useScroll({
-        target: trackRef,
-        offset: ['start start', 'end end'],
-    });
-
-    // Tuned spring so mobile touch scroll does not suffer from "double inertia" lag,
-    // while desktop wheel scrolling remains silky smooth.
-    const smoothProgress = useSpring(scrollYProgress, {
-        stiffness: 140,
-        damping: 28,
-        mass: 0.3,
-        restDelta: 0.0005,
-    });
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', onResize);
+        };
+    }, [rawScrollProgress]);
 
     // -------------------------------------------------------------------------
-    // ACT 1 (0.00 -> 0.27): Dramatic Portal Fly-Through into "REVOLUCIONA"
+    // ACT 1 (0.00 -> 0.25): Immediate Fly-Through into "REVOLUCIONA" from first pixel of scroll
     // -------------------------------------------------------------------------
-    const act1Opacity = useTransform(smoothProgress, [0, 0.21, 0.27], [1, 1, 0]);
-    const act1PointerEvents = useTransform(smoothProgress, (v) =>
-        v < 0.20 ? 'auto' : 'none'
+    const act1Opacity = useTransform(activeProgress, [0, 0.19, 0.25], [1, 1, 0]);
+    const act1PointerEvents = useTransform(activeProgress, (v) =>
+        v < 0.19 ? 'auto' : 'none'
     );
 
-    // Top Shield + Badge part upward
-    const act1TopOpacity = useTransform(smoothProgress, [0, 0.08, 0.15], [1, 0.5, 0]);
-    const act1TopY = useTransform(smoothProgress, [0, 0.15], [0, isMobile ? -65 : -110]);
-    const act1TopScale = useTransform(smoothProgress, [0, 0.15], [1, 0.88]);
+    // Top Shield + Badge part upward immediately as scroll begins
+    const act1TopOpacity = useTransform(activeProgress, [0, 0.11], [1, 0]);
+    const act1TopY = useTransform(activeProgress, [0, 0.12], [0, isMobile ? -70 : -110]);
+    const act1TopScale = useTransform(activeProgress, [0, 0.12], [1, 0.86]);
 
-    // Bottom Subtitle + CTAs part downward
-    const act1BottomOpacity = useTransform(smoothProgress, [0, 0.08, 0.15], [1, 0.5, 0]);
-    const act1BottomY = useTransform(smoothProgress, [0, 0.15], [0, isMobile ? 65 : 110]);
+    // Bottom Subtitle + CTAs part downward immediately as scroll begins
+    const act1BottomOpacity = useTransform(activeProgress, [0, 0.11], [1, 0]);
+    const act1BottomY = useTransform(activeProgress, [0, 0.12], [0, isMobile ? 70 : 110]);
 
-    // Responsive zoom: on mobile (narrow viewport), 1.5x fills the screen width cleanly without clipping;
-    // on desktop, 3.0x zooms dramatically into REVOLUCIONA.
+    // Responsive zoom into REVOLUCIONA starting at 0.00 with zero dead zone
     const headlineScale = useTransform(
-        smoothProgress,
-        [0, 0.08, 0.18, 0.24, 0.28],
-        isMobile ? [1, 1.12, 1.32, 1.45, 1.6] : [1, 1.25, 1.9, 2.3, 3.0]
+        activeProgress,
+        [0, 0.12, 0.21, 0.25],
+        isMobile ? [1, 1.38, 1.65, 1.85] : [1, 1.75, 2.35, 3.0]
     );
     const headlineX = useTransform(
-        smoothProgress,
-        [0, 0.12, 0.28],
+        activeProgress,
+        [0, 0.10, 0.25],
         [0, revolucionaGeometry.deltaX, revolucionaGeometry.deltaX]
     );
     const headlineY = useTransform(
-        smoothProgress,
-        [0, 0.12, 0.28],
+        activeProgress,
+        [0, 0.10, 0.25],
         [0, revolucionaGeometry.deltaY, revolucionaGeometry.deltaY]
     );
     const surroundingWordsOpacity = useTransform(
-        smoothProgress,
-        [0, 0.06, 0.14],
-        [1, 0.45, 0]
+        activeProgress,
+        [0, 0.09],
+        [1, 0]
     );
 
     // -------------------------------------------------------------------------
-    // ACT 2 (0.24 -> 0.54): Cancha Conectada
+    // ACT 2 (0.22 -> 0.54): Cancha Conectada
     // -------------------------------------------------------------------------
     const act2Opacity = useTransform(
-        smoothProgress,
-        [0.22, 0.30, 0.47, 0.54],
+        activeProgress,
+        [0.20, 0.27, 0.47, 0.54],
         [0, 1, 1, 0]
     );
     const act2X = useTransform(
-        smoothProgress,
-        [0.22, 0.30, 0.47, 0.54],
-        isMobile ? [0, 0, 0, 0] : [-45, 0, 0, -35]
+        activeProgress,
+        [0.20, 0.27, 0.47, 0.54],
+        isMobile ? [0, 0, 0, 0] : [-40, 0, 0, -30]
     );
     const act2Y = useTransform(
-        smoothProgress,
-        [0.22, 0.30, 0.47, 0.54],
-        isMobile ? [28, 0, 0, -24] : [0, 0, 0, 0]
+        activeProgress,
+        [0.20, 0.27, 0.47, 0.54],
+        isMobile ? [24, 0, 0, -20] : [0, 0, 0, 0]
     );
-    const act2PointerEvents = useTransform(smoothProgress, (v) =>
-        v >= 0.24 && v < 0.52 ? 'auto' : 'none'
+    const act2PointerEvents = useTransform(activeProgress, (v) =>
+        v >= 0.22 && v < 0.52 ? 'auto' : 'none'
     );
 
     // -------------------------------------------------------------------------
     // ACT 3 (0.52 -> 0.82): Control de Liguilla & Credenciales
     // -------------------------------------------------------------------------
     const act3Opacity = useTransform(
-        smoothProgress,
-        [0.51, 0.59, 0.75, 0.82],
+        activeProgress,
+        [0.50, 0.57, 0.75, 0.82],
         [0, 1, 1, 0]
     );
     const act3X = useTransform(
-        smoothProgress,
-        [0.51, 0.59, 0.75, 0.82],
-        isMobile ? [0, 0, 0, 0] : [45, 0, 0, 35]
+        activeProgress,
+        [0.50, 0.57, 0.75, 0.82],
+        isMobile ? [0, 0, 0, 0] : [40, 0, 0, 30]
     );
     const act3Y = useTransform(
-        smoothProgress,
-        [0.51, 0.59, 0.75, 0.82],
-        isMobile ? [28, 0, 0, -24] : [0, 0, 0, 0]
+        activeProgress,
+        [0.50, 0.57, 0.75, 0.82],
+        isMobile ? [24, 0, 0, -20] : [0, 0, 0, 0]
     );
-    const act3PointerEvents = useTransform(smoothProgress, (v) =>
-        v >= 0.53 && v < 0.80 ? 'auto' : 'none'
+    const act3PointerEvents = useTransform(activeProgress, (v) =>
+        v >= 0.52 && v < 0.80 ? 'auto' : 'none'
     );
 
     // -------------------------------------------------------------------------
     // ACT 4 (0.80 -> 1.00): 4 High-Contrast KPI Cards over Clean Stadium Sky
     // -------------------------------------------------------------------------
-    const act4Opacity = useTransform(smoothProgress, [0.79, 0.88, 1], [0, 1, 1]);
-    const act4Y = useTransform(smoothProgress, [0.79, 0.88, 1], [32, 0, 0]);
-    const act4Scale = useTransform(smoothProgress, [0.79, 0.88, 1], [0.96, 1, 1]);
-    const act4PointerEvents = useTransform(smoothProgress, (v) =>
-        v >= 0.81 ? 'auto' : 'none'
+    const act4Opacity = useTransform(activeProgress, [0.78, 0.86, 1], [0, 1, 1]);
+    const act4Y = useTransform(activeProgress, [0.78, 0.86, 1], [28, 0, 0]);
+    const act4Scale = useTransform(activeProgress, [0.78, 0.86, 1], [0.96, 1, 1]);
+    const act4PointerEvents = useTransform(activeProgress, (v) =>
+        v >= 0.80 ? 'auto' : 'none'
     );
 
     const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        // Never trigger state updates on mobile touch scrolling!
         if (isMobile || e.pointerType === 'touch') return;
         const rect = e.currentTarget.getBoundingClientRect();
         const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
@@ -216,10 +238,9 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
     return (
         <section
             ref={trackRef}
-            className="relative h-[300svh] lg:h-[390vh] w-full select-none"
+            className="relative h-[250svh] lg:h-[360vh] w-full select-none"
             aria-label="Presentación Interactiva LeagueOS Scrollytelling"
         >
-            {/* Sticky Viewport Container: uses 100svh so Chrome/Brave mobile URL bar never causes layout jumps */}
             <div
                 onPointerMove={handlePointerMove}
                 onPointerLeave={handlePointerLeave}
@@ -227,11 +248,11 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                 className="sticky top-20 h-[calc(100svh-5rem)] min-h-[480px] sm:min-h-[580px] w-full overflow-hidden"
             >
                 {/* ----------------------------------------------------------------- */}
-                {/* PLANE Z-0 & Z-1: GPU-ACCELERATED STADIUM CANVAS ENGINE            */}
+                {/* PLANE Z-0 & Z-1: GPU-ACCELERATED STADIUM STAGE ENGINE             */}
                 {/* ----------------------------------------------------------------- */}
                 <div className="absolute inset-0 z-0">
                     <ScrollyCanvasEngine
-                        scrollProgress={smoothProgress}
+                        scrollProgress={activeProgress}
                         heroImageSrc={heroDashboardImg}
                         totalFrames={TOTAL_VIRTUAL_FRAMES}
                         mouseX={isMobile ? 0 : mousePos.x}
@@ -240,14 +261,14 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                 </div>
 
                 {/* ================================================================= */}
-                {/* ACT 01 (0% - 27%): EL KICKOFF — FLY-THROUGH INTO "REVOLUCIONA"    */}
+                {/* ACT 01 (0% - 25%): EL KICKOFF — FLY-THROUGH INTO "REVOLUCIONA"    */}
                 {/* ================================================================= */}
                 <motion.div
                     style={{
                         opacity: act1Opacity,
                         pointerEvents: act1PointerEvents,
                     }}
-                    className="absolute inset-0 z-20 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pb-6 sm:pb-12 will-change-[opacity,transform]"
+                    className="absolute inset-0 z-20 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pb-6 sm:pb-12"
                 >
                     <div
                         style={{
@@ -264,7 +285,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                                 y: act1TopY,
                                 scale: act1TopScale,
                             }}
-                            className="flex flex-col items-center will-change-[opacity,transform]"
+                            className="flex flex-col items-center"
                         >
                             <div className="relative flex items-center justify-center mb-2 sm:mb-3">
                                 <div className="absolute w-28 h-28 sm:w-48 sm:h-48 bg-gradient-to-tr from-blue-600/45 via-cyan-400/30 to-emerald-400/20 rounded-full blur-2xl sm:blur-3xl pointer-events-none" />
@@ -315,7 +336,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                                 opacity: act1BottomOpacity,
                                 y: act1BottomY,
                             }}
-                            className="flex flex-col items-center will-change-[opacity,transform]"
+                            className="flex flex-col items-center"
                         >
                             <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-slate-200 font-normal leading-relaxed max-w-2xl mx-auto px-1">
                                 Elimina el caos de las inscripciones en papel y las hojas de Excel. Genera{' '}
@@ -350,7 +371,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                 </motion.div>
 
                 {/* ================================================================= */}
-                {/* ACT 02 (25% - 54%): CANCHA CONECTADA                              */}
+                {/* ACT 02 (22% - 54%): CANCHA CONECTADA                              */}
                 {/* ================================================================= */}
                 <motion.div
                     style={{
@@ -359,7 +380,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                         y: act2Y,
                         pointerEvents: act2PointerEvents,
                     }}
-                    className="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-8 lg:px-12 pb-6 sm:pb-12 will-change-[opacity,transform]"
+                    className="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-8 lg:px-12 pb-6 sm:pb-12"
                 >
                     <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                         {/* Left Column (5 cols): Narrative Card */}
@@ -505,7 +526,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                 </motion.div>
 
                 {/* ================================================================= */}
-                {/* ACT 03 (54% - 82%): CONTROL DE LIGUILLA & CREDENCIALES            */}
+                {/* ACT 03 (52% - 82%): CONTROL DE LIGUILLA & CREDENCIALES            */}
                 {/* ================================================================= */}
                 <motion.div
                     style={{
@@ -514,7 +535,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                         y: act3Y,
                         pointerEvents: act3PointerEvents,
                     }}
-                    className="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-8 lg:px-12 pb-6 sm:pb-12 will-change-[opacity,transform]"
+                    className="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-8 lg:px-12 pb-6 sm:pb-12"
                 >
                     <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                         {/* Left Column (7 cols on Desktop): Real LeagueOS Regla de Liguilla, Credenciales PDF & Brackets */}
@@ -648,7 +669,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                 </motion.div>
 
                 {/* ================================================================= */}
-                {/* ACT 04 (80% - 100%): CLEAN 4 KPI CARDS OVER CLEAN STADIUM SKY     */}
+                {/* ACT 04 (78% - 100%): CLEAN 4 KPI CARDS OVER CLEAN STADIUM SKY     */}
                 {/* ================================================================= */}
                 <motion.div
                     style={{
@@ -657,7 +678,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                         scale: act4Scale,
                         pointerEvents: act4PointerEvents,
                     }}
-                    className="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8 pb-6 sm:pb-12 will-change-[opacity,transform]"
+                    className="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8 pb-6 sm:pb-12"
                 >
                     <div
                         style={{
