@@ -3,6 +3,7 @@ import { LeagueDashboard } from '@/features/league-dashboard/ui/LeagueDashboard'
 import { RosterDashboard } from '@/features/team-management/ui/RosterDashboard';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { LeagueOSLandingPage } from '@/features/landing/ui/LeagueOSLandingPage';
+import { LeagueOSScrollyLandingPage } from '@/features/landing/ui/LeagueOSScrollyLandingPage';
 import './App.css';
 
 import { AdminDashboardLayout } from '@/features/admin/ui/AdminDashboardLayout';
@@ -36,9 +37,9 @@ function App() {
             <ToastProvider>
             <TenantSettingsProvider>
                 <Routes>
-                    {/* Official LeagueOS Landing Page */}
+                    {/* Official LeagueOS Landing Pages: /leagueos (Classic) & /landing (Scrollytelling 2.5D) */}
                     <Route path="/leagueos" element={<LeagueOSLandingPage />} />
-                    <Route path="/landing" element={<LeagueOSLandingPage />} />
+                    <Route path="/landing" element={<LeagueOSScrollyLandingPage />} />
                     <Route path="/about" element={<LeagueOSLandingPage />} />
 
                     {/* Dynamic League Public Dashboard */}
