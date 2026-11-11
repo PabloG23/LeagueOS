@@ -128,94 +128,106 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
     }, [rawScrollProgress]);
 
     // -------------------------------------------------------------------------
-    // ACT 1 (0.00 -> 0.25): Immediate Fly-Through into "REVOLUCIONA" from first pixel of scroll
+    // ACT 1 (0.00 -> 0.35): Slower, more cinematic zoom through "REVOLUCIONA"
     // -------------------------------------------------------------------------
-    const act1Opacity = useTransform(activeProgress, [0, 0.19, 0.25], [1, 1, 0]);
+    const act1Opacity = useTransform(activeProgress, [0, 0.28, 0.35], [1, 1, 0]);
     const act1PointerEvents = useTransform(activeProgress, (v) =>
-        v < 0.19 ? 'auto' : 'none'
+        v < 0.28 ? 'auto' : 'none'
     );
 
     // Top Shield + Badge part upward immediately as scroll begins
-    const act1TopOpacity = useTransform(activeProgress, [0, 0.11], [1, 0]);
-    const act1TopY = useTransform(activeProgress, [0, 0.12], [0, isMobile ? -70 : -110]);
-    const act1TopScale = useTransform(activeProgress, [0, 0.12], [1, 0.86]);
+    const act1TopOpacity = useTransform(
+        activeProgress,
+        isMobile ? [0, 0.08] : [0, 0.13],
+        [1, 0]
+    );
+    const act1TopY = useTransform(activeProgress, [0, 0.15], [0, isMobile ? -80 : -110]);
+    const act1TopScale = useTransform(activeProgress, [0, 0.15], [1, 0.86]);
 
-    // Bottom Subtitle + CTAs part downward immediately as scroll begins
-    const act1BottomOpacity = useTransform(activeProgress, [0, 0.11], [1, 0]);
-    const act1BottomY = useTransform(activeProgress, [0, 0.12], [0, isMobile ? 70 : 110]);
+    // Bottom Subtitle parts downward immediately as scroll begins
+    const act1BottomOpacity = useTransform(
+        activeProgress,
+        isMobile ? [0, 0.08] : [0, 0.13],
+        [1, 0]
+    );
+    const act1BottomY = useTransform(activeProgress, [0, 0.15], [0, isMobile ? 80 : 110]);
 
-    // Responsive zoom into REVOLUCIONA starting at 0.00 with zero dead zone
+    // Responsive zoom into REVOLUCIONA with extended, relaxed runway (0.00 -> 0.35)
     const headlineScale = useTransform(
         activeProgress,
-        [0, 0.12, 0.21, 0.25],
-        isMobile ? [1, 1.38, 1.65, 1.85] : [1, 1.75, 2.35, 3.0]
+        [0, 0.15, 0.27, 0.35],
+        isMobile ? [1, 1.45, 1.95, 2.6] : [1, 1.75, 2.35, 3.0]
     );
     const headlineX = useTransform(
         activeProgress,
-        [0, 0.10, 0.25],
-        [0, revolucionaGeometry.deltaX, revolucionaGeometry.deltaX]
+        [0, 0.15, 0.35],
+        isMobile
+            ? [0, 0, 0]
+            : [0, revolucionaGeometry.deltaX, revolucionaGeometry.deltaX]
     );
     const headlineY = useTransform(
         activeProgress,
-        [0, 0.10, 0.25],
-        [0, revolucionaGeometry.deltaY, revolucionaGeometry.deltaY]
+        [0, 0.15, 0.35],
+        isMobile
+            ? [0, 0, 0]
+            : [0, revolucionaGeometry.deltaY, revolucionaGeometry.deltaY]
     );
     const surroundingWordsOpacity = useTransform(
         activeProgress,
-        [0, 0.09],
+        isMobile ? [0, 0.08] : [0, 0.12],
         [1, 0]
     );
 
     // -------------------------------------------------------------------------
-    // ACT 2 (0.22 -> 0.54): Cancha Conectada
+    // ACT 2 (0.32 -> 0.59): Cancha Conectada (keeps identical pacing as before)
     // -------------------------------------------------------------------------
     const act2Opacity = useTransform(
         activeProgress,
-        [0.20, 0.27, 0.47, 0.54],
+        [0.32, 0.38, 0.53, 0.59],
         [0, 1, 1, 0]
     );
     const act2X = useTransform(
         activeProgress,
-        [0.20, 0.27, 0.47, 0.54],
+        [0.32, 0.38, 0.53, 0.59],
         isMobile ? [0, 0, 0, 0] : [-40, 0, 0, -30]
     );
     const act2Y = useTransform(
         activeProgress,
-        [0.20, 0.27, 0.47, 0.54],
+        [0.32, 0.38, 0.53, 0.59],
         isMobile ? [24, 0, 0, -20] : [0, 0, 0, 0]
     );
     const act2PointerEvents = useTransform(activeProgress, (v) =>
-        v >= 0.22 && v < 0.52 ? 'auto' : 'none'
+        v >= 0.34 && v < 0.57 ? 'auto' : 'none'
     );
 
     // -------------------------------------------------------------------------
-    // ACT 3 (0.52 -> 0.82): Control de Liguilla & Credenciales
+    // ACT 3 (0.56 -> 0.82): Control de Liguilla & Credenciales (keeps identical pacing)
     // -------------------------------------------------------------------------
     const act3Opacity = useTransform(
         activeProgress,
-        [0.50, 0.57, 0.75, 0.82],
+        [0.56, 0.62, 0.76, 0.82],
         [0, 1, 1, 0]
     );
     const act3X = useTransform(
         activeProgress,
-        [0.50, 0.57, 0.75, 0.82],
+        [0.56, 0.62, 0.76, 0.82],
         isMobile ? [0, 0, 0, 0] : [40, 0, 0, 30]
     );
     const act3Y = useTransform(
         activeProgress,
-        [0.50, 0.57, 0.75, 0.82],
+        [0.56, 0.62, 0.76, 0.82],
         isMobile ? [24, 0, 0, -20] : [0, 0, 0, 0]
     );
     const act3PointerEvents = useTransform(activeProgress, (v) =>
-        v >= 0.52 && v < 0.80 ? 'auto' : 'none'
+        v >= 0.58 && v < 0.80 ? 'auto' : 'none'
     );
 
     // -------------------------------------------------------------------------
-    // ACT 4 (0.80 -> 1.00): 4 High-Contrast KPI Cards over Clean Stadium Sky
+    // ACT 4 (0.79 -> 1.00): 4 High-Contrast KPI Cards over Clean Stadium Sky
     // -------------------------------------------------------------------------
-    const act4Opacity = useTransform(activeProgress, [0.78, 0.86, 1], [0, 1, 1]);
-    const act4Y = useTransform(activeProgress, [0.78, 0.86, 1], [28, 0, 0]);
-    const act4Scale = useTransform(activeProgress, [0.78, 0.86, 1], [0.96, 1, 1]);
+    const act4Opacity = useTransform(activeProgress, [0.79, 0.86, 1], [0, 1, 1]);
+    const act4Y = useTransform(activeProgress, [0.79, 0.86, 1], [28, 0, 0]);
+    const act4Scale = useTransform(activeProgress, [0.79, 0.86, 1], [0.96, 1, 1]);
     const act4PointerEvents = useTransform(activeProgress, (v) =>
         v >= 0.80 ? 'auto' : 'none'
     );
@@ -236,7 +248,7 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
     return (
         <section
             ref={trackRef}
-            className="relative h-[250svh] lg:h-[360vh] w-full select-none"
+            className="relative h-[300svh] lg:h-[420vh] w-full select-none"
             aria-label="Presentación Interactiva LeagueOS Scrollytelling"
         >
             <div
@@ -310,20 +322,28 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                                 x: headlineX,
                                 y: headlineY,
                                 scale: headlineScale,
-                                transformOrigin: `${revolucionaGeometry.originX} ${revolucionaGeometry.originY}`,
+                                transformOrigin: isMobile
+                                    ? '50% 50%'
+                                    : `${revolucionaGeometry.originX} ${revolucionaGeometry.originY}`,
                             }}
-                            className="relative text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] uppercase will-change-transform"
+                            className="relative text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.18] uppercase will-change-transform"
                         >
-                            <motion.span style={{ opacity: surroundingWordsOpacity }}>
+                            <motion.span
+                                style={{ opacity: surroundingWordsOpacity }}
+                                className="block sm:inline"
+                            >
                                 El Sistema Operativo que{' '}
                             </motion.span>
                             <span
                                 ref={revolucionaRef}
-                                className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400"
+                                className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400 my-1 sm:my-0"
                             >
                                 Revoluciona
                             </span>{' '}
-                            <motion.span style={{ opacity: surroundingWordsOpacity }}>
+                            <motion.span
+                                style={{ opacity: surroundingWordsOpacity }}
+                                className="block sm:inline"
+                            >
                                 tu Liga Deportiva
                             </motion.span>
                         </motion.h1>

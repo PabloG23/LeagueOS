@@ -257,7 +257,7 @@ export const ScrollyCanvasEngine: React.FC<ScrollyCanvasEngineProps> = ({
 
     const cameraScale = useTransform(
         scrollProgress,
-        [0, 0.25, 0.5, 0.75, 1],
+        [0, 0.35, 0.58, 0.80, 1],
         [1.02, 1.05, 1.03, 1.05, 1.02]
     );
 
