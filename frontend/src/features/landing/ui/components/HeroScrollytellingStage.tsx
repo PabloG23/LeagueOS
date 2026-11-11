@@ -6,8 +6,6 @@ import {
     useTransform,
 } from 'framer-motion';
 import {
-    Zap,
-    Play,
     ArrowRight,
     CheckCircle2,
     Bot,
@@ -349,23 +347,6 @@ export const HeroScrollytellingStage: React.FC<HeroScrollytellingStageProps> = (
                                 </strong>
                                 .
                             </p>
-
-                            <div className="mt-5 sm:mt-7 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full sm:w-auto">
-                                <a
-                                    href="#contacto"
-                                    className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs sm:text-base uppercase tracking-wider rounded-2xl shadow-2xl shadow-blue-600/50 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
-                                    <span>Agendar Demo Gratis</span>
-                                </a>
-                                <a
-                                    href="#clientes"
-                                    className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-[#060913]/90 hover:bg-slate-900 text-white font-bold text-xs sm:text-base rounded-2xl border border-white/25 shadow-2xl transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-                                    <span>Ver Ligas en Vivo</span>
-                                </a>
-                            </div>
                         </motion.div>
                     </div>
                 </motion.div>
