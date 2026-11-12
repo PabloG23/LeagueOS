@@ -125,33 +125,51 @@ export const LoginPage = () => {
 
                 {/* Content */}
                 <div className="relative z-10 flex flex-col items-center text-center space-y-6">
-                    <div className="relative">
+                    {/* Imposing Floating Emblem with Radiant Halo (estilo Landing) */}
+                    <div className="relative group flex items-center justify-center">
+                        {/* Radiant Glow Halo */}
+                        <div className="absolute w-72 h-72 bg-gradient-to-tr from-blue-600/60 via-indigo-500/40 to-emerald-400/30 rounded-full blur-3xl opacity-80 group-hover:opacity-100 transition-all duration-700 pointer-events-none animate-pulse" />
+                        
+                        {/* Shield Logo directly without any box, large & imposing */}
                         <img
-                            src="/league_logo_new.png"
-                            alt="Logo de LeagueOS"
-                            className="h-64 w-auto object-contain mix-blend-screen opacity-90 drop-shadow-[0_0_40px_rgba(59,130,246,0.5)]"
+                            src="/league_logo_transparent.png"
+                            alt="Escudo Oficial LeagueOS"
+                            className="relative h-64 w-auto object-contain filter drop-shadow-[0_0_50px_rgba(37,99,235,0.65)] hover:scale-105 transition-all duration-500"
                         />
                     </div>
 
+                    {/* Badge Callout */}
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold backdrop-blur-md">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Potenciando ligas deportivas con IA</span>
+                    </div>
+
                     <div className="space-y-4 max-w-sm">
-                        <p className="text-slate-400 text-lg leading-relaxed font-light tracking-wide border-t border-slate-800 pt-6">
+                        <p className="text-slate-400 text-base leading-relaxed font-light tracking-wide border-t border-slate-800/80 pt-6">
                             El Sistema Operativo para Ligas Deportivas Profesionales
                         </p>
                     </div>
                 </div>
 
                 {/* Footer Tagline */}
-                <div className="absolute bottom-8 text-slate-500 text-sm font-medium tracking-wider uppercase">
+                <div className="absolute bottom-8 text-slate-500 text-xs font-semibold tracking-widest uppercase">
                     Potenciando el Deporte
                 </div>
             </div>
 
             {/* Right Column - Login Form (60%) */}
-            <div className="w-full md:w-[60%] bg-white flex flex-col items-center justify-center p-8 md:p-12 relative">
+            <div className="w-full md:w-[60%] bg-white flex flex-col items-center justify-center px-6 py-10 sm:p-8 md:p-12 relative min-h-screen md:min-h-0">
                 <div className="w-full max-w-md space-y-8">
                     {/* Mobile Logo (Visible only on small screens) */}
-                    <div className="md:hidden flex flex-col items-center mb-8">
-                        <img src="/league_logo_new.png" alt="LeagueOS" className="h-16 w-auto" />
+                    <div className="md:hidden flex flex-col items-center mb-6">
+                        <div className="relative px-5 py-3 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 shadow-xl shadow-blue-950/25 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/30 via-indigo-500/20 to-emerald-400/10 rounded-2xl blur-md pointer-events-none" />
+                            <img
+                                src="/league_logo_transparent.png"
+                                alt="LeagueOS"
+                                className="relative h-14 w-auto object-contain filter drop-shadow-[0_0_15px_rgba(59,130,246,0.7)]"
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2 text-center md:text-left">
