@@ -12,6 +12,7 @@ import { useTenantSettings } from '@/shared/hooks/useTenantSettings';
 import { FullCalendarModal } from './FullCalendarModal';
 import { SponsorsCarousel } from './SponsorsCarousel';
 import { leagueApi, Season, Match, PlayerScorerDTO, PlayerYellowCardsDTO } from '@/shared/api/league-api';
+import { PublicPlayoffsView } from './PublicPlayoffsView';
 
 export const LeagueDashboard = () => {
     const { settings } = useTenantSettings();
@@ -21,6 +22,7 @@ export const LeagueDashboard = () => {
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
     const [activeSeason, setActiveSeason] = useState<Season | null>(null);
     const [allActiveSeasons, setAllActiveSeasons] = useState<Season[]>([]);
+    const [playoffSeasons, setPlayoffSeasons] = useState<Season[]>([]);
     const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
     const [loadingUpcoming, setLoadingUpcoming] = useState(true);
 
@@ -67,6 +69,24 @@ export const LeagueDashboard = () => {
         }
     }, [settings?.tenantId, settings?.enableAccumulatedYellowSuspensions]);
 
+    useEffect(() => {
+        if (!settings?.tenantId || !settings.showPublicPlayoffs) {
+            setPlayoffSeasons([]);
+            return;
+        }
+        Promise.all(allActiveSeasons
+            .filter(season => season.tournamentType !== 'COPA')
+            .map(async season => {
+                const { data } = await leagueApi.getPlayoffBracket(settings.tenantId as string, season.id);
+                return data.length > 0 ? season : null;
+            }))
+            .then(results => setPlayoffSeasons(results.filter((season): season is Season => season !== null)))
+            .catch(error => {
+                console.error('Error fetching public playoffs', error);
+                setPlayoffSeasons([]);
+            });
+    }, [settings?.tenantId, settings?.showPublicPlayoffs, allActiveSeasons]);
+
     const defenseData = useMemo(() => {
         const standingsList = Array.isArray(finalStandingsData)
             ? finalStandingsData
@@ -106,6 +126,40 @@ export const LeagueDashboard = () => {
         fetchStandings();
     }, [settings?.tenantId, allActiveSeasons]);
 
+    const playoffsSection = settings?.showPublicPlayoffs && settings.tenantId && playoffSeasons.length > 0 && (
+        <>
+            {playoffSeasons.map(season => (
+                <section key={season.id} className="space-y-5">
+                    <div className="text-center">
+                        <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-500">Fase final</p>
+                        <h2 className="text-2xl font-black text-white">Liguilla · {season.name}</h2>
+                    </div>
+                    <PublicPlayoffsView tenantId={settings.tenantId as string} seasonId={season.id} />
+                </section>
+            ))}
+        </>
+    );
+
+    const standingsSection = (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-9 flex flex-col gap-8">
+                <div className="space-y-4">
+                    <StandingsTable data={finalStandingsData} seasons={allActiveSeasons} />
+                </div>
+            </div>
+
+            <div className="lg:col-span-3 flex flex-col gap-6 self-start">
+                <TopScorersWidget scorers={topScorers} loading={loadingScorers} />
+                {settings?.showOffenseDefenseWidgets && defenseData.length > 0 && (
+                    <TopDefenseWidget data={defenseData} />
+                )}
+                {settings?.enableAccumulatedYellowSuspensions && (
+                    <TopYellowCardsWidget data={yellowCardsData} loading={loadingYellowCards} />
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
             <Navbar />
@@ -136,24 +190,17 @@ export const LeagueDashboard = () => {
 
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
 
-                {/* Main Grid: Standings (9 cols) + Goleo Individual (3 cols) */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <div className="lg:col-span-9 flex flex-col gap-8">
-                        <div className="space-y-4">
-                            <StandingsTable data={finalStandingsData} seasons={allActiveSeasons} />
-                        </div>
-                    </div>
-
-                    <div className="lg:col-span-3 flex flex-col gap-6 self-start">
-                        <TopScorersWidget scorers={topScorers} loading={loadingScorers} />
-                        {settings?.showOffenseDefenseWidgets && defenseData.length > 0 && (
-                            <TopDefenseWidget data={defenseData} />
-                        )}
-                        {settings?.enableAccumulatedYellowSuspensions && (
-                            <TopYellowCardsWidget data={yellowCardsData} loading={loadingYellowCards} />
-                        )}
-                    </div>
-                </div>
+                {playoffSeasons.length > 0 ? (
+                    <>
+                        {playoffsSection}
+                        {standingsSection}
+                    </>
+                ) : (
+                    <>
+                        {standingsSection}
+                        {playoffsSection}
+                    </>
+                )}
 
                 {/* Leadership Section */}
                 <div className="grid grid-cols-1 gap-8 pt-4 border-t border-white/20">

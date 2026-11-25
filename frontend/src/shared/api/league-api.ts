@@ -60,6 +60,7 @@ export interface Season {
     currentMatchday: number;
     tenantId: string;
     tournamentType?: string;
+    playoffFormat?: 'STANDARD' | 'DUAL_SEMIFINAL_BRACKETS';
 }
 
 export interface Person {
@@ -301,8 +302,13 @@ export const leagueApi = {
         api.put<Season>(`/leagues/seasons/${seasonId}/activate`, null, { headers: { 'X-Tenant-ID': tenantId } }),
 
     // Playoffs
-    generatePlayoffs: (tenantId: string, seasonId: string, payload: { startingRound: string, seededTeamIds: string[], numLegs: number }) =>
+    generatePlayoffs: (tenantId: string, seasonId: string, payload: { startingRound: string, playoffFormat?: string, seededTeamIds: string[], numLegs: number }) =>
         api.post(`/leagues/seasons/${seasonId}/playoffs/generate`, payload, {
+            headers: { 'X-Tenant-ID': tenantId }
+        }),
+
+    getPlayoffSheetData: (tenantId: string, matchId: string) =>
+        api.get<{ homeRoster: Player[], awayRoster: Player[], minimumMatches: number, seasonId: string }>(`/competition/matches/${matchId}/playoff-sheet-data`, {
             headers: { 'X-Tenant-ID': tenantId }
         }),
 

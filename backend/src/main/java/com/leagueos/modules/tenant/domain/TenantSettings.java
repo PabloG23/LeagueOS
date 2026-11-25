@@ -28,6 +28,9 @@ public class TenantSettings extends BaseEntity {
     @Column(name = "min_matches_for_playoffs")
     private Integer minMatchesForPlayoffs = 0;
 
+    @Column(name = "show_public_playoffs", nullable = false)
+    private boolean showPublicPlayoffs = false;
+
     @Column(name = "theme_class")
     private String themeClass;
 

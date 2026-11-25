@@ -44,4 +44,8 @@ public class Season extends BaseEntity {
 
     @Column(name = "tournament_type")
     private String tournamentType = "LIGA";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "playoff_format", nullable = false)
+    private com.leagueos.modules.competition.domain.PlayoffFormat playoffFormat = com.leagueos.modules.competition.domain.PlayoffFormat.STANDARD;
 }

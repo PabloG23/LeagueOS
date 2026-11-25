@@ -309,6 +309,7 @@ public class LeagueController {
 
     public static class GeneratePlayoffRequest {
         public com.leagueos.modules.competition.domain.PlayoffRound startingRound;
+        public com.leagueos.modules.competition.domain.PlayoffFormat playoffFormat = com.leagueos.modules.competition.domain.PlayoffFormat.STANDARD;
         public List<UUID> seededTeamIds;
         public int numLegs;
     }
@@ -321,7 +322,7 @@ public class LeagueController {
             @RequestBody GeneratePlayoffRequest request) {
         TenantContext.setCurrentTenant(tenantId);
         try {
-            playoffService.generateBracket(id, request.startingRound, request.seededTeamIds, request.numLegs);
+            playoffService.generateBracket(id, request.startingRound, request.playoffFormat, request.seededTeamIds, request.numLegs);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));

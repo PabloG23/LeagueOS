@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -165,6 +166,42 @@ class PlayoffServiceTest {
             playoffService.generateBracket(seasonId, PlayoffRound.ROUND_OF_16, seedIds, 1);
 
             verify(playoffTieRepository, atLeastOnce()).save(any(PlayoffTie.class));
+        }
+
+        @Test
+        @DisplayName("should generate independent Primera and Segunda Fuerza brackets")
+        void generatesDualSemifinalBrackets() {
+            when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
+            List<Team> teams = new ArrayList<>();
+            List<UUID> seedIds = new ArrayList<>();
+            for (int i = 1; i <= 8; i++) {
+                Team team = createTeam("Seed " + i, TENANT_A);
+                teams.add(team);
+                seedIds.add(team.getId());
+                when(teamRepository.findByIdAndTenantId(team.getId(), TENANT_A)).thenReturn(Optional.of(team));
+            }
+            List<PlayoffTie> savedTies = new ArrayList<>();
+            when(playoffTieRepository.save(any(PlayoffTie.class))).thenAnswer(inv -> {
+                PlayoffTie tie = inv.getArgument(0);
+                if (tie.getId() == null) {
+                    tie.setId(UUID.randomUUID());
+                    savedTies.add(tie);
+                }
+                return tie;
+            });
+
+            playoffService.generateBracket(seasonId, PlayoffRound.SEMI_FINALS,
+                    com.leagueos.modules.competition.domain.PlayoffFormat.DUAL_SEMIFINAL_BRACKETS, seedIds, 1);
+
+            assertThat(savedTies).hasSize(6);
+            assertThat(savedTies).filteredOn(t -> t.getRound() == PlayoffRound.SEMI_FINALS)
+                    .extracting(t -> t.getHomeSeedTeam().getName(), t -> t.getAwaySeedTeam().getName())
+                    .containsExactly(tuple("Seed 1", "Seed 4"), tuple("Seed 2", "Seed 3"),
+                            tuple("Seed 5", "Seed 8"), tuple("Seed 6", "Seed 7"));
+            assertThat(savedTies).filteredOn(t -> t.getRound() == PlayoffRound.FINAL)
+                    .extracting(PlayoffTie::getBracketKey)
+                    .containsExactlyInAnyOrder("PRIMERA_FUERZA", "SEGUNDA_FUERZA");
+            verify(matchRepository, times(4)).save(any(Match.class));
         }
 
         @Test

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Trash2, AlertTriangle, X, Zap, Crown } from 'lucide-react';
+import { Trophy, Trash2, AlertTriangle, X, Zap, Crown, MapPin, Clock } from 'lucide-react';
 import { useToast } from '@/shared/components/ui/ToastContext';
 import { leagueApi } from '@/shared/api/league-api';
 
@@ -10,6 +10,8 @@ export interface PlayoffTie {
     awaySeedTeam: any;
     advancingTeam: any;
     nextTieId: string | null;
+    bracketKey?: string;
+    bracketName?: string | null;
 }
 
 interface PlayoffsBracketViewProps {
@@ -132,24 +134,17 @@ export const PlayoffsBracketView = ({
     }
 
     const safeTies = Array.isArray(ties) ? ties : [];
-    const roundsMap = {
-        'ROUND_OF_32': safeTies.filter(t => t?.round === 'ROUND_OF_32'),
-        'ROUND_OF_16': safeTies.filter(t => t?.round === 'ROUND_OF_16'),
-        'QUARTER_FINALS': safeTies.filter(t => t?.round === 'QUARTER_FINALS'),
-        'SEMI_FINALS': safeTies.filter(t => t?.round === 'SEMI_FINALS'),
-        'FINAL': safeTies.filter(t => t?.round === 'FINAL')
-    };
-
-    const hasRoundOf32 = roundsMap['ROUND_OF_32'].length > 0;
-    const hasRoundOf16 = roundsMap['ROUND_OF_16'].length > 0;
-    const hasQuarters = roundsMap['QUARTER_FINALS'].length > 0;
-    const hasSemis = roundsMap['SEMI_FINALS'].length > 0;
-    const TeamCard = ({ team, isWinner }: { team: any, isWinner: boolean }) => (
+    const hasRoundOf32 = safeTies.some(t => t?.round === 'ROUND_OF_32');
+    const hasRoundOf16 = safeTies.some(t => t?.round === 'ROUND_OF_16');
+    const TeamCard = ({ team, isWinner, score }: { team: any, isWinner: boolean, score?: number | null }) => (
         <div className={`p-3 border-b border-white/5 last:border-0 flex items-center gap-3 transition-all duration-300 ${isWinner ? 'bg-gradient-to-r from-amber-950/40 to-transparent border-l-4 border-l-amber-500' : 'opacity-70 grayscale hover:opacity-100 hover:grayscale-0'}`}>
             <div className={`w-7 h-7 rounded-full overflow-hidden shrink-0 border-2 ${isWinner ? 'border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'border-white/10'}`}>
                 {team?.logoUrl ? <img src={team.logoUrl} className="w-full h-full object-cover" /> : <span className={`text-[9px] flex items-center justify-center h-full font-black ${isWinner ? 'text-amber-400' : 'text-slate-400'}`}>{team?.name?.substring(0, 2) || '?'}</span>}
             </div>
             <span className={`truncate flex-1 text-sm font-bold tracking-wide ${isWinner ? 'text-amber-100 drop-shadow-[0_0_2px_rgba(245,158,11,0.3)]' : 'text-slate-300'}`}>{team?.name || 'Por definir'}</span>
+            <span className={`min-w-6 text-center text-base font-black tabular-nums ${isWinner ? 'text-amber-300' : 'text-slate-300'}`}>
+                {score ?? '-'}
+            </span>
             {isWinner && <Crown className="w-4 h-4 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.8)] shrink-0" />}
         </div>
     );
@@ -172,15 +167,19 @@ export const PlayoffsBracketView = ({
                 )}
                 
                 <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl w-56 shrink-0 overflow-hidden hover:border-amber-400/80 hover:shadow-[0_0_25px_rgba(245,158,11,0.25)] transition-all duration-300 relative z-10 my-4 cursor-pointer transform group-hover:scale-105">
-                    <TeamCard team={tie.homeSeedTeam} isWinner={homeWinner} />
-                    <TeamCard team={tie.awaySeedTeam} isWinner={awayWinner} />
+                    <TeamCard team={tie.homeSeedTeam} isWinner={homeWinner} score={tieMatch?.homeScore} />
+                    <TeamCard team={tie.awaySeedTeam} isWinner={awayWinner} score={tieMatch?.awayScore} />
                     
-                    {tieMatch && tieMatch.status === 'SCHEDULED' && (tieMatch.matchDate || tieMatch.location) && (
-                        <div className="bg-slate-950/80 border-t border-white/5 px-3 py-2 flex flex-col gap-0.5 text-[10px] text-slate-400 font-bold tracking-wide">
-                            {tieMatch.location && <span className="truncate flex items-center gap-1">📍 {tieMatch.location}</span>}
-                            {tieMatch.matchDate && <span className="flex items-center gap-1">🕒 {formatMatchDate(tieMatch.matchDate)}</span>}
-                        </div>
-                    )}
+                    <div className="bg-slate-950/80 border-t border-white/5 px-3 py-2 flex flex-col gap-1 text-[10px] text-slate-400 font-bold tracking-wide">
+                        <span className="flex items-center gap-1.5" title={tieMatch?.location || 'Sede por definir'}>
+                            <MapPin className="w-3 h-3 shrink-0 text-amber-500" />
+                            <span className="truncate">{tieMatch?.location || 'Sede por definir'}</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <Clock className="w-3 h-3 shrink-0 text-amber-500" />
+                            <span>{formatMatchDate(tieMatch?.matchDate) || 'Fecha y horario por definir'}</span>
+                        </span>
+                    </div>
                     
                     {/* Inner highlight */}
                     <div className="absolute inset-0 border border-white/5 rounded-xl pointer-events-none"></div>
@@ -244,17 +243,32 @@ export const PlayoffsBracketView = ({
                 </div>
             )}
 
-            <div className="overflow-x-auto pb-4 hide-scrollbar">
-                <div className="w-max flex gap-16 pl-4 pt-4 relative">
-                    
-                    {renderColumn('16vos', roundsMap['ROUND_OF_32'], <Zap className="w-4 h-4 text-amber-500" />, 0)}
-                    {renderColumn('Octavos', roundsMap['ROUND_OF_16'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 1 : 0)}
-                    {renderColumn('Cuartos', roundsMap['QUARTER_FINALS'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 2 : hasRoundOf16 ? 1 : 0)}
-                    {renderColumn('Semifinal', roundsMap['SEMI_FINALS'], <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 3 : hasRoundOf16 ? 2 : 1)}
-                    {renderColumn('Gran Final', roundsMap['FINAL'], <Trophy className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />, hasRoundOf32 ? 4 : hasRoundOf16 ? 3 : 2, true)}
-
-                </div>
-            </div>
+            {Object.entries(safeTies.reduce<Record<string, PlayoffTie[]>>((groups, tie) => {
+                const key = tie.bracketKey || 'DEFAULT';
+                groups[key] = [...(groups[key] || []), tie];
+                return groups;
+            }, {})).map(([bracketKey, bracketTies]) => {
+                const byRound = (round: PlayoffTie['round']) => bracketTies.filter(tie => tie.round === round);
+                const bracketName = bracketTies[0]?.bracketName;
+                return (
+                    <div key={bracketKey} className="mb-8 last:mb-0">
+                        {bracketName && (
+                            <h3 className="relative z-10 mb-6 text-center text-xl font-black uppercase tracking-[0.2em] text-amber-300">
+                                {bracketName}
+                            </h3>
+                        )}
+                        <div className="overflow-x-auto pb-4 hide-scrollbar">
+                            <div className="w-max flex gap-16 pl-4 pt-4 relative">
+                                {renderColumn('16vos', byRound('ROUND_OF_32'), <Zap className="w-4 h-4 text-amber-500" />, 0)}
+                                {renderColumn('Octavos', byRound('ROUND_OF_16'), <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 1 : 0)}
+                                {renderColumn('Cuartos', byRound('QUARTER_FINALS'), <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 2 : hasRoundOf16 ? 1 : 0)}
+                                {renderColumn('Semifinal', byRound('SEMI_FINALS'), <Zap className="w-4 h-4 text-amber-500" />, hasRoundOf32 ? 3 : hasRoundOf16 ? 2 : 1)}
+                                {renderColumn('Gran Final', byRound('FINAL'), <Trophy className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />, hasRoundOf32 ? 4 : hasRoundOf16 ? 3 : 2, true)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
 
             {showDeleteConfirm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">

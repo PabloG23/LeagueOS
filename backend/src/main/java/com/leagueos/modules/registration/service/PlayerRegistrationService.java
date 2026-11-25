@@ -546,7 +546,12 @@ public class PlayerRegistrationService {
         if (season == null) {
             return List.of();
         }
-        return seasonRosterRepository.findByTeamIdAndSeasonId(teamId, season.getId()).stream()
+        return getPlayersByTeamAndSeason(teamId, season.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlayerResponse> getPlayersByTeamAndSeason(UUID teamId, UUID seasonId) {
+        return seasonRosterRepository.findByTeamIdAndSeasonId(teamId, seasonId).stream()
                 .map(roster -> mapToResponse(roster.getPlayer(), roster))
                 .collect(Collectors.toList());
     }

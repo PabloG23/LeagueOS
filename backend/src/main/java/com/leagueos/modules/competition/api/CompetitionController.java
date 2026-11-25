@@ -21,6 +21,23 @@ public class CompetitionController {
     private final MatchSchedulerService schedulerService;
     private final com.leagueos.modules.media.service.StorageService storageService;
     private final com.leagueos.modules.competition.service.CompetitionPhaseService phaseService;
+    private final com.leagueos.modules.competition.service.PlayoffSheetService playoffSheetService;
+
+    @GetMapping("/matches/{matchId}/playoff-sheet-data")
+    @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")
+    public ResponseEntity<?> getPlayoffSheetData(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @PathVariable UUID matchId) {
+        UUID tenantId = UUID.fromString(currentUser.getTenantId());
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return ResponseEntity.ok(playoffSheetService.getEligibleRosters(matchId, tenantId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } finally {
+            TenantContext.clear();
+        }
+    }
 
     @PostMapping("/seasons/{seasonId}/split-phase")
     @PreAuthorize("hasRole('ROLE_LEAGUE_ADMIN')")

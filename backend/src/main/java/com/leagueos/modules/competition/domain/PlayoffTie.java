@@ -48,4 +48,10 @@ public class PlayoffTie extends BaseEntity {
 
     @Column(name = "next_tie_id")
     private UUID nextTieId;
+
+    @Column(name = "bracket_key", nullable = false)
+    private String bracketKey = "DEFAULT";
+
+    @Column(name = "bracket_name")
+    private String bracketName;
 }

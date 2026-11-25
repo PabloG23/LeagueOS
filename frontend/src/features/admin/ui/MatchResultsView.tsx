@@ -467,6 +467,7 @@ export const MatchResultsView = () => {
     const [awayRoster, setAwayRoster] = useState<Player[]>([]);
     const [loadingRosters, setLoadingRosters] = useState(false);
     const [bracketRefreshTrigger, setBracketRefreshTrigger] = useState(0);
+    const [activePhase, setActivePhase] = useState<'REGULAR' | 'PLAYOFFS'>('REGULAR');
 
     useEffect(() => {
         if (!settings?.tenantId) return;
@@ -492,13 +493,12 @@ export const MatchResultsView = () => {
                 away: m.awayTeam?.name || 'Visitante',
             }));
 
-            const mDays = Array.from(new Set(uiMatches.map(m => m.matchday || 1))).sort((a, b) => a - b);
+            const mDays = Array.from(new Set(uiMatches
+                .filter(m => !m.playoffTie?.id && !m.playoffTieId)
+                .map(m => m.matchday || 1)))
+                .sort((a, b) => a - b);
             setMatchdays(mDays);
-
-            // Si el selectedMatchday actual no está en la nueva lista, seleccionar el menor
-            if (!selectedMatchday || !mDays.includes(Number(selectedMatchday))) {
-                setSelectedMatchday(mDays[0] || 1);
-            }
+            setSelectedMatchday(current => current && mDays.includes(Number(current)) ? current : (mDays[0] || ''));
 
             setMatches(uiMatches);
         } catch (err) {
@@ -553,18 +553,25 @@ export const MatchResultsView = () => {
         if (!settings?.tenantId) return;
         setDownloadingMatchId(m.id);
         try {
-            const homeId = m.homeTeam?.id || m.homeTeamId;
-            const awayId = m.awayTeam?.id || m.awayTeamId;
+            const isPlayoff = Boolean(m.playoffTie?.id || m.playoffTieId);
+            let homeRoster: Player[] = [];
+            let awayRoster: Player[] = [];
 
-            if (!homeId || !awayId) {
-                console.error("Missing team IDs in match object", m);
-                throw new Error("Missing team IDs");
+            if (isPlayoff) {
+                const { data } = await leagueApi.getPlayoffSheetData(settings.tenantId, m.id);
+                homeRoster = data.homeRoster;
+                awayRoster = data.awayRoster;
+            } else {
+                const homeId = m.homeTeam?.id || m.homeTeamId;
+                const awayId = m.awayTeam?.id || m.awayTeamId;
+                if (!homeId || !awayId) throw new Error("Missing team IDs");
+                const [homeRes, awayRes] = await Promise.all([
+                    leagueApi.getTeamPlayers(settings.tenantId, homeId),
+                    leagueApi.getTeamPlayers(settings.tenantId, awayId),
+                ]);
+                homeRoster = homeRes.data || [];
+                awayRoster = awayRes.data || [];
             }
-
-            const [homeRes, awayRes] = await Promise.all([
-                leagueApi.getTeamPlayers(settings.tenantId, homeId).catch(() => ({ data: [] })),
-                leagueApi.getTeamPlayers(settings.tenantId, awayId).catch(() => ({ data: [] })),
-            ]);
 
             const currentSeason = seasons.find(s => s.id === selectedSeasonId);
 
@@ -572,8 +579,8 @@ export const MatchResultsView = () => {
                 match: m,
                 homeTeamName: m.home,
                 awayTeamName: m.away,
-                homeRoster: homeRes.data || [],
-                awayRoster: awayRes.data || [],
+                homeRoster,
+                awayRoster,
                 seasonName: currentSeason?.name,
                 leagueName: settings.name,
                 leagueLogoUrl: settings.logoUrl,
@@ -628,7 +635,9 @@ export const MatchResultsView = () => {
 
     const selectedSeason = seasons.find(s => s.id === selectedSeasonId);
     const isCopa = selectedSeason?.tournamentType === 'COPA';
-    const displayedMatches = matches.filter(m => (m.matchday || 1) === selectedMatchday);
+    const regularMatches = matches.filter(m => !m.playoffTie?.id && !m.playoffTieId);
+    const playoffMatches = matches.filter(m => m.playoffTie?.id || m.playoffTieId);
+    const displayedMatches = regularMatches.filter(m => (m.matchday || 1) === selectedMatchday);
 
     return (
         <div className="space-y-6 relative h-full">
@@ -641,7 +650,10 @@ export const MatchResultsView = () => {
                     {/* Season Selector */}
                     <select
                         value={selectedSeasonId}
-                        onChange={(e) => setSelectedSeasonId(e.target.value)}
+                        onChange={(e) => {
+                            setSelectedSeasonId(e.target.value);
+                            setActivePhase('REGULAR');
+                        }}
                         className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                         {seasons.length === 0 && <option value="">Sin Torneos</option>}
@@ -657,7 +669,7 @@ export const MatchResultsView = () => {
                             <Trophy className="w-3.5 h-3.5 text-amber-600" />
                             Torneo de Copa
                         </span>
-                    ) : (
+                    ) : activePhase === 'REGULAR' ? (
                         <>
                             {/* Matchday Selector */}
                             <select
@@ -686,15 +698,39 @@ export const MatchResultsView = () => {
                                 Publicar como Actual
                             </button>
                         </>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
-            {isCopa ? (
+            {!isCopa && playoffMatches.length > 0 && (
+                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1" role="tablist" aria-label="Fase del torneo">
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activePhase === 'REGULAR'}
+                        onClick={() => setActivePhase('REGULAR')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activePhase === 'REGULAR' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+                    >
+                        Temporada regular
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activePhase === 'PLAYOFFS'}
+                        onClick={() => setActivePhase('PLAYOFFS')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${activePhase === 'PLAYOFFS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+                    >
+                        <Trophy className="w-4 h-4" />
+                        Liguilla
+                    </button>
+                </div>
+            )}
+
+            {isCopa || activePhase === 'PLAYOFFS' ? (
                 <InteractiveCopaBracketView
                     tenantId={settings?.tenantId || ''}
                     seasonId={selectedSeasonId}
-                    matches={matches}
+                    matches={isCopa ? matches : playoffMatches}
                     onOpenWizard={handleOpenWizard}
                     onOpenQuickScore={setSelectedQuickScoreMatch}
                     onOpenEditSchedule={setSelectedEditMatch}

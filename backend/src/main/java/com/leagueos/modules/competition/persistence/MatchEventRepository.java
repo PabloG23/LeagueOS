@@ -25,6 +25,11 @@ public interface MatchEventRepository extends JpaRepository<MatchEvent, UUID> {
     @Query("SELECT COUNT(DISTINCT e.match.id) FROM MatchEvent e WHERE e.player.id = :playerId")
     int countDistinctMatchesByPlayerId(@Param("playerId") UUID playerId);
 
+    @Query("SELECT e.player.id, COUNT(DISTINCT e.match.id) FROM MatchEvent e JOIN e.match m " +
+           "WHERE m.season.id = :seasonId AND e.team.id = :teamId AND m.stage = 'REGULAR' " +
+           "AND e.eventType = 'APPEARANCE' GROUP BY e.player.id")
+    List<Object[]> countRegularSeasonAppearancesByTeam(@Param("seasonId") UUID seasonId, @Param("teamId") UUID teamId);
+
     @Query("SELECT e FROM MatchEvent e " +
            "JOIN FETCH e.match m " +
            "JOIN FETCH m.homeTeam ht " +

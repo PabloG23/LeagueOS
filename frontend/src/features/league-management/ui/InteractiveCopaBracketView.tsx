@@ -508,12 +508,14 @@ export const InteractiveCopaBracketView = ({
     const BracketRoundColumn = ({
         title,
         roundKey,
+        navigationKey,
         tiesList,
         icon,
         roundIndex
     }: {
         title: string;
         roundKey: string;
+        navigationKey?: string;
         tiesList: PlayoffTie[];
         icon: any;
         roundIndex: number;
@@ -564,7 +566,7 @@ export const InteractiveCopaBracketView = ({
 
         return (
             <div
-                ref={el => { roundRefs.current[roundKey] = el; }}
+                ref={el => { roundRefs.current[navigationKey || roundKey] = el; }}
                 key={roundKey}
                 className="flex flex-col relative z-10 w-[215px] sm:w-[225px] shrink-0 snap-start"
             >
@@ -725,26 +727,42 @@ export const InteractiveCopaBracketView = ({
                     className="overflow-x-auto pb-4 pt-1 scroll-smooth snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#93C572]/40"
                 >
                     <div
-                        className="w-max flex gap-8 pl-1 sm:pl-2 relative items-stretch transition-transform duration-200 origin-top-left"
+                        className="w-max transition-transform duration-200 origin-top-left"
                         style={{
                             transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
                             transformOrigin: 'top left'
                         }}
                     >
-                        {roundsConfig.map((r, idx) => {
-                            const list = roundsMap[r.key] || [];
-                            if (list.length === 0) return null;
-                            return (
-                                <BracketRoundColumn
-                                    key={r.key}
-                                    title={r.label}
-                                    roundKey={r.key}
-                                    tiesList={list}
-                                    icon={r.icon}
-                                    roundIndex={idx}
-                                />
-                            );
-                        })}
+                        {Object.entries(safeTies.reduce<Record<string, PlayoffTie[]>>((groups, tie) => {
+                            const key = tie.bracketKey || 'DEFAULT';
+                            groups[key] = [...(groups[key] || []), tie];
+                            return groups;
+                        }, {})).map(([bracketKey, bracketTies]) => (
+                            <div key={bracketKey} className="mb-8 last:mb-0">
+                                {bracketTies[0]?.bracketName && (
+                                    <h3 className="mb-4 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-700">
+                                        {bracketTies[0].bracketName}
+                                    </h3>
+                                )}
+                                <div className="w-max flex gap-8 pl-1 sm:pl-2 relative items-stretch">
+                                    {roundsConfig.map((r, idx) => {
+                                        const list = bracketTies.filter(tie => tie.round === r.key);
+                                        if (list.length === 0) return null;
+                                        return (
+                                            <BracketRoundColumn
+                                                key={r.key}
+                                                title={r.label}
+                                                roundKey={`${bracketKey}-${r.key}`}
+                                                navigationKey={r.key}
+                                                tiesList={list}
+                                                icon={r.icon}
+                                                roundIndex={idx}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

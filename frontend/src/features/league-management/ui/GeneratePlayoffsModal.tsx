@@ -21,6 +21,7 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
 
     // Form config
     const [startingRound, setStartingRound] = useState<'FINAL' | 'SEMI_FINALS' | 'QUARTER_FINALS' | 'ROUND_OF_16'>('QUARTER_FINALS');
+    const [playoffFormat, setPlayoffFormat] = useState<'STANDARD' | 'DUAL_SEMIFINAL_BRACKETS'>('STANDARD');
     const [numLegs, setNumLegs] = useState<number>(2);
     const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
 
@@ -64,7 +65,7 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
                 
                 setTeams(sortedEnrolled);
                 
-                const maxTeams = startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
+                const maxTeams = playoffFormat === 'DUAL_SEMIFINAL_BRACKETS' ? 8 : startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
                 setSelectedTeamIds(sortedEnrolled.slice(0, maxTeams).map(t => t.team.id));
             })
             .catch(console.error)
@@ -73,9 +74,9 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
 
     // Recalculate selected teams when round changes
     useEffect(() => {
-        const maxTeams = startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
+        const maxTeams = playoffFormat === 'DUAL_SEMIFINAL_BRACKETS' ? 8 : startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
         setSelectedTeamIds(teams.slice(0, maxTeams).map(t => t.team.id));
-    }, [startingRound, teams]);
+    }, [startingRound, playoffFormat, teams]);
 
     if (!isOpen) return null;
 
@@ -83,7 +84,8 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
         setGenerating(true);
         try {
             await leagueApi.generatePlayoffs(tenantId, seasonId, {
-                startingRound,
+                startingRound: playoffFormat === 'DUAL_SEMIFINAL_BRACKETS' ? 'SEMI_FINALS' : startingRound,
+                playoffFormat,
                 seededTeamIds: selectedTeamIds,
                 numLegs
             });
@@ -108,7 +110,7 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
         setSelectedTeamIds(next);
     }
 
-    const expectedCount = startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
+    const expectedCount = playoffFormat === 'DUAL_SEMIFINAL_BRACKETS' ? 8 : startingRound === 'FINAL' ? 2 : startingRound === 'SEMI_FINALS' ? 4 : startingRound === 'QUARTER_FINALS' ? 8 : 16;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
@@ -132,26 +134,43 @@ export const GeneratePlayoffsModal = ({ isOpen, onClose, tenantId, seasonId, onG
                     {step === 1 ? (
                         <div className="space-y-6">
                             <div>
-                                <h3 className="font-bold text-slate-800 mb-2">Formato de la Liguilla</h3>
-                                <p className="text-sm text-slate-500 mb-4">¿Desde qué ronda empezará la fase final?</p>
+                                {playoffFormat !== 'DUAL_SEMIFINAL_BRACKETS' && (
+                                    <>
+                                        <h3 className="font-bold text-slate-800 mb-2">Formato de la Liguilla</h3>
+                                        <p className="text-sm text-slate-500 mb-4">¿Desde qué ronda empezará la fase final?</p>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    {[
-                                        { id: 'FINAL', label: 'Final Directa', desc: 'Clasifican 2 equipos' },
-                                        { id: 'SEMI_FINALS', label: 'Semifinales', desc: 'Clasifican 4 equipos' },
-                                        { id: 'QUARTER_FINALS', label: 'Cuartos de Final', desc: 'Clasifican 8 equipos' },
-                                        { id: 'ROUND_OF_16', label: 'Octavos de Final', desc: 'Clasifican 16 equipos' },
-                                    ].map(f => (
-                                        <button
-                                            key={f.id}
-                                            onClick={() => setStartingRound(f.id as any)}
-                                            className={`p-4 rounded-xl border-2 text-left transition-all ${startingRound === f.id ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-600/20' : 'border-slate-200 hover:border-slate-300'}`}
-                                        >
-                                            <div className="font-bold text-slate-800">{f.label}</div>
-                                            <div className="text-xs text-slate-500 mt-1">{f.desc}</div>
-                                        </button>
-                                    ))}
-                                </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[
+                                                { id: 'FINAL', label: 'Final Directa', desc: 'Clasifican 2 equipos' },
+                                                { id: 'SEMI_FINALS', label: 'Semifinales', desc: 'Clasifican 4 equipos' },
+                                                { id: 'QUARTER_FINALS', label: 'Cuartos de Final', desc: 'Clasifican 8 equipos' },
+                                                { id: 'ROUND_OF_16', label: 'Octavos de Final', desc: 'Clasifican 16 equipos' },
+                                            ].map(f => (
+                                                <button
+                                                    key={f.id}
+                                                    onClick={() => setStartingRound(f.id as any)}
+                                                    className={`p-4 rounded-xl border-2 text-left transition-all ${startingRound === f.id ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-600/20' : 'border-slate-200 hover:border-slate-300'}`}
+                                                >
+                                                    <div className="font-bold text-slate-800">{f.label}</div>
+                                                    <div className="text-xs text-slate-500 mt-1">{f.desc}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                <label className={`mt-4 flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer ${playoffFormat === 'DUAL_SEMIFINAL_BRACKETS' ? 'border-purple-600 bg-purple-50' : 'border-slate-200'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={playoffFormat === 'DUAL_SEMIFINAL_BRACKETS'}
+                                        onChange={event => setPlayoffFormat(event.target.checked ? 'DUAL_SEMIFINAL_BRACKETS' : 'STANDARD')}
+                                        className="mt-1 text-purple-600"
+                                    />
+                                    <span>
+                                        <span className="block font-bold text-slate-800">Dos liguillas independientes (8 equipos)</span>
+                                        <span className="block text-xs text-slate-500 mt-1">Primera Fuerza: 1 vs 4 y 2 vs 3. Segunda Fuerza: 5 vs 8 y 6 vs 7. Cada grupo tiene su propia final.</span>
+                                    </span>
+                                </label>
                             </div>
 
                             <hr className="border-slate-100" />

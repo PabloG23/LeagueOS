@@ -22,6 +22,7 @@ export interface TenantSettings {
     showDisciplineWidget: boolean;
     enableAutoSuspensions: boolean;
     minMatchesForPlayoffs: number;
+    showPublicPlayoffs?: boolean;
     allowTransfers: boolean;
     requireJerseyNumbers: boolean;
     showJerseyNumberOnCredentials?: boolean;

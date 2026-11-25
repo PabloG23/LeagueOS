@@ -55,23 +55,40 @@ public class PlayoffService {
 
     @Transactional
     public void generateBracket(UUID seasonId, PlayoffRound startingRound, List<UUID> seededTeamIds, int numLegs) {
+        generateBracket(seasonId, startingRound, com.leagueos.modules.competition.domain.PlayoffFormat.STANDARD, seededTeamIds, numLegs);
+    }
+
+    @Transactional
+    public void generateBracket(UUID seasonId, PlayoffRound startingRound,
+                                com.leagueos.modules.competition.domain.PlayoffFormat playoffFormat,
+                                List<UUID> seededTeamIds, int numLegs) {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new IllegalArgumentException("Season not found"));
 
-        // If a bracket already exists for this season, clean it up first
-        deleteBracket(seasonId);
-
-        int expected = EXPECTED_TEAMS.getOrDefault(startingRound, -1);
+        if (playoffFormat == com.leagueos.modules.competition.domain.PlayoffFormat.DUAL_SEMIFINAL_BRACKETS
+                && startingRound != PlayoffRound.SEMI_FINALS) {
+            throw new IllegalArgumentException("Dual semifinal brackets require SEMI_FINALS as starting round");
+        }
+        int expected = playoffFormat == com.leagueos.modules.competition.domain.PlayoffFormat.DUAL_SEMIFINAL_BRACKETS
+                ? 8 : EXPECTED_TEAMS.getOrDefault(startingRound, -1);
         if (expected == -1) throw new IllegalArgumentException("Unsupported starting round: " + startingRound);
         if (seededTeamIds.size() != expected) {
             throw new IllegalArgumentException("Expected " + expected + " teams for " + startingRound + ", got " + seededTeamIds.size());
         }
 
-        // Fetch teams in seed order
         List<Team> teams = new ArrayList<>();
         for (UUID teamId : seededTeamIds) {
             teams.add(teamRepository.findByIdAndTenantId(teamId, season.getTenantId())
                     .orElseThrow(() -> new IllegalArgumentException("Team not found: " + teamId)));
+        }
+
+        deleteBracket(seasonId);
+        season.setPlayoffFormat(playoffFormat);
+        seasonRepository.save(season);
+
+        if (playoffFormat == com.leagueos.modules.competition.domain.PlayoffFormat.DUAL_SEMIFINAL_BRACKETS) {
+            generateDualSemifinalBrackets(season, teams, numLegs);
+            return;
         }
 
         // Build rounds top-down: FINAL → ... → startingRound
@@ -199,13 +216,36 @@ public class PlayoffService {
     // Private helpers
     // -------------------------------------------------------------------------
 
+    private void generateDualSemifinalBrackets(Season season, List<Team> teams, int numLegs) {
+        String[] keys = {"PRIMERA_FUERZA", "SEGUNDA_FUERZA"};
+        String[] names = {"Primera Fuerza", "Segunda Fuerza"};
+        int[][] matchups = {{0, 3}, {1, 2}, {4, 7}, {5, 6}};
+
+        for (int bracket = 0; bracket < 2; bracket++) {
+            PlayoffTie finalTie = saveTie(season, PlayoffRound.FINAL, null, null, null, keys[bracket], names[bracket]);
+            for (int semifinal = 0; semifinal < 2; semifinal++) {
+                int[] matchup = matchups[bracket * 2 + semifinal];
+                PlayoffTie tie = saveTie(season, PlayoffRound.SEMI_FINALS,
+                        teams.get(matchup[0]), teams.get(matchup[1]), finalTie, keys[bracket], names[bracket]);
+                createMatchesForTie(tie, numLegs);
+            }
+        }
+    }
+
     private PlayoffTie saveTie(Season season, PlayoffRound round, Team home, Team away, PlayoffTie nextTie) {
+        return saveTie(season, round, home, away, nextTie, "DEFAULT", null);
+    }
+
+    private PlayoffTie saveTie(Season season, PlayoffRound round, Team home, Team away, PlayoffTie nextTie,
+                               String bracketKey, String bracketName) {
         PlayoffTie tie = new PlayoffTie();
         tie.setSeason(season);
         tie.setTenantId(season.getTenantId());
         tie.setRound(round);
         tie.setHomeSeedTeam(home);
         tie.setAwaySeedTeam(away);
+        tie.setBracketKey(bracketKey);
+        tie.setBracketName(bracketName);
         if (nextTie != null) {
             tie.setNextTieId(nextTie.getId());
         }
