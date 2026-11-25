@@ -138,7 +138,7 @@ export const PlayoffsBracketView = ({
     const hasRoundOf32 = safeTies.some(t => t?.round === 'ROUND_OF_32');
     const hasRoundOf16 = safeTies.some(t => t?.round === 'ROUND_OF_16');
     const TeamCard = ({ team, isWinner, score }: { team: any, isWinner: boolean, score?: number | null }) => (
-        <div className={`p-3 border-b border-white/5 last:border-0 flex items-center gap-3 transition-all duration-300 ${isWinner ? 'bg-gradient-to-r from-amber-950/40 to-transparent border-l-4 border-l-amber-500' : 'opacity-70 grayscale hover:opacity-100 hover:grayscale-0'}`}>
+        <div className={`p-3 border-b border-white/5 last:border-0 flex items-center gap-3 transition-all duration-300 ${isWinner ? 'bg-gradient-to-r from-amber-950/40 to-transparent border-l-4 border-l-amber-500' : 'opacity-70 hover:opacity-100'}`}>
             <div className={`w-7 h-7 rounded-full overflow-hidden shrink-0 border-2 ${isWinner ? 'border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'border-white/10'}`}>
                 <TeamLogo
                     teamName={team?.name}
