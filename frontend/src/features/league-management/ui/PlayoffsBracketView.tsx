@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trophy, Trash2, AlertTriangle, X, Zap, Crown, MapPin, Clock } from 'lucide-react';
 import { useToast } from '@/shared/components/ui/ToastContext';
 import { leagueApi } from '@/shared/api/league-api';
+import { TeamLogo } from '@/shared/components/TeamLogo';
 
 export interface PlayoffTie {
     id: string;
@@ -139,7 +140,11 @@ export const PlayoffsBracketView = ({
     const TeamCard = ({ team, isWinner, score }: { team: any, isWinner: boolean, score?: number | null }) => (
         <div className={`p-3 border-b border-white/5 last:border-0 flex items-center gap-3 transition-all duration-300 ${isWinner ? 'bg-gradient-to-r from-amber-950/40 to-transparent border-l-4 border-l-amber-500' : 'opacity-70 grayscale hover:opacity-100 hover:grayscale-0'}`}>
             <div className={`w-7 h-7 rounded-full overflow-hidden shrink-0 border-2 ${isWinner ? 'border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'border-white/10'}`}>
-                {team?.logoUrl ? <img src={team.logoUrl} className="w-full h-full object-cover" /> : <span className={`text-[9px] flex items-center justify-center h-full font-black ${isWinner ? 'text-amber-400' : 'text-slate-400'}`}>{team?.name?.substring(0, 2) || '?'}</span>}
+                <TeamLogo
+                    teamName={team?.name}
+                    logoUrl={team?.signedLogoUrl || team?.logoUrl}
+                    fallbackClass={`text-[9px] flex items-center justify-center h-full font-black ${isWinner ? 'text-amber-400' : 'text-slate-400'}`}
+                />
             </div>
             <span className={`truncate flex-1 text-sm font-bold tracking-wide ${isWinner ? 'text-amber-100 drop-shadow-[0_0_2px_rgba(245,158,11,0.3)]' : 'text-slate-300'}`}>{team?.name || 'Por definir'}</span>
             <span className={`min-w-6 text-center text-base font-black tabular-nums ${isWinner ? 'text-amber-300' : 'text-slate-300'}`}>
